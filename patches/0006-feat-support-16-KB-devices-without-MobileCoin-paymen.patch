@@ -1,0 +1,394 @@
+From fe700dce25ebede2e98e8f8436b7b1539fc41826 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:43 +0100
+Subject: [PATCH 6/8] feat: support 16 KB devices without MobileCoin payments
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ app/build.gradle.kts                          | 10 +-
+ app/src/main/AndroidManifest.xml              |  1 +
+ .../conversation/ConversationUpdateItem.java  |  4 +-
+ .../conversation/v2/ConversationFragment.kt   | 10 ++
+ .../jobs/PaymentTransactionCheckJob.java      |  6 ++
+ .../securesms/keyvalue/PaymentsValues.kt      | 16 ++++
+ .../messages/DataMessageProcessor.kt          |  6 ++
+ .../messages/SyncMessageProcessor.kt          |  6 ++
+ app/src/main/res/values/vesper_features.xml   |  5 +
+ .../securesms/keyvalue/PaymentsValuesTest.kt  | 92 ++-----------------
+ gradle/libs.versions.toml                     |  2 +-
+ gradle/verification-metadata.xml              |  8 ++
+ 12 files changed, 70 insertions(+), 96 deletions(-)
+ create mode 100644 app/src/main/res/values/vesper_features.xml
+
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 96d8bf735f..1fd7f8e0f1 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -212,7 +212,8 @@ android {
+     jniLibs {
+       excludes += setOf(
+         "**/*.dylib",
+-        "**/*.dll"
++        "**/*.dll",
++        "**/libmobilecoin.so"
+       )
+     }
+     resources {
+@@ -308,6 +309,7 @@ android {
+     buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_6cmGZopuTsV8novGgJJW9JpC00vLIgtQ1D\"")
+     buildConfigField("boolean", "TRACING_ENABLED", "false")
+     buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
++    buildConfigField("boolean", "MOBILE_COIN_PAYMENTS_ENABLED", "false")
+ 
+     ndk {
+       abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+@@ -565,12 +567,6 @@ androidComponents {
+       variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
+     }
+ 
+-    // Starting with minSdk 23, Android leaves native libraries uncompressed, which is fine for the Play Store, but not for our self-distributed APKs.
+-    // This reverts it to the legacy behavior, compressing the native libraries, and drastically reducing the APK file size.
+-    if (variant.name.contains("website", ignoreCase = true) || variant.name.contains("github", ignoreCase = true)) {
+-      variant.packaging.jniLibs.useLegacyPackaging.set(true)
+-    }
+-
+     // Version overrides
+     if (variant.name.contains("nightly", ignoreCase = true)) {
+       var tag = getNightlyTagForCurrentCommit()
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 8cb7dfdd23..14b528eea8 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -792,6 +792,7 @@
+         <activity
+             android:name=".payments.preferences.PaymentsActivity"
+             android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"
++            android:enabled="@bool/mobilecoin_payments_enabled"
+             android:exported="false"
+             android:theme="@style/TextSecure.LightRegistrationTheme" />
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
+index e1d80e9955..1fba659074 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
+@@ -697,7 +697,7 @@ public final class ConversationUpdateItem extends FrameLayout
+       });
+ 
+       actionButton.setText(R.string.ConversationActivity__invite_to_signal);
+-    } else if (conversationMessage.getMessageRecord().isPaymentsRequestToActivate() && !conversationMessage.getMessageRecord().isOutgoing() && !SignalStore.payments().mobileCoinPaymentsEnabled() && SignalStore.account().isPrimaryDevice()) {
++    } else if (conversationMessage.getMessageRecord().isPaymentsRequestToActivate() && !conversationMessage.getMessageRecord().isOutgoing() && SignalStore.payments().getPaymentsAvailability().canRegister() && SignalStore.account().isPrimaryDevice()) {
+       actionButton.setText(R.string.ConversationUpdateItem_activate_payments);
+       actionButton.setVisibility(VISIBLE);
+       actionButton.setOnClickListener(v -> {
+@@ -707,7 +707,7 @@ public final class ConversationUpdateItem extends FrameLayout
+           passthroughClickListener.onClick(v);
+         }
+       });
+-    } else if (conversationMessage.getMessageRecord().isPaymentsActivated() && !conversationMessage.getMessageRecord().isOutgoing() && SignalStore.account().isPrimaryDevice()) {
++    } else if (conversationMessage.getMessageRecord().isPaymentsActivated() && !conversationMessage.getMessageRecord().isOutgoing() && SignalStore.payments().getPaymentsAvailability().isSendAllowed() && SignalStore.account().isPrimaryDevice()) {
+       actionButton.setText(R.string.ConversationUpdateItem_send_payment);
+       actionButton.setVisibility(VISIBLE);
+       actionButton.setOnClickListener(v -> {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
+index a1c71e36f3..d2599628c1 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
+@@ -137,6 +137,7 @@ import org.signal.core.util.setActionItemTint
+ import org.signal.donations.InAppPaymentType
+ import org.signal.ringrtc.CallLinkRootKey
+ import org.thoughtcrime.securesms.BlockUnblockDialog
++import org.thoughtcrime.securesms.BuildConfig
+ import org.thoughtcrime.securesms.MainActivity
+ import org.thoughtcrime.securesms.MuteDialog
+ import org.thoughtcrime.securesms.R
+@@ -3104,6 +3105,15 @@ class ConversationFragment :
+   }
+ 
+   private fun handleViewPaymentDetails(conversationMessage: ConversationMessage) {
++    if (!BuildConfig.MOBILE_COIN_PAYMENTS_ENABLED) {
++      MaterialAlertDialogBuilder(requireContext())
++        .setTitle(R.string.PaymentTombstoneLearnMoreDialog_title)
++        .setMessage(R.string.mobilecoin_payments_disabled)
++        .setPositiveButton(android.R.string.ok, null)
++        .show()
++      return
++    }
++
+     val record: MmsMessageRecord = conversationMessage.messageRecord as? MmsMessageRecord ?: return
+     val payment = record.payment
+     if (payment == null || record.isPaymentTombstone) {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/PaymentTransactionCheckJob.java b/app/src/main/java/org/thoughtcrime/securesms/jobs/PaymentTransactionCheckJob.java
+index bc0ff76348..51b59c81ce 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/PaymentTransactionCheckJob.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/PaymentTransactionCheckJob.java
+@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+ 
+ import org.signal.core.util.logging.Log;
++import org.thoughtcrime.securesms.BuildConfig;
+ import org.thoughtcrime.securesms.database.PaymentTable;
+ import org.thoughtcrime.securesms.database.SignalDatabase;
+ import org.thoughtcrime.securesms.dependencies.AppDependencies;
+@@ -53,6 +54,11 @@ public final class PaymentTransactionCheckJob extends BaseJob {
+ 
+   @Override
+   protected void onRun() throws Exception {
++    if (!BuildConfig.MOBILE_COIN_PAYMENTS_ENABLED) {
++      Log.w(TAG, "MobileCoin payments are disabled");
++      return;
++    }
++
+     PaymentTable paymentDatabase = SignalDatabase.payments();
+ 
+     PaymentTable.PaymentTransaction payment = paymentDatabase.getPayment(uuid);
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/PaymentsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/PaymentsValues.kt
+index 0742995fc2..f4706ec031 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/PaymentsValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/PaymentsValues.kt
+@@ -8,6 +8,7 @@ import com.mobilecoin.lib.Mnemonics
+ import com.mobilecoin.lib.exceptions.BadMnemonicException
+ import org.signal.core.util.Util
+ import org.signal.core.util.logging.Log
++import org.thoughtcrime.securesms.BuildConfig
+ import org.thoughtcrime.securesms.database.SignalDatabase
+ import org.thoughtcrime.securesms.lock.v2.PinKeyboardType
+ import org.thoughtcrime.securesms.payments.Balance
+@@ -104,6 +105,10 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
+    * Consider using [.getPaymentsAvailability] which includes feature flag and region status.
+    */
+   fun mobileCoinPaymentsEnabled(): Boolean {
++    if (!BuildConfig.MOBILE_COIN_PAYMENTS_ENABLED) {
++      return false
++    }
++
+     return getBoolean(MOB_PAYMENTS_ENABLED, false)
+   }
+ 
+@@ -112,6 +117,10 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
+    */
+   val paymentsAvailability: PaymentsAvailability
+     get() {
++      if (!BuildConfig.MOBILE_COIN_PAYMENTS_ENABLED) {
++        return PaymentsAvailability.DISABLED_REMOTELY
++      }
++
+       if (!SignalStore.account.isRegistered) {
+         return PaymentsAvailability.NOT_IN_REGION
+       }
+@@ -138,6 +147,13 @@ class PaymentsValues internal constructor(store: KeyValueStore) : SignalStoreVal
+ 
+   @WorkerThread
+   fun setMobileCoinPaymentsEnabled(isMobileCoinPaymentsEnabled: Boolean) {
++    if (!BuildConfig.MOBILE_COIN_PAYMENTS_ENABLED) {
++      if (getBoolean(MOB_PAYMENTS_ENABLED, false)) {
++        putBoolean(MOB_PAYMENTS_ENABLED, false)
++      }
++      return
++    }
++
+     if (mobileCoinPaymentsEnabled() == isMobileCoinPaymentsEnabled) {
+       return
+     }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
+index 12b61a8947..e7f4c90634 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
+@@ -15,6 +15,7 @@ import org.signal.core.util.orNull
+ import org.signal.core.util.toOptional
+ import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation
+ import org.signal.network.util.Preconditions
++import org.thoughtcrime.securesms.BuildConfig
+ import org.thoughtcrime.securesms.attachments.Attachment
+ import org.thoughtcrime.securesms.attachments.LocalStickerAttachment
+ import org.thoughtcrime.securesms.attachments.PointerAttachment
+@@ -663,6 +664,11 @@ object DataMessageProcessor {
+   ): InsertResult? {
+     log(envelope.clientTimestamp!!, "Payment message.")
+ 
++    if (!BuildConfig.MOBILE_COIN_PAYMENTS_ENABLED) {
++      log(envelope.clientTimestamp!!, "Ignoring payment message because MobileCoin payments are disabled.")
++      return null
++    }
++
+     if (message.payment?.notification?.mobileCoin?.receipt == null) {
+       warn(envelope.clientTimestamp!!, "Ignoring payment message without notification")
+       return null
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
+index 870f96888b..b553da1860 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
+@@ -25,6 +25,7 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord
+ import org.signal.ringrtc.CallException
+ import org.signal.ringrtc.CallId
+ import org.signal.ringrtc.CallLinkRootKey
++import org.thoughtcrime.securesms.BuildConfig
+ import org.thoughtcrime.securesms.attachments.Attachment
+ import org.thoughtcrime.securesms.attachments.DatabaseAttachment
+ import org.thoughtcrime.securesms.attachments.TombstoneAttachment
+@@ -1244,6 +1245,11 @@ object SyncMessageProcessor {
+   private fun handleSynchronizeOutgoingPayment(outgoingPayment: SyncMessage.OutgoingPayment, envelopeTimestamp: Long) {
+     log(envelopeTimestamp, "Synchronize outgoing payment.")
+ 
++    if (!BuildConfig.MOBILE_COIN_PAYMENTS_ENABLED) {
++      log(envelopeTimestamp, "Ignoring synchronized outgoing payment because MobileCoin payments are disabled.")
++      return
++    }
++
+     val mobileCoin = if (outgoingPayment.mobileCoin != null) {
+       outgoingPayment.mobileCoin!!
+     } else {
+diff --git a/app/src/main/res/values/vesper_features.xml b/app/src/main/res/values/vesper_features.xml
+new file mode 100644
+index 0000000000..3e3d749233
+--- /dev/null
++++ b/app/src/main/res/values/vesper_features.xml
+@@ -0,0 +1,5 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <bool name="mobilecoin_payments_enabled">false</bool>
++    <string name="mobilecoin_payments_disabled">MobileCoin payments are not available in Vesper.</string>
++</resources>
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/keyvalue/PaymentsValuesTest.kt b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/PaymentsValuesTest.kt
+index b3be92f2b0..78924e1b83 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/keyvalue/PaymentsValuesTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/PaymentsValuesTest.kt
+@@ -1,101 +1,21 @@
+ package org.thoughtcrime.securesms.keyvalue
+ 
+-import io.mockk.every
+ import io.mockk.mockk
+-import io.mockk.mockkObject
+-import io.mockk.unmockkAll
+-import org.junit.After
+ import org.junit.Assert.assertEquals
+-import org.junit.Before
++import org.junit.Assert.assertFalse
+ import org.junit.Test
+-import org.thoughtcrime.securesms.util.RemoteConfig
+ 
+ class PaymentsValuesTest {
+ 
+-  private lateinit var paymentValues: PaymentsValues
+-
+-  @Before
+-  fun setup() {
+-    mockkObject(RemoteConfig)
+-    mockkObject(SignalStore)
+-
+-    paymentValues = mockk()
+-    every { paymentValues.paymentsAvailability } answers { callOriginal() }
+-
+-    every { SignalStore.payments } returns paymentValues
+-
+-    every { SignalStore.account.isRegistered } returns true
+-  }
+-
+-  @After
+-  fun tearDown() {
+-    unmockkAll()
+-  }
++  private val paymentsValues = PaymentsValues(mockk())
+ 
+   @Test
+-  fun `when unregistered, expect NOT_IN_REGION`() {
+-    every { SignalStore.account.isRegistered } returns false
+-
+-    assertEquals(PaymentsAvailability.NOT_IN_REGION, SignalStore.payments.paymentsAvailability)
++  fun `mobilecoin payments are disabled in Vesper`() {
++    assertFalse(paymentsValues.mobileCoinPaymentsEnabled())
+   }
+ 
+   @Test
+-  fun `when flag disabled and no account, expect DISABLED_REMOTELY`() {
+-    every { SignalStore.account.e164 } returns "+15551234567"
+-    every { paymentValues.mobileCoinPaymentsEnabled() } returns false
+-    every { RemoteConfig.payments } returns false
+-    every { RemoteConfig.paymentsCountryBlocklist } returns ""
+-
+-    assertEquals(PaymentsAvailability.DISABLED_REMOTELY, SignalStore.payments.paymentsAvailability)
+-  }
+-
+-  @Test
+-  fun `when flag disabled but has account, expect WITHDRAW_ONLY`() {
+-    every { SignalStore.account.e164 } returns "+15551234567"
+-    every { paymentValues.mobileCoinPaymentsEnabled() } returns true
+-    every { RemoteConfig.payments } returns false
+-    every { RemoteConfig.paymentsCountryBlocklist } returns ""
+-
+-    assertEquals(PaymentsAvailability.WITHDRAW_ONLY, SignalStore.payments.paymentsAvailability)
+-  }
+-
+-  @Test
+-  fun `when flag enabled and no account, expect REGISTRATION_AVAILABLE`() {
+-    every { SignalStore.account.e164 } returns "+15551234567"
+-    every { paymentValues.mobileCoinPaymentsEnabled() } returns false
+-    every { RemoteConfig.payments } returns true
+-    every { RemoteConfig.paymentsCountryBlocklist } returns ""
+-
+-    assertEquals(PaymentsAvailability.REGISTRATION_AVAILABLE, SignalStore.payments.paymentsAvailability)
+-  }
+-
+-  @Test
+-  fun `when flag enabled and has account, expect WITHDRAW_AND_SEND`() {
+-    every { SignalStore.account.e164 } returns "+15551234567"
+-    every { paymentValues.mobileCoinPaymentsEnabled() } returns true
+-    every { RemoteConfig.payments } returns true
+-    every { RemoteConfig.paymentsCountryBlocklist } returns ""
+-
+-    assertEquals(PaymentsAvailability.WITHDRAW_AND_SEND, SignalStore.payments.paymentsAvailability)
+-  }
+-
+-  @Test
+-  fun `when flag enabled and no account and in the country blocklist, expect NOT_IN_REGION`() {
+-    every { SignalStore.account.e164 } returns "+15551234567"
+-    every { paymentValues.mobileCoinPaymentsEnabled() } returns false
+-    every { RemoteConfig.payments } returns true
+-    every { RemoteConfig.paymentsCountryBlocklist } returns "1"
+-
+-    assertEquals(PaymentsAvailability.NOT_IN_REGION, SignalStore.payments.paymentsAvailability)
+-  }
+-
+-  @Test
+-  fun `when flag enabled and has account and in the country blocklist, expect WITHDRAW_ONLY`() {
+-    every { SignalStore.account.e164 } returns "+15551234567"
+-    every { paymentValues.mobileCoinPaymentsEnabled() } returns true
+-    every { RemoteConfig.payments } returns true
+-    every { RemoteConfig.paymentsCountryBlocklist } returns "1"
+-
+-    assertEquals(PaymentsAvailability.WITHDRAW_ONLY, SignalStore.payments.paymentsAvailability)
++  fun `mobilecoin payments are unavailable in Vesper`() {
++    assertEquals(PaymentsAvailability.DISABLED_REMOTELY, paymentsValues.paymentsAvailability)
+   }
+ }
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+index e96a24ca82..97275aba14 100644
+--- a/gradle/libs.versions.toml
++++ b/gradle/libs.versions.toml
+@@ -185,7 +185,7 @@ rxjava3-rxjava = "io.reactivex.rxjava3:rxjava:3.1.12"
+ rxjava3-rxandroid = "io.reactivex.rxjava3:rxandroid:3.0.2"
+ rxjava3-rxkotlin = "io.reactivex.rxjava3:rxkotlin:3.0.1"
+ rxdogtag = "com.uber.rxdogtag2:rxdogtag:2.0.2"
+-conscrypt-android = "org.conscrypt:conscrypt-android:2.5.3"
++conscrypt-android = "org.conscrypt:conscrypt-android:2.6.1"
+ mobilecoin = "com.mobilecoin:android-sdk:6.1.2"
+ leolin-shortcutbadger = "me.leolin:ShortcutBadger:1.1.22"
+ glide-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
+diff --git a/gradle/verification-metadata.xml b/gradle/verification-metadata.xml
+index dbbc46b7b4..68370b080e 100644
+--- a/gradle/verification-metadata.xml
++++ b/gradle/verification-metadata.xml
+@@ -6585,6 +6585,14 @@ https://docs.gradle.org/current/userguide/dependency_verification.html
+             <sha256 value="551ae4e301c571760d1791e647db6ed1dcb10d34dcae7aa12b67f220f2ce98d1" origin="Generated by Gradle"/>
+          </artifact>
+       </component>
++      <component group="org.conscrypt" name="conscrypt-android" version="2.6.1">
++         <artifact name="conscrypt-android-2.6.1.aar">
++            <sha256 value="3d1a7fd58c1c52f46abe580219b6a27355d1343ff07c8f6fd3cd86c9a28cce57" origin="Generated by Gradle"/>
++         </artifact>
++         <artifact name="conscrypt-android-2.6.1.module">
++            <sha256 value="be7e18493b60d133cd2a7cbbf578cd41b994bacc8c6f736c4ba44ef6036068b1" origin="Generated by Gradle"/>
++         </artifact>
++      </component>
+       <component group="org.conscrypt" name="conscrypt-openjdk-uber" version="2.5.2">
+          <artifact name="conscrypt-openjdk-uber-2.5.2.jar">
+             <sha256 value="eaf537d98e033d0f0451cd1b8cc74e02d7b55ec882da63c88060d806ba89c348" origin="Generated by Gradle"/>

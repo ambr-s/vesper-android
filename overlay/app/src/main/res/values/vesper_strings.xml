@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2026 Vesper contributors
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+<resources>
+    <string name="preferences_appearance__dynamic_colors">Dynamic colours</string>
+    <string name="preferences_appearance__use_system_colors_for_the_app_theme">Use your system colours for the app theme</string>
+    <string name="preferences__enable_debug_log">Enable debug logging</string>
+    <string name="HelpSettingsFragment_disable_and_delete_debug_log">Delete existing logs and stop debug logging?</string>
+    <string name="preferences__ignore_remote_delete">Keep deleted messages</string>
+    <string name="preferences__ignore_remote_delete_summary">Keep messages when someone deletes them for everyone. Vesper labels them &quot;Deletion requested&quot;.</string>
+    <string name="preferences__ignore_remote_delete_confirmation_title">Keep deleted messages?</string>
+    <string name="preferences__ignore_remote_delete_confirmation_message">This can preserve evidence of abuse. Respect other people\'s privacy, and don\'t be a douchebag with it.</string>
+    <string name="preferences__ignore_remote_delete_confirmation_enable">Keep messages</string>
+    <string name="preferences__preserved_remote_delete_badge">Deletion requested</string>
+</resources>

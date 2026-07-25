@@ -1,0 +1,227 @@
+From 648cd7b435d69b990f2580e31eed8b63e7ef31a9 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:44 +0100
+Subject: [PATCH 8/8] chore: clarify licensing and interface copy
+
+Add source and AGPL notices to Vesper-owned code, preserve Molly provenance, and tighten the user-facing wording in British English.
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../debug/res/drawable/ic_launcher_background.xml    |  6 +++++-
+ app/src/debug/res/values/strings.xml                 |  7 +++++--
+ .../settings/app/help/HelpSettingsState.kt           |  5 +++++
+ .../settings/app/help/HelpSettingsViewModel.kt       |  5 +++++
+ .../settings/app/labs/LabsSettingsFragment.kt        |  2 +-
+ .../org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt  |  4 ++--
+ .../securesms/messages/DataMessageProcessor.kt       |  2 +-
+ .../securesms/messages/PreservedRemoteDelete.kt      | 12 +++++++++---
+ .../securesms/util/DynamicMediaPreviewTheme.java     |  5 +++++
+ .../vesper_preserved_delete_pill_background.xml      |  4 ++++
+ app/src/main/res/values/vesper_features.xml          |  4 ++++
+ .../thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt  |  5 +++++
+ .../org/signal/core/ui/compose/theme/SignalTheme.kt  |  5 ++---
+ 13 files changed, 53 insertions(+), 13 deletions(-)
+
+diff --git a/app/src/debug/res/drawable/ic_launcher_background.xml b/app/src/debug/res/drawable/ic_launcher_background.xml
+index dc11a45150..21da459a3c 100644
+--- a/app/src/debug/res/drawable/ic_launcher_background.xml
++++ b/app/src/debug/res/drawable/ic_launcher_background.xml
+@@ -1,3 +1,7 @@
++<!--
++  Adapted from Signal Android.
++  SPDX-License-Identifier: AGPL-3.0-only
++-->
+ <vector xmlns:android="http://schemas.android.com/apk/res/android"
+     xmlns:aapt="http://schemas.android.com/aapt"
+     android:width="108dp"
+@@ -24,4 +28,4 @@
+       </aapt:attr>
+     </path>
+   </group>
+-</vector>
+\ No newline at end of file
++</vector>
+diff --git a/app/src/debug/res/values/strings.xml b/app/src/debug/res/values/strings.xml
+index 6a8646f20e..36faac7107 100644
+--- a/app/src/debug/res/values/strings.xml
++++ b/app/src/debug/res/values/strings.xml
+@@ -1,6 +1,9 @@
+ <?xml version="1.0" encoding="utf-8"?>
++<!--
++  Copyright 2026 Vesper contributors
++  SPDX-License-Identifier: AGPL-3.0-only
++-->
+ <resources>
+-    <!-- Overrides the main source set so debug builds are distinguishable in the
+-         launcher and everywhere the app refers to itself by name. -->
++    <!-- Gives debug builds a distinct name in the launcher and in the app. -->
+     <string name="app_name" translatable="false">Vesper Debug</string>
+ </resources>
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
+index 3033c7e651..a0562b041e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
+@@ -1,3 +1,8 @@
++/*
++ * Adapted from Molly Instant Messenger.
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
+ package org.thoughtcrime.securesms.components.settings.app.help
+ 
+ data class HelpSettingsState(
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
+index 99a298f2a2..3cdff548d6 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
+@@ -1,3 +1,8 @@
++/*
++ * Adapted from Molly Instant Messenger.
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
+ package org.thoughtcrime.securesms.components.settings.app.help
+ 
+ import android.app.Application
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
+index 91fa7b8619..eea6cff3d3 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
+@@ -81,7 +81,7 @@ private fun LabsSettingsContent(
+             modifier = Modifier.size(20.dp)
+           )
+           Text(
+-            text = "These are experimental pre-release features. They are all in various unfinished states. They may need more polish, finalized designs, or cross-client compatibility before they can be released.",
++            text = "These features are unfinished and may change or break. Some still need design work or support in other Signal clients.",
+             style = MaterialTheme.typography.bodyMedium,
+             color = MaterialTheme.colorScheme.onSurfaceVariant,
+             modifier = Modifier.padding(start = 12.dp)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
+index 93da6ff198..da0a980982 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
+@@ -83,7 +83,7 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+     }
+ 
+     if (shouldUpdate(getCurrentAppVersionCode(), BuildConfig.BUILD_TIMESTAMP, updateDescriptor.versionCode, updateDescriptor.buildTimestamp)) {
+-      Log.i(TAG, "Newer build available. Current: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), Update: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
++      Log.i(TAG, "A newer build is available. Current: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), available: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
+       val digest: ByteArray = Hex.fromStringCondensed(updateDescriptor.digest)
+       val downloadStatus: DownloadStatus = getDownloadStatus(updateDescriptor.url, digest)
+ 
+@@ -97,7 +97,7 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+         handleDownloadStart(updateDescriptor.url, updateDescriptor.versionName, digest, updateDescriptor.uploadTimestamp ?: 0)
+       }
+     } else {
+-      Log.d(TAG, "Installed build is current. Current: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), Update: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
++      Log.d(TAG, "The installed build is current. Installed: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), available: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
+     }
+ 
+     SignalStore.apkUpdate.lastSuccessfulCheck = System.currentTimeMillis()
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
+index e7f4c90634..065a967c77 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
+@@ -589,7 +589,7 @@ object DataMessageProcessor {
+     return if (targetMessage != null && MessageConstraintsUtil.isValidRemoteDeleteReceive(targetMessage, senderRecipientId, envelope.serverTimestamp!!)) {
+       val isSelfDelete = senderRecipientId == Recipient.self().id
+       if (!isSelfDelete && SignalStore.settings.isIgnoreRemoteDeleteEnabled) {
+-        log(envelope.clientTimestamp!!, "Ignoring remote delete due to user preference and labeling the preserved message")
++        log(envelope.clientTimestamp!!, "Ignoring remote delete at the user's request and labelling the preserved message")
+         val marker = PreservedRemoteDelete.marker(senderRecipientId)
+         SignalDatabase.reactions.addReaction(MessageId(targetMessage.id), marker)
+       } else {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
+index ca20eb4bbf..2e79256cab 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
+@@ -1,12 +1,18 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
+ package org.thoughtcrime.securesms.messages
+ 
+ import org.thoughtcrime.securesms.database.model.ReactionRecord
+ import org.thoughtcrime.securesms.recipients.RecipientId
+ 
+ /**
+- * Stores a local-only annotation for a message whose remote-deletion request was
+- * deliberately ignored. The reactions table gives the annotation the lifecycle
+- * of its message without changing the message payload.
++ * Marks a message when Vesper ignores its remote deletion request.
++ *
++ * The marker lives in the reactions table, so it is deleted with the message and
++ * does not alter the message payload.
+  */
+ object PreservedRemoteDelete {
+   private const val MARKER = "\uF8FFvesper.remote-delete"
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
+index 5758653f63..a0ad20b41e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
+@@ -1,3 +1,8 @@
++/*
++ * Adapted from Molly Instant Messenger.
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
+ package org.thoughtcrime.securesms.util;
+ 
+ import androidx.annotation.StyleRes;
+diff --git a/app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml b/app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
+index dbfaefcb68..1c7673ff12 100644
+--- a/app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
++++ b/app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
+@@ -1,4 +1,8 @@
+ <?xml version="1.0" encoding="utf-8"?>
++<!--
++  Copyright 2026 Vesper contributors
++  SPDX-License-Identifier: AGPL-3.0-only
++-->
+ <shape xmlns:android="http://schemas.android.com/apk/res/android"
+     android:shape="rectangle">
+     <solid android:color="?attr/colorErrorContainer" />
+diff --git a/app/src/main/res/values/vesper_features.xml b/app/src/main/res/values/vesper_features.xml
+index 3e3d749233..7e5ec4cf5d 100644
+--- a/app/src/main/res/values/vesper_features.xml
++++ b/app/src/main/res/values/vesper_features.xml
+@@ -1,4 +1,8 @@
+ <?xml version="1.0" encoding="utf-8"?>
++<!--
++  Copyright 2026 Vesper contributors
++  SPDX-License-Identifier: AGPL-3.0-only
++-->
+ <resources>
+     <bool name="mobilecoin_payments_enabled">false</bool>
+     <string name="mobilecoin_payments_disabled">MobileCoin payments are not available in Vesper.</string>
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt b/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
+index 24bd3c580e..712f5e23f3 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
+@@ -1,3 +1,8 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
+ package org.thoughtcrime.securesms.jobs
+ 
+ import org.junit.Assert.assertFalse
+diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
+index ace52d7bb6..a8d753616b 100644
+--- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
++++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
+@@ -229,9 +229,8 @@ fun SignalTheme(
+   val maySupportDynamicColor = Build.VERSION.SDK_INT >= 31
+   val dynamicColors = maySupportDynamicColor && (useDynamicColors ?: isThemeUsingDynamicColors(context))
+ 
+-  // API 31–33's Compose fallback is substantially more saturated than the
+-  // platform resource palette. Use the same resources as XML there so legacy
+-  // views and Compose surfaces stay visually aligned.
++  // API 31-33's Compose fallback is more saturated than the platform resource
++  // palette. Use the same resources for XML and Compose.
+   val colorScheme = when {
+     dynamicColors -> {
+       if (Build.VERSION.SDK_INT >= 34) {

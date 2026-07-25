@@ -1,0 +1,94 @@
+# Copyright 2026 Vesper contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+name: Track upstream Signal
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: track-upstream-signal
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Detect latest stable Signal
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    outputs:
+      candidate: ${{ steps.signal.outputs.candidate }}
+      changed: ${{ steps.signal.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare latest release with known-good pin
+        id: signal
+        run: |
+          candidate="$(./tools/latest-signal-tag.sh)"
+          pinned="$(sed -n 's/^signal=//p' upstream.pin)"
+          echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
+          if [[ "$candidate" == "$pinned" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Vesper is already based on the latest Signal release ($pinned)."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Testing Signal candidate $candidate (known-good: $pinned)."
+          fi
+
+  adopt:
+    name: Build and publish candidate
+    needs: detect
+    if: needs.detect.outputs.changed == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build.yml
+    with:
+      signal_tag: ${{ needs.detect.outputs.candidate }}
+      advance_pin: true
+    secrets: inherit
+
+  report-failure:
+    name: Report failed candidate
+    needs:
+      - detect
+      - adopt
+    if: >-
+      ${{
+        always() &&
+        needs.detect.outputs.changed == 'true' &&
+        needs.adopt.result == 'failure'
+      }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE: ${{ needs.detect.outputs.candidate }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Signal $CANDIDATE adoption failed"
+          issue="$(
+            gh issue list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --search "$title in:title" \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+          body="The scheduled Vesper build for **$CANDIDATE** failed. Nothing was published and \`upstream.pin\` was not advanced.
+
+          Build log: $RUN_URL"
+          if [[ -n "$issue" ]]; then
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body "$body"
+          fi

@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adapted from Molly Instant Messenger.
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+<resources>
+
+    <!-- Android 12+ Material You themes for both legacy views and Compose. -->
+    <style name="Theme.Vesper.Dynamic.Light" parent="TextSecure.BaseLightTheme">
+        <item name="colorPrimaryInverse">@color/dynamic_primary_inverse_light</item>
+        <item name="colorPrimary">@color/dynamic_primary_light</item>
+        <item name="colorPrimaryDark">@color/dynamic_primary_light</item>
+        <item name="colorOnPrimary">@color/dynamic_on_primary_light</item>
+        <item name="colorPrimaryContainer">@color/dynamic_primary_container_light</item>
+        <item name="colorOnPrimaryContainer">@color/dynamic_on_primary_container_light</item>
+        <item name="colorPrimaryFixed">@color/vesper_primary_fixed</item>
+        <item name="colorPrimaryFixedDim">@color/vesper_primary_fixed_dim</item>
+        <item name="colorOnPrimaryFixed">@color/vesper_on_primary_fixed</item>
+        <item name="colorSecondary">@color/dynamic_secondary_light</item>
+        <item name="colorOnSecondary">@color/dynamic_on_secondary_light</item>
+        <item name="colorSecondaryContainer">@color/dynamic_secondary_container_light</item>
+        <item name="colorOnSecondaryContainer">@color/dynamic_on_secondary_container_light</item>
+        <item name="colorSecondaryFixed">@color/vesper_secondary_fixed</item>
+        <item name="colorSecondaryFixedDim">@color/vesper_secondary_fixed_dim</item>
+        <item name="colorOnSecondaryFixed">@color/vesper_on_secondary_fixed</item>
+        <item name="colorSurfaceInverse">@color/dynamic_surface_inverse_light</item>
+        <item name="colorSurfaceVariant">@color/dynamic_surface_variant_light</item>
+        <item name="colorSurface">@color/dynamic_surface_light</item>
+        <item name="colorSurfaceDim">@color/dynamic_surface_dim_light</item>
+        <item name="colorSurfaceContainerHighest">@color/dynamic_surface_container_highest_light</item>
+        <item name="colorSurfaceContainerHigh">@color/dynamic_surface_container_high_light</item>
+        <item name="colorSurfaceContainer">@color/dynamic_surface_container_light</item>
+        <item name="colorSurfaceContainerLow">@color/dynamic_surface_container_low_light</item>
+        <item name="colorSurfaceBright">@color/dynamic_surface_bright_light</item>
+        <item name="colorSurfaceContainerLowest">@color/dynamic_surface_container_lowest_light</item>
+        <item name="colorOnSurfaceInverse">@color/dynamic_on_surface_inverse_light</item>
+        <item name="colorOnSurface">@color/dynamic_on_surface_light</item>
+        <item name="colorOnBackground">@color/dynamic_on_background_light</item>
+        <item name="colorOnSurfaceVariant">@color/dynamic_on_surface_variant_light</item>
+        <item name="colorOutline">@color/dynamic_outline_light</item>
+        <item name="colorOutlineVariant">@color/dynamic_outline_variant_light</item>
+        <item name="colorError">@color/dynamic_error_light</item>
+        <item name="colorOnError">@color/dynamic_on_error_light</item>
+        <item name="colorErrorContainer">@color/dynamic_error_container_light</item>
+        <item name="colorOnErrorContainer">@color/dynamic_on_error_container_light</item>
+        <item name="colorTertiary">@color/dynamic_tertiary_light</item>
+        <item name="colorOnTertiary">@color/dynamic_on_tertiary_light</item>
+        <item name="colorTertiaryContainer">@color/dynamic_tertiary_container_light</item>
+        <item name="colorOnTertiaryContainer">@color/dynamic_on_tertiary_container_light</item>
+        <item name="colorTertiaryFixed">@color/vesper_tertiary_fixed</item>
+        <item name="colorTertiaryFixedDim">@color/vesper_tertiary_fixed_dim</item>
+        <item name="colorOnTertiaryFixed">@color/vesper_on_tertiary_fixed</item>
+        <item name="colorOnTertiaryFixedVariant">@color/vesper_on_tertiary_fixed_variant</item>
+        <item name="colorAccent">@color/dynamic_primary_light</item>
+        <item name="colorControlActivated">@color/dynamic_primary_light</item>
+        <item name="vesper_colorSurface1">@color/dynamic_surface_container_low_light</item>
+        <item name="vesper_colorSurface2">@color/dynamic_surface_container_light</item>
+        <item name="vesper_colorSurface3">@color/dynamic_surface_container_high_light</item>
+        <item name="vesper_colorSurface4">@color/dynamic_surface_container_highest_light</item>
+        <item name="vesper_colorSurface5">@color/dynamic_surface_dim_light</item>
+        <item name="dynamic_colors">true</item>
+        <!-- Theme aliases inherited from the static parent resolve against that parent's
+             palette. Override them with concrete dynamic tokens so legacy views use the
+             same palette as Material and Compose. -->
+        <item name="android:windowBackground">@color/dynamic_surface_light</item>
+        <item name="conversation_toolbar_color">@color/dynamic_surface_light</item>
+        <item name="signal_accent_primary">@color/dynamic_primary_light</item>
+        <item name="signal_background_primary">@color/dynamic_surface_light</item>
+        <item name="signal_background_secondary">@color/dynamic_surface_container_low_light</item>
+        <item name="signal_background_dialog">@color/dynamic_surface_container_light</item>
+        <item name="signal_background_dialog_secondary">@color/dynamic_surface_container_low_light</item>
+        <item name="signal_text_primary">@color/dynamic_on_surface_light</item>
+        <item name="signal_text_secondary">@color/dynamic_on_surface_variant_light</item>
+        <item name="signal_text_toolbar_title">@color/dynamic_surface_light</item>
+        <item name="signal_icon_tint_primary">@color/dynamic_on_surface_light</item>
+        <item name="signal_icon_tint_secondary">@color/dynamic_on_surface_variant_light</item>
+        <item name="signal_icon_tint_tab_selected">@color/dynamic_on_surface_light</item>
+        <item name="signal_icon_tint_tab_unselected">@color/dynamic_on_surface_variant_light</item>
+        <item name="signal_button_primary">@color/dynamic_primary_light</item>
+        <item name="signal_button_secondary_text">@color/dynamic_primary_light</item>
+        <item name="conversation_compose_background">@color/dynamic_surface_container_high_light</item>
+        <item name="contact_filter_edit_background">@color/dynamic_surface_container_highest_light</item>
+        <item name="reactions_pill_selected_color">@color/dynamic_surface_container_light</item>
+        <item name="qr_card_color">@color/dynamic_surface_container_low_light</item>
+        <item name="qr_card_text_color">@color/dynamic_on_surface_light</item>
+        <item name="conversation_item_update_text_color">@color/dynamic_on_surface_variant_light</item>
+        <item name="conversation_item_quote_text_color">@color/dynamic_on_surface_light</item>
+        <item name="conversation_item_quote_text_color_sent">@color/dynamic_on_surface_light</item>
+        <item name="conversation_item_recv_bubble_color_normal">@color/dynamic_surface_container_high_light</item>
+        <item name="conversation_item_incoming_audio_foreground_tint_normal">@color/dynamic_on_surface_light</item>
+        <item name="conversation_typing_indicator_foreground_tint_normal">@color/dynamic_on_surface_variant_light</item>
+        <item name="conversation_scroll_to_bottom_foreground_color">@color/dynamic_on_surface_variant_light</item>
+        <item name="conversation_list_selected_color">@color/dynamic_surface_container_light</item>
+        <item name="reactions_pill_text_color">@color/dynamic_on_surface_variant_light</item>
+        <item name="reactions_overlay_any_emoji_background">@color/dynamic_outline_variant_light</item>
+        <item name="reactions_overlay_any_emoji_foreground">@color/dynamic_on_surface_light</item>
+        <item name="megaphone_body_text_color">@color/dynamic_on_surface_variant_light</item>
+        <item name="tooltip_default_color">@color/dynamic_secondary_container_light</item>
+        <item name="quote_view_foreground_outgoing_wallpaper">@color/dynamic_on_surface_light</item>
+        <item name="quote_view_foreground_incoming_normal">@color/dynamic_on_surface_light</item>
+        <item name="quote_view_foreground_outgoing_normal">@color/dynamic_on_surface_light</item>
+        <item name="react_with_any_background">@color/dynamic_surface_container_low_light</item>
+        <item name="react_with_any_search_background">@color/dynamic_surface_container_high_light</item>
+        <item name="react_with_any_search_hint">@color/dynamic_on_surface_variant_light</item>
+        <item name="react_with_any_customize_background">@color/dynamic_surface_variant_light</item>
+        <item name="voice_note_player_view_background">@color/dynamic_surface_container_low_light</item>
+        <item name="message_request_bar_container_background_normal">@color/dynamic_surface_light</item>
+        <item name="message_request_bar_background_normal">@color/dynamic_surface_container_light</item>
+        <item name="message_request_bar_denyForeground_normal">@color/dynamic_error_light</item>
+        <item name="message_request_bar_acceptForeground_normal">@color/dynamic_on_secondary_container_light</item>
+        <item name="message_request_bar_denyForeground_wallpaper">@color/dynamic_error_light</item>
+        <item name="switchThemeOverlay">@style/ThemeOverlay.MaterialSwitch.Dynamic</item>
+        <item name="extended_action_button_container_color">@color/dynamic_secondary_container_light</item>
+        <item name="extended_action_button_icon_color">@color/dynamic_on_secondary_container_light</item>
+        <item name="filled_tonal_icon_button_container_color">@color/dynamic_surface_container_highest_light</item>
+        <item name="filled_tonal_icon_button_icon_color">@color/dynamic_on_surface_variant_light</item>
+        <item name="context_menu_container_color">@color/dynamic_surface_container_light</item>
+        <item name="navbar_active_indicator_color">@color/dynamic_secondary_container_light</item>
+        <item name="navbar_container_color">@color/dynamic_surface_container_high_light</item>
+        <item name="android:navigationBarColor">@color/dynamic_surface_light</item>
+        <item name="android:statusBarColor">@color/dynamic_surface_light</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.Dark" parent="TextSecure.BaseDarkTheme">
+        <item name="colorPrimaryInverse">@color/dynamic_primary_inverse_dark</item>
+        <item name="colorPrimary">@color/dynamic_primary_dark</item>
+        <item name="colorPrimaryDark">@color/dynamic_primary_dark</item>
+        <item name="colorOnPrimary">@color/dynamic_on_primary_dark</item>
+        <item name="colorPrimaryContainer">@color/dynamic_primary_container_dark</item>
+        <item name="colorOnPrimaryContainer">@color/dynamic_on_primary_container_dark</item>
+        <item name="colorPrimaryFixed">@color/vesper_primary_fixed</item>
+        <item name="colorPrimaryFixedDim">@color/vesper_primary_fixed_dim</item>
+        <item name="colorOnPrimaryFixed">@color/vesper_on_primary_fixed</item>
+        <item name="colorSecondary">@color/dynamic_secondary_dark</item>
+        <item name="colorOnSecondary">@color/dynamic_on_secondary_dark</item>
+        <item name="colorSecondaryContainer">@color/dynamic_secondary_container_dark</item>
+        <item name="colorOnSecondaryContainer">@color/dynamic_on_secondary_container_dark</item>
+        <item name="colorSecondaryFixed">@color/vesper_secondary_fixed</item>
+        <item name="colorSecondaryFixedDim">@color/vesper_secondary_fixed_dim</item>
+        <item name="colorOnSecondaryFixed">@color/vesper_on_secondary_fixed</item>
+        <item name="colorSurfaceInverse">@color/dynamic_surface_inverse_dark</item>
+        <item name="colorSurfaceVariant">@color/dynamic_surface_variant_dark</item>
+        <item name="colorSurface">@color/dynamic_surface_dark</item>
+        <item name="colorSurfaceDim">@color/dynamic_surface_dim_dark</item>
+        <item name="colorSurfaceContainerHighest">@color/dynamic_surface_container_highest_dark</item>
+        <item name="colorSurfaceContainerHigh">@color/dynamic_surface_container_high_dark</item>
+        <item name="colorSurfaceContainer">@color/dynamic_surface_container_dark</item>
+        <item name="colorSurfaceContainerLow">@color/dynamic_surface_container_low_dark</item>
+        <item name="colorSurfaceBright">@color/dynamic_surface_bright_dark</item>
+        <item name="colorSurfaceContainerLowest">@color/dynamic_surface_container_lowest_dark</item>
+        <item name="colorOnSurfaceInverse">@color/dynamic_on_surface_inverse_dark</item>
+        <item name="colorOnSurface">@color/dynamic_on_surface_dark</item>
+        <item name="colorOnBackground">@color/dynamic_on_background_dark</item>
+        <item name="colorOnSurfaceVariant">@color/dynamic_on_surface_variant_dark</item>
+        <item name="colorOutline">@color/dynamic_outline_dark</item>
+        <item name="colorOutlineVariant">@color/dynamic_outline_variant_dark</item>
+        <item name="colorError">@color/dynamic_error_dark</item>
+        <item name="colorOnError">@color/dynamic_on_error_dark</item>
+        <item name="colorErrorContainer">@color/dynamic_error_container_dark</item>
+        <item name="colorOnErrorContainer">@color/dynamic_on_error_container_dark</item>
+        <item name="colorTertiary">@color/dynamic_tertiary_dark</item>
+        <item name="colorOnTertiary">@color/dynamic_on_tertiary_dark</item>
+        <item name="colorTertiaryContainer">@color/dynamic_tertiary_container_dark</item>
+        <item name="colorOnTertiaryContainer">@color/dynamic_on_tertiary_container_dark</item>
+        <item name="colorTertiaryFixed">@color/vesper_tertiary_fixed</item>
+        <item name="colorTertiaryFixedDim">@color/vesper_tertiary_fixed_dim</item>
+        <item name="colorOnTertiaryFixed">@color/vesper_on_tertiary_fixed</item>
+        <item name="colorOnTertiaryFixedVariant">@color/vesper_on_tertiary_fixed_variant</item>
+        <item name="colorAccent">@color/dynamic_primary_dark</item>
+        <item name="colorControlActivated">@color/dynamic_primary_dark</item>
+        <item name="vesper_colorSurface1">@color/dynamic_surface_container_low_dark</item>
+        <item name="vesper_colorSurface2">@color/dynamic_surface_container_dark</item>
+        <item name="vesper_colorSurface3">@color/dynamic_surface_container_high_dark</item>
+        <item name="vesper_colorSurface4">@color/dynamic_surface_container_highest_dark</item>
+        <item name="vesper_colorSurface5">@color/dynamic_surface_bright_dark</item>
+        <item name="dynamic_colors">true</item>
+        <!-- Keep legacy theme aliases on the concrete dynamic palette; inherited aliases
+             otherwise retain colors resolved from the static dark parent. -->
+        <item name="android:windowBackground">@color/dynamic_surface_dark</item>
+        <item name="conversation_toolbar_color">@color/dynamic_surface_dark</item>
+        <item name="signal_accent_primary">@color/dynamic_primary_dark</item>
+        <item name="signal_background_primary">@color/dynamic_surface_dark</item>
+        <item name="signal_background_secondary">@color/dynamic_surface_container_low_dark</item>
+        <item name="signal_background_dialog">@color/dynamic_surface_container_dark</item>
+        <item name="signal_background_dialog_secondary">@color/dynamic_surface_container_low_dark</item>
+        <item name="signal_text_primary">@color/dynamic_on_surface_dark</item>
+        <item name="signal_text_secondary">@color/dynamic_on_surface_variant_dark</item>
+        <item name="signal_text_toolbar_title">@color/dynamic_on_surface_dark</item>
+        <item name="signal_icon_tint_primary">@color/dynamic_on_surface_dark</item>
+        <item name="signal_icon_tint_secondary">@color/dynamic_on_surface_variant_dark</item>
+        <item name="signal_icon_tint_action">@color/dynamic_on_surface_dark</item>
+        <item name="signal_icon_tint_tab_selected">@color/dynamic_on_surface_dark</item>
+        <item name="signal_icon_tint_tab_unselected">@color/dynamic_on_surface_variant_dark</item>
+        <item name="signal_button_primary">@color/dynamic_primary_dark</item>
+        <item name="signal_button_secondary_text">@color/dynamic_primary_dark</item>
+        <item name="conversation_compose_background">@color/dynamic_surface_container_high_dark</item>
+        <item name="contact_filter_edit_background">@color/dynamic_surface_container_highest_dark</item>
+        <item name="reactions_pill_selected_color">@color/dynamic_surface_container_dark</item>
+        <item name="qr_card_text_color">@color/dynamic_on_surface_variant_dark</item>
+        <item name="conversation_item_update_text_color">@color/dynamic_on_surface_variant_dark</item>
+        <item name="conversation_item_quote_text_color">@color/dynamic_on_surface_dark</item>
+        <item name="conversation_item_quote_text_color_sent">@color/dynamic_on_surface_dark</item>
+        <item name="conversation_item_recv_bubble_color_normal">@color/dynamic_surface_container_high_dark</item>
+        <item name="conversation_item_incoming_audio_foreground_tint_normal">@color/dynamic_on_surface_dark</item>
+        <item name="conversation_typing_indicator_foreground_tint_normal">@color/dynamic_on_surface_variant_dark</item>
+        <item name="conversation_scroll_to_bottom_foreground_color">@color/dynamic_on_surface_variant_dark</item>
+        <item name="conversation_list_selected_color">@color/dynamic_surface_container_dark</item>
+        <item name="reactions_pill_text_color">@color/dynamic_on_surface_variant_dark</item>
+        <item name="reactions_overlay_any_emoji_background">@color/dynamic_outline_variant_dark</item>
+        <item name="reactions_overlay_any_emoji_foreground">@color/dynamic_on_surface_dark</item>
+        <item name="megaphone_body_text_color">@color/dynamic_on_surface_variant_dark</item>
+        <item name="tooltip_default_color">@color/dynamic_secondary_container_dark</item>
+        <item name="quote_view_foreground_incoming_normal">@color/dynamic_on_surface_dark</item>
+        <item name="quote_view_foreground_outgoing_normal">@color/dynamic_on_surface_inverse_dark</item>
+        <item name="react_with_any_background">@color/dynamic_surface_container_low_dark</item>
+        <item name="react_with_any_search_background">@color/dynamic_surface_container_high_dark</item>
+        <item name="react_with_any_search_hint">@color/dynamic_on_surface_variant_dark</item>
+        <item name="react_with_any_customize_background">@color/dynamic_surface_variant_dark</item>
+        <item name="voice_note_player_view_background">@color/dynamic_surface_container_low_dark</item>
+        <item name="message_request_bar_container_background_normal">@color/dynamic_surface_dark</item>
+        <item name="message_request_bar_background_normal">@color/dynamic_surface_container_dark</item>
+        <item name="message_request_bar_denyForeground_normal">@color/dynamic_error_dark</item>
+        <item name="message_request_bar_acceptForeground_normal">@color/dynamic_on_secondary_container_dark</item>
+        <item name="message_request_bar_denyForeground_wallpaper">@color/dynamic_error_dark</item>
+        <item name="safety_tip_background">@color/dynamic_secondary_container_dark</item>
+        <item name="safety_tip_image_background">@color/dynamic_secondary_dark</item>
+        <item name="switchThemeOverlay">@style/ThemeOverlay.MaterialSwitch.Dynamic</item>
+        <item name="extended_action_button_container_color">@color/dynamic_secondary_container_dark</item>
+        <item name="extended_action_button_icon_color">@color/dynamic_on_secondary_container_dark</item>
+        <item name="filled_tonal_icon_button_container_color">@color/dynamic_surface_container_highest_dark</item>
+        <item name="filled_tonal_icon_button_icon_color">@color/dynamic_on_surface_variant_dark</item>
+        <item name="context_menu_container_color">@color/dynamic_surface_container_high_dark</item>
+        <item name="navbar_active_indicator_color">@color/dynamic_secondary_container_dark</item>
+        <item name="navbar_container_color">@color/dynamic_surface_container_high_dark</item>
+        <item name="android:navigationBarColor">@color/dynamic_surface_dark</item>
+        <item name="android:statusBarColor">@color/dynamic_surface_dark</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic" parent="Theme.Vesper.Dynamic.Light" />
+
+    <style name="Theme.Vesper.Dynamic.BaseNoActionBar.Light" parent="Theme.Vesper.Dynamic.Light">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="actionBarPopupTheme">@style/ThemeOverlay.Material3.Light</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.BaseNoActionBar.Dark" parent="Theme.Vesper.Dynamic.Dark">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="actionBarPopupTheme">@style/ThemeOverlay.Material3.Dark</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.NoActionBar.Light" parent="Theme.Vesper.Dynamic.BaseNoActionBar.Light">
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.NoActionBar.Dark" parent="Theme.Vesper.Dynamic.BaseNoActionBar.Dark">
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.NoActionBar" parent="Theme.Vesper.Dynamic.NoActionBar.Light" />
+    <style name="Theme.Vesper.Dynamic.Registration.Light" parent="Theme.Vesper.Dynamic.BaseNoActionBar.Light">
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.Registration.Dark" parent="Theme.Vesper.Dynamic.BaseNoActionBar.Dark">
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.Registration" parent="Theme.Vesper.Dynamic.Registration.Light" />
+
+    <style name="Theme.Vesper.Dynamic.ConversationSettings.Light" parent="Theme.Vesper.Dynamic.BaseNoActionBar.Light">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@color/transparent_black_20</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowSharedElementEnterTransition">@transition/transparent_window_wipe_transition</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.ConversationSettings.Dark" parent="Theme.Vesper.Dynamic.BaseNoActionBar.Dark">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@color/transparent_black_20</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowSharedElementEnterTransition">@transition/transparent_window_wipe_transition</item>
+    </style>
+
+    <style name="Theme.Vesper.Dynamic.ConversationSettings" parent="Theme.Vesper.Dynamic.ConversationSettings.Light" />
+
+    <style name="Theme.Vesper.Dynamic.MediaPreview" parent="Theme.Vesper.Dynamic.BaseNoActionBar.Dark">
+        <item name="android:windowBackground">@color/signal_dark_colorNeutral</item>
+        <item name="android:statusBarColor">@color/signal_dark_colorNeutral</item>
+        <item name="android:navigationBarColor">@color/signal_dark_colorNeutral</item>
+    </style>
+
+</resources>

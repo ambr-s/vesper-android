@@ -1,0 +1,284 @@
+From 41fdf1deafb80468a8713c47876953af67edc627 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:42 +0100
+Subject: [PATCH 3/8] feat: optionally preserve remotely deleted messages
+
+Keep a local marker when Vesper honours the user setting instead of a remote deletion request.
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../v2/exporters/ChatItemArchiveExporter.kt   |  2 +
+ .../app/privacy/PrivacySettingsFragment.kt    | 24 ++++++++++++
+ .../app/privacy/PrivacySettingsState.kt       |  1 +
+ .../app/privacy/PrivacySettingsViewModel.kt   |  6 +++
+ .../messages/DataMessageProcessor.kt          | 13 +++++--
+ .../messages/PreservedRemoteDelete.kt         | 38 +++++++++++++++++++
+ .../reactions/ReactionsConversationView.java  | 27 ++++++++++++-
+ .../reactions/ReactionsRepository.kt          |  3 +-
+ ...esper_preserved_delete_pill_background.xml |  6 +++
+ 9 files changed, 115 insertions(+), 5 deletions(-)
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
+ create mode 100644 app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt b/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
+index 9bd292bc6e..0ad1b6ec6a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
+@@ -100,6 +100,7 @@ import org.thoughtcrime.securesms.database.model.databaseprotos.ThreadMergeEvent
+ import org.thoughtcrime.securesms.dependencies.AppDependencies
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+ import org.thoughtcrime.securesms.linkpreview.LinkPreview
++import org.thoughtcrime.securesms.messages.PreservedRemoteDelete
+ import org.thoughtcrime.securesms.mms.PartAuthority
+ import org.thoughtcrime.securesms.mms.QuoteModel
+ import org.thoughtcrime.securesms.payments.FailureReason
+@@ -1437,6 +1438,7 @@ private fun BodyRangeList.BodyRange.Style.toRemote(): BackupBodyRange.Style {
+ 
+ private fun List<ReactionRecord>?.toRemote(exportState: ExportState): List<Reaction> {
+   return this
++    ?.filterNot(PreservedRemoteDelete::isMarker)
+     ?.mapNotNull {
+       if (!it.author.hasAciOrE164(exportState)) {
+         return@mapNotNull null
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
+index bd1ac399b3..0f84457801 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
+@@ -161,6 +161,19 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
+         }
+       )
+ 
++      switchPref(
++        title = DSLSettingsText.from(R.string.preferences__ignore_remote_delete),
++        summary = DSLSettingsText.from(R.string.preferences__ignore_remote_delete_summary),
++        isChecked = state.ignoreRemoteDelete,
++        onClick = {
++          if (state.ignoreRemoteDelete) {
++            viewModel.setIgnoreRemoteDeleteEnabled(false)
++          } else {
++            showIgnoreRemoteDeleteConfirmation()
++          }
++        }
++      )
++
+       dividerPref()
+ 
+       sectionHeaderPref(R.string.PrivacySettingsFragment__disappearing_messages)
+@@ -329,6 +342,17 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
+     }
+   }
+ 
++  private fun showIgnoreRemoteDeleteConfirmation() {
++    MaterialAlertDialogBuilder(requireContext())
++      .setTitle(R.string.preferences__ignore_remote_delete_confirmation_title)
++      .setMessage(R.string.preferences__ignore_remote_delete_confirmation_message)
++      .setNegativeButton(android.R.string.cancel, null)
++      .setPositiveButton(R.string.preferences__ignore_remote_delete_confirmation_enable) { _, _ ->
++        viewModel.setIgnoreRemoteDeleteEnabled(true)
++      }
++      .show()
++  }
++
+   private fun showGoToPhoneSettings() {
+     MaterialAlertDialogBuilder(requireContext()).apply {
+       setTitle(getString(R.string.PrivacySettingsFragment__cant_enable_title))
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
+index 06c314db15..5af9ac70d4 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
+@@ -4,6 +4,7 @@ data class PrivacySettingsState(
+   val blockedCount: Int,
+   val readReceipts: Boolean,
+   val typingIndicators: Boolean,
++  val ignoreRemoteDelete: Boolean,
+   val screenLock: Boolean,
+   val screenLockActivityTimeout: Long,
+   val screenSecurity: Boolean,
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
+index 924569866d..23ac7d4a24 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
+@@ -37,6 +37,11 @@ class PrivacySettingsViewModel(
+     refresh()
+   }
+ 
++  fun setIgnoreRemoteDeleteEnabled(enabled: Boolean) {
++    SignalStore.settings.setIgnoreRemoteDelete(enabled)
++    refresh()
++  }
++
+   fun setScreenSecurityEnabled(enabled: Boolean) {
+     sharedPreferences.edit().putBoolean(TextSecurePreferences.SCREEN_SECURITY_PREF, enabled).apply()
+     refresh()
+@@ -71,6 +76,7 @@ class PrivacySettingsViewModel(
+       blockedCount = 0,
+       readReceipts = TextSecurePreferences.isReadReceiptsEnabled(AppDependencies.application),
+       typingIndicators = TextSecurePreferences.isTypingIndicatorsEnabled(AppDependencies.application),
++      ignoreRemoteDelete = SignalStore.settings.isIgnoreRemoteDeleteEnabled,
+       screenLock = SignalStore.settings.screenLockEnabled,
+       screenLockActivityTimeout = SignalStore.settings.screenLockTimeout,
+       screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(AppDependencies.application),
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
+index 98d71b9123..12b61a8947 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
+@@ -586,9 +586,16 @@ object DataMessageProcessor {
+     val targetMessage: MessageRecord? = SignalDatabase.messages.getMessageFor(targetSentTimestamp, senderRecipientId)
+ 
+     return if (targetMessage != null && MessageConstraintsUtil.isValidRemoteDeleteReceive(targetMessage, senderRecipientId, envelope.serverTimestamp!!)) {
+-      SignalDatabase.messages.markAsRemoteDelete(targetMessage, senderRecipientId)
+-      if (targetMessage.isStory()) {
+-        SignalDatabase.messages.deleteRemotelyDeletedStory(targetMessage.id)
++      val isSelfDelete = senderRecipientId == Recipient.self().id
++      if (!isSelfDelete && SignalStore.settings.isIgnoreRemoteDeleteEnabled) {
++        log(envelope.clientTimestamp!!, "Ignoring remote delete due to user preference and labeling the preserved message")
++        val marker = PreservedRemoteDelete.marker(senderRecipientId)
++        SignalDatabase.reactions.addReaction(MessageId(targetMessage.id), marker)
++      } else {
++        SignalDatabase.messages.markAsRemoteDelete(targetMessage, senderRecipientId)
++        if (targetMessage.isStory()) {
++          SignalDatabase.messages.deleteRemotelyDeletedStory(targetMessage.id)
++        }
+       }
+ 
+       AppDependencies.messageNotifier.updateNotification(context, ConversationId.fromMessageRecord(targetMessage))
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
+new file mode 100644
+index 0000000000..ca20eb4bbf
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
+@@ -0,0 +1,38 @@
++package org.thoughtcrime.securesms.messages
++
++import org.thoughtcrime.securesms.database.model.ReactionRecord
++import org.thoughtcrime.securesms.recipients.RecipientId
++
++/**
++ * Stores a local-only annotation for a message whose remote-deletion request was
++ * deliberately ignored. The reactions table gives the annotation the lifecycle
++ * of its message without changing the message payload.
++ */
++object PreservedRemoteDelete {
++  private const val MARKER = "\uF8FFvesper.remote-delete"
++
++  @JvmStatic
++  fun marker(author: RecipientId): ReactionRecord {
++    return ReactionRecord(
++      emoji = MARKER,
++      author = author,
++      dateSent = 0,
++      dateReceived = 0
++    )
++  }
++
++  @JvmStatic
++  fun isMarker(reaction: ReactionRecord): Boolean {
++    return reaction.emoji == MARKER && reaction.dateSent == 0L && reaction.dateReceived == 0L
++  }
++
++  @JvmStatic
++  fun hasMarker(reactions: List<ReactionRecord>): Boolean {
++    return reactions.any(::isMarker)
++  }
++
++  @JvmStatic
++  fun hasUserReactions(reactions: List<ReactionRecord>): Boolean {
++    return reactions.any { !isMarker(it) }
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
+index 846d155297..f2c642753e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
+@@ -13,11 +13,12 @@ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+ import androidx.core.content.ContextCompat;
+ 
+-
++import org.signal.core.ui.util.ThemeUtil;
+ import org.thoughtcrime.securesms.R;
+ import org.thoughtcrime.securesms.components.emoji.EmojiImageView;
+ import org.thoughtcrime.securesms.components.emoji.EmojiUtil;
+ import org.thoughtcrime.securesms.database.model.ReactionRecord;
++import org.thoughtcrime.securesms.messages.PreservedRemoteDelete;
+ import org.thoughtcrime.securesms.recipients.Recipient;
+ import org.thoughtcrime.securesms.recipients.RecipientId;
+ import org.thoughtcrime.securesms.util.ViewUtil;
+@@ -130,6 +131,10 @@ public class ReactionsConversationView extends LinearLayout {
+ 
+     removeAllViews();
+ 
++    if (PreservedRemoteDelete.hasMarker(records)) {
++      addView(buildPreservedDeletePill(getContext(), this));
++    }
++
+     for (Reaction reaction : reactions) {
+       View pill = buildPill(getContext(), this, reaction);
+       addView(pill);
+@@ -143,6 +148,10 @@ public class ReactionsConversationView extends LinearLayout {
+     RecipientId           selfId   = Recipient.self().getId();
+ 
+     for (ReactionRecord record : records) {
++      if (PreservedRemoteDelete.isMarker(record)) {
++        continue;
++      }
++
+       String   baseEmoji = EmojiUtil.getCanonicalRepresentation(record.getEmoji());
+       Reaction info      = counters.get(baseEmoji);
+ 
+@@ -222,6 +231,22 @@ public class ReactionsConversationView extends LinearLayout {
+     return root;
+   }
+ 
++  private static View buildPreservedDeletePill(@NonNull Context context, @NonNull ViewGroup parent) {
++    View           root      = LayoutInflater.from(context).inflate(R.layout.reactions_pill, parent, false);
++    EmojiImageView emojiView = root.findViewById(R.id.reactions_pill_emoji);
++    TextView       countView = root.findViewById(R.id.reactions_pill_count);
++    View           spacer    = root.findViewById(R.id.reactions_pill_spacer);
++
++    emojiView.setVisibility(GONE);
++    spacer.setVisibility(GONE);
++    countView.setText(R.string.preferences__preserved_remote_delete_badge);
++    countView.setTextColor(ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnErrorContainer));
++    root.setBackground(ContextCompat.getDrawable(context, R.drawable.vesper_preserved_delete_pill_background));
++    root.setContentDescription(context.getString(R.string.preferences__preserved_remote_delete_badge));
++
++    return root;
++  }
++
+   private static class Reaction implements Comparable<Reaction> {
+     private String  baseEmoji;
+     private String  displayEmoji;
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt
+index e7182106ec..6039b15393 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt
+@@ -10,6 +10,7 @@ import org.thoughtcrime.securesms.database.SignalDatabase
+ import org.thoughtcrime.securesms.database.model.MessageId
+ import org.thoughtcrime.securesms.database.model.ReactionRecord
+ import org.thoughtcrime.securesms.dependencies.AppDependencies
++import org.thoughtcrime.securesms.messages.PreservedRemoteDelete
+ import org.thoughtcrime.securesms.recipients.Recipient
+ import org.thoughtcrime.securesms.sms.MessageSender
+ 
+@@ -38,7 +39,7 @@ class ReactionsRepository {
+   private fun fetchReactionDetails(messageId: MessageId): List<ReactionDetails> {
+     val reactions: List<ReactionRecord> = SignalDatabase.reactions.getReactions(messageId)
+ 
+-    return reactions.map { reaction ->
++    return reactions.filterNot(PreservedRemoteDelete::isMarker).map { reaction ->
+       ReactionDetails(
+         sender = Recipient.resolved(reaction.author),
+         baseEmoji = EmojiUtil.getCanonicalRepresentation(reaction.emoji),
+diff --git a/app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml b/app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
+new file mode 100644
+index 0000000000..dbfaefcb68
+--- /dev/null
++++ b/app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<shape xmlns:android="http://schemas.android.com/apk/res/android"
++    android:shape="rectangle">
++    <solid android:color="?attr/colorErrorContainer" />
++    <corners android:radius="13dp" />
++</shape>

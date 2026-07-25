@@ -1,0 +1,27 @@
+Vesper for Android
+Copyright 2026 Vesper contributors
+
+Vesper is licensed under the GNU Affero General Public License, version 3 only.
+See LICENSE for the full terms.
+
+Vesper is maintained as changes against Signal Android:
+https://github.com/signalapp/Signal-Android
+
+Signal Android is copyright Signal Messenger, LLC and its contributors. Vesper
+keeps Signal's copyright and licence notices in the materialised source. "Signal"
+and its associated marks belong to their respective owners. Use of the code or
+name does not imply affiliation or endorsement.
+
+Vesper also carries work adapted from Molly:
+https://github.com/mollyim/mollyim-android
+
+This includes dynamic-colour resources, optional debug logging, parts of the
+settings UI, and the resource and colour tools. Those changes include work by
+Oscar Mira and other Molly contributors. The rebranding plugin keeps Molly's
+copyright notice in the source file.
+
+Molly and its contributors retain their copyright. Molly is an independent
+project and does not endorse Vesper.
+
+Other dependencies and notices come from the pinned Signal source and remain
+under their own licences.

@@ -1,0 +1,232 @@
+From d07bd6b56d585722140889181a61869768b9122e Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:44 +0100
+Subject: [PATCH 7/8] fix: refine Vesper conversation appearance
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../settings/app/help/HelpSettingsFragment.kt | 30 +---------------
+ .../V2ConversationItemTextOnlyViewHolder.kt   |  5 +--
+ .../securesms/keyvalue/SettingsValues.java    |  2 +-
+ .../reactions/ReactionsConversationView.java  | 35 +++++++++++++++++--
+ 4 files changed, 38 insertions(+), 34 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
+index 68247d948c..763a97aa25 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
+@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.foundation.text.InlineTextContent
+-import androidx.compose.foundation.text.appendInlineContent
+-import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
+@@ -27,14 +24,10 @@ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.res.vectorResource
+ import androidx.compose.ui.text.LinkAnnotation
+-import androidx.compose.ui.text.Placeholder
+-import androidx.compose.ui.text.PlaceholderVerticalAlign
+ import androidx.compose.ui.text.SpanStyle
+ import androidx.compose.ui.text.buildAnnotatedString
+ import androidx.compose.ui.text.withLink
+ import androidx.compose.ui.text.withStyle
+-import androidx.compose.ui.unit.dp
+-import androidx.compose.ui.unit.sp
+ import androidx.fragment.app.viewModels
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.navigation.NavController
+@@ -171,7 +164,6 @@ class HelpSettingsFragment : ComposeFragment() {
+         }
+ 
+         item {
+-          val externalLinkId = "vesper-website-icon"
+           val aboutLabel = buildAnnotatedString {
+             append(getString(R.string.HelpSettingsFragment__vesper_messenger_by))
+             append(" ")
+@@ -182,7 +174,6 @@ class HelpSettingsFragment : ComposeFragment() {
+             ) {
+               withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                 append(getString(R.string.HelpSettingsFragment__amber_systems))
+-                appendInlineContent(externalLinkId, "[external link]")
+               }
+             }
+             append("\n")
+@@ -190,22 +181,6 @@ class HelpSettingsFragment : ComposeFragment() {
+             append("\n")
+             append(getString(R.string.HelpSettingsFragment__signal_is_a_501c3))
+           }
+-          val inlineContent = mapOf(
+-            externalLinkId to InlineTextContent(
+-              placeholder = Placeholder(
+-                width = 20.sp,
+-                height = 16.sp,
+-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+-              )
+-            ) {
+-              Icon(
+-                imageVector = ImageVector.vectorResource(R.drawable.symbol_open_20),
+-                contentDescription = null,
+-                tint = MaterialTheme.colorScheme.primary,
+-                modifier = Modifier.padding(start = 4.dp)
+-              )
+-            }
+-          )
+ 
+           Row(
+             modifier = Modifier
+@@ -213,10 +188,7 @@ class HelpSettingsFragment : ComposeFragment() {
+               .padding(defaultPadding()),
+             verticalAlignment = CenterVertically
+           ) {
+-            TextAndLabel(
+-              label = aboutLabel,
+-              inlineContent = inlineContent
+-            )
++            TextAndLabel(label = aboutLabel)
+           }
+         }
+       }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/items/V2ConversationItemTextOnlyViewHolder.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/items/V2ConversationItemTextOnlyViewHolder.kt
+index 24cc490730..a21a43e16b 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/items/V2ConversationItemTextOnlyViewHolder.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/items/V2ConversationItemTextOnlyViewHolder.kt
+@@ -45,6 +45,7 @@ import org.thoughtcrime.securesms.database.model.MessageRecord
+ import org.thoughtcrime.securesms.database.model.MmsMessageRecord
+ import org.thoughtcrime.securesms.dependencies.AppDependencies
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
++import org.thoughtcrime.securesms.messages.PreservedRemoteDelete
+ import org.thoughtcrime.securesms.recipients.Recipient
+ import org.thoughtcrime.securesms.recipients.RecipientId
+ import org.thoughtcrime.securesms.util.InterceptableLongClickCopyLinkSpan
+@@ -693,14 +694,14 @@ open class V2ConversationItemTextOnlyViewHolder<Model : MappingModel<Model>>(
+       binding.reactions.setReactions(conversationMessage.messageRecord.reactions)
+       binding.root.addOnMeasureListener(reactionMeasureListener)
+       binding.reactions.setOnClickListener {
+-        if (conversationContext.selectedItems.isEmpty()) {
++        if (PreservedRemoteDelete.hasUserReactions(conversationMessage.messageRecord.reactions) && conversationContext.selectedItems.isEmpty()) {
+           conversationContext.clickListener
+             .onReactionClicked(
+               Multiselect.getParts(conversationMessage).asSingle().singlePart,
+               conversationMessage.messageRecord.id,
+               conversationMessage.messageRecord.isMms
+             )
+-        } else {
++        } else if (conversationContext.selectedItems.isNotEmpty()) {
+           conversationContext.clickListener.onItemClick(getMultiselectPartForLatestTouch())
+         }
+       }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
+index 53537b8db2..520439795e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
+@@ -256,7 +256,7 @@ public final class SettingsValues extends SignalStoreValues {
+   }
+ 
+   public boolean isDynamicColorsEnabled() {
+-    return getBoolean(DYNAMIC_COLORS_ENABLED, false);
++    return getBoolean(DYNAMIC_COLORS_ENABLED, true);
+   }
+ 
+   public int getMessageFontSize() {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
+index f2c642753e..a64670b7b9 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
+@@ -1,6 +1,7 @@
+ package org.thoughtcrime.securesms.reactions;
+ 
+ import android.content.Context;
++import android.content.res.ColorStateList;
+ import android.content.res.TypedArray;
+ import android.util.AttributeSet;
+ import android.view.LayoutInflater;
+@@ -12,6 +13,7 @@ import android.widget.TextView;
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+ import androidx.core.content.ContextCompat;
++import androidx.core.widget.TextViewCompat;
+ 
+ import org.signal.core.ui.util.ThemeUtil;
+ import org.thoughtcrime.securesms.R;
+@@ -38,6 +40,8 @@ public class ReactionsConversationView extends LinearLayout {
+   private List<ReactionRecord> records;
+   private int                  bubbleWidth;
+   private boolean              isSettingBubbleWidth;
++  private @Nullable View       preservedDeletePill;
++  private @Nullable TextView   preservedDeleteLabel;
+ 
+   public ReactionsConversationView(Context context) {
+     super(context);
+@@ -61,6 +65,8 @@ public class ReactionsConversationView extends LinearLayout {
+   public void clear() {
+     this.records.clear();
+     this.bubbleWidth = 0;
++    this.preservedDeletePill = null;
++    this.preservedDeleteLabel = null;
+     removeAllViews();
+   }
+ 
+@@ -88,6 +94,13 @@ public class ReactionsConversationView extends LinearLayout {
+         pill.setVisibility(bubbleWidth == 0 ? INVISIBLE : VISIBLE);
+       }
+ 
++      setPreservedDeleteCompact(false);
++
++      if (preservedDeletePill != null) {
++        preservedDeletePill.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
++        setPreservedDeleteCompact(preservedDeletePill.getMeasuredWidth() >= bubbleWidth - OUTER_MARGIN);
++      }
++
+       measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+ 
+       int railWidth = getMeasuredWidth();
+@@ -130,9 +143,13 @@ public class ReactionsConversationView extends LinearLayout {
+     List<Reaction> reactions = buildSortedReactionsList(records);
+ 
+     removeAllViews();
++    preservedDeletePill = null;
++    preservedDeleteLabel = null;
+ 
+     if (PreservedRemoteDelete.hasMarker(records)) {
+-      addView(buildPreservedDeletePill(getContext(), this));
++      preservedDeletePill = buildPreservedDeletePill(getContext(), this);
++      preservedDeleteLabel = preservedDeletePill.findViewById(R.id.reactions_pill_count);
++      addView(preservedDeletePill);
+     }
+ 
+     for (Reaction reaction : reactions) {
+@@ -239,14 +256,28 @@ public class ReactionsConversationView extends LinearLayout {
+ 
+     emojiView.setVisibility(GONE);
+     spacer.setVisibility(GONE);
++    int foregroundColor = ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnErrorContainer);
++
+     countView.setText(R.string.preferences__preserved_remote_delete_badge);
+-    countView.setTextColor(ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnErrorContainer));
++    countView.setTextColor(foregroundColor);
++    countView.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.symbol_trash_compact_20, 0, 0, 0);
++    countView.setCompoundDrawablePadding(ViewUtil.dpToPx(4));
++    TextViewCompat.setCompoundDrawableTintList(countView, ColorStateList.valueOf(foregroundColor));
+     root.setBackground(ContextCompat.getDrawable(context, R.drawable.vesper_preserved_delete_pill_background));
+     root.setContentDescription(context.getString(R.string.preferences__preserved_remote_delete_badge));
+ 
+     return root;
+   }
+ 
++  private void setPreservedDeleteCompact(boolean compact) {
++    if (preservedDeleteLabel == null) {
++      return;
++    }
++
++    preservedDeleteLabel.setText(compact ? null : getContext().getString(R.string.preferences__preserved_remote_delete_badge));
++    preservedDeleteLabel.setCompoundDrawablePadding(compact ? 0 : ViewUtil.dpToPx(4));
++  }
++
+   private static class Reaction implements Comparable<Reaction> {
+     private String  baseEmoji;
+     private String  displayEmoji;

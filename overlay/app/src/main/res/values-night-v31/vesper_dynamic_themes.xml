@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adapted from Molly Instant Messenger.
+  SPDX-License-Identifier: AGPL-3.0-only
+-->
+<resources>
+    <style name="Theme.Vesper.Dynamic" parent="Theme.Vesper.Dynamic.Dark" />
+    <style name="Theme.Vesper.Dynamic.NoActionBar" parent="Theme.Vesper.Dynamic.NoActionBar.Dark" />
+    <style name="Theme.Vesper.Dynamic.Registration" parent="Theme.Vesper.Dynamic.Registration.Dark" />
+
+    <style name="Theme.Vesper.Dynamic.ConversationSettings" parent="Theme.Vesper.Dynamic.ConversationSettings.Dark" />
+</resources>

@@ -1,0 +1,300 @@
+# Copyright 2026 Vesper contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+name: Build Vesper
+
+on:
+  push:
+    branches:
+      - main
+  workflow_call:
+    inputs:
+      signal_tag:
+        description: Stable Signal tag to build
+        required: true
+        type: string
+      advance_pin:
+        description: Advance upstream.pin after publication succeeds
+        required: false
+        default: false
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      signal_tag:
+        description: Stable Signal tag; leave empty to use upstream.pin
+        required: false
+        type: string
+      advance_pin:
+        description: Advance upstream.pin after publication succeeds
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vesper-build-${{ inputs.signal_tag || 'pinned' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Signal ${{ inputs.signal_tag || 'pinned release' }}
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 120
+    env:
+      R2_BUCKET: vesper-android-updates
+      UPDATE_ORIGIN: https://vspab.asy.st
+
+    steps:
+      - name: Check out Vesper patchset
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Signal tag
+        id: version
+        env:
+          REQUESTED_TAG: ${{ inputs.signal_tag }}
+        run: |
+          tag="$REQUESTED_TAG"
+          if [[ -z "$tag" ]]; then
+            tag="$(sed -n 's/^signal=//p' upstream.pin)"
+          fi
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid Signal tag: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Materialise Vesper
+        run: ./tools/materialize.sh --tag "${{ steps.version.outputs.tag }}"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Install declared Android toolchain
+        run: |
+          compile_sdk="$(sed -n 's/^compileSdk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          build_tools="$(sed -n 's/^buildTools = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          ndk="$(sed -n 's/^ndk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          echo "y" | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platforms;$compile_sdk" \
+            "build-tools;$build_tools" \
+            "ndk;$ndk"
+
+      - name: Build release APKs
+        working-directory: work
+        run: ./gradlew :Signal-Android:assembleWebsiteProdRelease --stacktrace
+
+      - name: Locate universal APK
+        id: apk
+        run: |
+          output_dir="work/app/build/outputs/apk/websiteProd/release"
+          mapfile -t apks < <(
+            find "$output_dir" \
+              -maxdepth 1 -type f -iname '*universal*.apk' |
+              sort
+          )
+          if [[ "${#apks[@]}" -ne 1 ]]; then
+            printf 'Expected one universal APK, found %s:\n' "${#apks[@]}" >&2
+            find "$output_dir" -maxdepth 1 -type f -name '*.apk' \
+              -printf '  %p\n' |
+              sort >&2
+            exit 1
+          fi
+          echo "unsigned=${apks[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Check signing credentials
+        env:
+          SECRET_KEYSTORE: ${{ secrets.SECRET_KEYSTORE }}
+          SECRET_KEYSTORE_ALIAS: ${{ secrets.SECRET_KEYSTORE_ALIAS }}
+          SECRET_KEYSTORE_PASSWORD: ${{ secrets.SECRET_KEYSTORE_PASSWORD }}
+        run: |
+          missing=()
+          for name in \
+            SECRET_KEYSTORE \
+            SECRET_KEYSTORE_ALIAS \
+            SECRET_KEYSTORE_PASSWORD; do
+            [[ -n "${!name}" ]] || missing+=("$name")
+          done
+          if ((${#missing[@]})); then
+            printf 'Missing required signing secret: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Check publishing credentials
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          missing=()
+          for name in \
+            R2_ACCOUNT_ID \
+            R2_ACCESS_KEY_ID \
+            R2_SECRET_ACCESS_KEY; do
+            [[ -n "${!name}" ]] || missing+=("$name")
+          done
+          if ((${#missing[@]})); then
+            printf 'Missing required publishing secret: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+      - name: Sign and verify universal APK
+        id: signed
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SECRET_KEYSTORE }}
+          KEYSTORE_ALIAS: ${{ secrets.SECRET_KEYSTORE_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.SECRET_KEYSTORE_PASSWORD }}
+          UNSIGNED_APK: ${{ steps.apk.outputs.unsigned }}
+          SIGNAL_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          keystore="$RUNNER_TEMP/vesper-release.jks"
+          signed_apk="$RUNNER_TEMP/Vesper-${SIGNAL_TAG#v}-build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.apk"
+          printenv KEYSTORE_BASE64 | base64 --decode > "$keystore"
+          apksigner="$(
+            find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 \
+              -type f -name apksigner |
+              sort -V |
+              tail -n 1
+          )"
+          "$apksigner" sign \
+            --ks "$keystore" \
+            --ks-key-alias "$KEYSTORE_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEYSTORE_PASSWORD \
+            --out "$signed_apk" \
+            "$UNSIGNED_APK"
+          "$apksigner" verify --verbose --print-certs "$signed_apk"
+          echo "path=$signed_apk" >> "$GITHUB_OUTPUT"
+          echo "filename=$(basename "$signed_apk")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload signed build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Vesper-${{ steps.version.outputs.tag }}-signed
+          path: ${{ steps.signed.outputs.path }}
+          if-no-files-found: error
+
+      - name: Build update manifest
+        id: manifest
+        env:
+          SIGNED_APK: ${{ steps.signed.outputs.path }}
+          APK_FILENAME: ${{ steps.signed.outputs.filename }}
+        run: |
+          aapt="$(
+            find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 \
+              -type f -name aapt |
+              sort -V |
+              tail -n 1
+          )"
+          badging="$("$aapt" dump badging "$SIGNED_APK")"
+          version_code="$(
+            sed -n "s/^package:.*versionCode='\\([^']*\\)'.*/\\1/p" <<< "$badging"
+          )"
+          version_name="$(
+            sed -n "s/^package:.*versionName='\\([^']*\\)'.*/\\1/p" <<< "$badging"
+          )"
+          build_config="work/app/build/generated/source/buildConfig/websiteProd/release/org/thoughtcrime/securesms/BuildConfig.java"
+          build_timestamp="$(
+            sed -n 's/.*BUILD_TIMESTAMP = \([0-9][0-9]*\)L;.*/\1/p' "$build_config"
+          )"
+          [[ -n "$version_code" && -n "$version_name" && -n "$build_timestamp" ]] || {
+            echo "Could not read version metadata from signed APK." >&2
+            exit 1
+          }
+          sha256sum="$(sha256sum "$SIGNED_APK" | cut -d' ' -f1)"
+          manifest="$RUNNER_TEMP/latest.json"
+          jq -n \
+            --argjson versionCode "$version_code" \
+            --arg versionName "$version_name" \
+            --arg url "$UPDATE_ORIGIN/android/$APK_FILENAME" \
+            --arg sha256sum "$sha256sum" \
+            --argjson buildTimestamp "$build_timestamp" \
+            --argjson uploadTimestamp "$(date +%s%3N)" \
+            '{
+              versionCode: $versionCode,
+              versionName: $versionName,
+              url: $url,
+              sha256sum: $sha256sum,
+              buildTimestamp: $buildTimestamp,
+              uploadTimestamp: $uploadTimestamp
+            }' > "$manifest"
+          jq --exit-status . "$manifest"
+          echo "path=$manifest" >> "$GITHUB_OUTPUT"
+
+      - name: Publish APK, then update manifest
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          SIGNED_APK: ${{ steps.signed.outputs.path }}
+          APK_FILENAME: ${{ steps.signed.outputs.filename }}
+          UPDATE_MANIFEST: ${{ steps.manifest.outputs.path }}
+        run: |
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          aws s3 cp \
+            "$SIGNED_APK" \
+            "s3://$R2_BUCKET/android/$APK_FILENAME" \
+            --endpoint-url "$endpoint" \
+            --cache-control 'public, max-age=31536000, immutable' \
+            --content-type 'application/vnd.android.package-archive'
+          aws s3 cp \
+            "$UPDATE_MANIFEST" \
+            "s3://$R2_BUCKET/android/latest.json" \
+            --endpoint-url "$endpoint" \
+            --cache-control 'public, max-age=300' \
+            --content-type 'application/json'
+
+      - name: Advance known-good pin and tag
+        env:
+          ADVANCE_PIN: ${{ inputs.advance_pin }}
+          SIGNAL_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if [[ "$ADVANCE_PIN" == "true" ]]; then
+            ./tools/bump.sh --accept "$SIGNAL_TAG"
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          if ! git diff --quiet -- upstream.pin; then
+            git add upstream.pin
+            git commit -m "chore: advance Signal to $SIGNAL_TAG"
+            git push origin HEAD:main
+          fi
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$SIGNAL_TAG" >/dev/null 2>&1; then
+            git tag "$SIGNAL_TAG"
+            git push origin "$SIGNAL_TAG"
+          fi
+
+      - name: Create or update draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNAL_TAG: ${{ steps.version.outputs.tag }}
+          SIGNED_APK: ${{ steps.signed.outputs.path }}
+        run: |
+          if gh release view "$SIGNAL_TAG" >/dev/null 2>&1; then
+            gh release upload "$SIGNAL_TAG" "$SIGNED_APK" --clobber
+          else
+            gh release create "$SIGNAL_TAG" "$SIGNED_APK" \
+              --draft \
+              --verify-tag \
+              --title "Vesper ${SIGNAL_TAG#v}" \
+              --notes "Vesper for Android, rebuilt from Signal $SIGNAL_TAG."
+          fi
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          keystore="$RUNNER_TEMP/vesper-release.jks"
+          [[ ! -e "$keystore" ]] || shred -u "$keystore"

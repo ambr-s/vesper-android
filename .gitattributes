@@ -1,0 +1,2 @@
+# Unified diffs encode empty context lines with a one-character prefix.
+patches/*.patch whitespace=-blank-at-eol,-blank-at-eof

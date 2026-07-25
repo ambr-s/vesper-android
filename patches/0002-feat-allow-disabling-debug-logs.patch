@@ -1,0 +1,157 @@
+From d312f2c5a48fb6b95b93368e2dfd0a4408d1dea3 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:41 +0100
+Subject: [PATCH 2/8] feat: allow disabling debug logs
+
+Adapted from Molly work by Oscar Mira and other Molly contributors.
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../settings/app/help/HelpSettingsState.kt    |  5 ++++
+ .../securesms/util/TextSecurePreferences.java |  9 +++++++
+ .../java/org/signal/core/util/logging/Log.kt  | 27 ++++++++++++-------
+ 3 files changed, 31 insertions(+), 10 deletions(-)
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
+new file mode 100644
+index 0000000000..3033c7e651
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
+@@ -0,0 +1,5 @@
++package org.thoughtcrime.securesms.components.settings.app.help
++
++data class HelpSettingsState(
++  val logEnabled: Boolean
++)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java b/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java
+index 2b04af571f..8b16e49eb7 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java
+@@ -122,6 +122,7 @@ public class TextSecurePreferences {
+   private static final String LAST_FULL_CONTACT_SYNC_TIME = "pref_last_full_contact_sync_time";
+   private static final String NEEDS_FULL_CONTACT_SYNC     = "pref_needs_full_contact_sync";
+ 
++  public  static final String LOG_ENABLED            = "pref_log_enabled";
+   private static final String LOG_ENCRYPTED_SECRET   = "pref_log_encrypted_secret";
+   private static final String LOG_UNENCRYPTED_SECRET = "pref_log_unencrypted_secret";
+ 
+@@ -719,6 +720,14 @@ public class TextSecurePreferences {
+     setBooleanPreference(context, NEEDS_FULL_CONTACT_SYNC, needsSync);
+   }
+ 
++  public static void setLogEnabled(Context context, boolean enabled) {
++    setBooleanPreference(context, LOG_ENABLED, enabled);
++  }
++
++  public static boolean isLogEnabled(Context context) {
++    return getBooleanPreference(context, LOG_ENABLED, false);
++  }
++
+   public static void setLogEncryptedSecret(Context context, String base64Secret) {
+     setStringPreference(context, LOG_ENCRYPTED_SECRET, base64Secret);
+   }
+diff --git a/core/util-jvm/src/main/java/org/signal/core/util/logging/Log.kt b/core/util-jvm/src/main/java/org/signal/core/util/logging/Log.kt
+index 1748be82ee..752f830e8a 100644
+--- a/core/util-jvm/src/main/java/org/signal/core/util/logging/Log.kt
++++ b/core/util-jvm/src/main/java/org/signal/core/util/logging/Log.kt
+@@ -10,7 +10,8 @@ import kotlin.reflect.KClass
+ object Log {
+   private val NOOP_LOGGER: Logger = NoopLogger()
+   private var internalCheck: InternalCheck? = null
+-  private var logger: Logger = NoopLogger()
++  private var initializedLogger: Logger = NoopLogger()
++  private var activeLogger: Logger = NoopLogger()
+ 
+   /**
+    * @param internalCheck A checker that will indicate if this is an internal user
+@@ -19,7 +20,8 @@ object Log {
+   @JvmStatic
+   fun initialize(internalCheck: InternalCheck?, vararg loggers: Logger) {
+     Log.internalCheck = internalCheck
+-    logger = CompoundLogger(loggers.toList())
++    initializedLogger = CompoundLogger(loggers.toList())
++    activeLogger = initializedLogger
+   }
+ 
+   @JvmStatic
+@@ -27,6 +29,11 @@ object Log {
+     initialize({ false }, *loggers)
+   }
+ 
++  @JvmStatic
++  fun setLogging(enabled: Boolean) {
++    activeLogger = if (enabled) initializedLogger else NOOP_LOGGER
++  }
++
+   @JvmStatic
+   fun v(tag: String, message: String) = v(tag, message, null)
+ 
+@@ -40,7 +47,7 @@ object Log {
+   fun v(tag: String, message: String?, keepLonger: Boolean) = v(tag, message, null, keepLonger)
+ 
+   @JvmStatic
+-  fun v(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = logger.v(tag, message, t, keepLonger)
++  fun v(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = activeLogger.v(tag, message, t, keepLonger)
+ 
+   @JvmStatic
+   fun d(tag: String, message: String) = d(tag, message, null)
+@@ -55,7 +62,7 @@ object Log {
+   fun d(tag: String, message: String?, keepLonger: Boolean) = d(tag, message, null, keepLonger)
+ 
+   @JvmStatic
+-  fun d(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = logger.d(tag, message, t, keepLonger)
++  fun d(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = activeLogger.d(tag, message, t, keepLonger)
+ 
+   @JvmStatic
+   fun i(tag: String, message: String) = i(tag, message, null)
+@@ -70,7 +77,7 @@ object Log {
+   fun i(tag: String, message: String?, keepLonger: Boolean) = i(tag, message, null, keepLonger)
+ 
+   @JvmStatic
+-  fun i(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = logger.i(tag, message, t, keepLonger)
++  fun i(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = activeLogger.i(tag, message, t, keepLonger)
+ 
+   @JvmStatic
+   fun w(tag: String, message: String) = w(tag, message, null)
+@@ -82,11 +89,11 @@ object Log {
+   fun w(tag: String, message: String?, t: Throwable? = null) = w(tag, message, t, false)
+ 
+   @JvmStatic
+-  fun w(tag: String, message: String?, keepLonger: Boolean) = logger.w(tag, message, keepLonger)
++  fun w(tag: String, message: String?, keepLonger: Boolean) = activeLogger.w(tag, message, keepLonger)
+ 
+   @JvmStatic
+   fun w(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) {
+-    logger.w(tag, message, t, keepLonger)
++    activeLogger.w(tag, message, t, keepLonger)
+   }
+ 
+   @JvmStatic
+@@ -102,7 +109,7 @@ object Log {
+   fun e(tag: String, message: String?, keepLonger: Boolean) = e(tag, message, null, keepLonger)
+ 
+   @JvmStatic
+-  fun e(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = logger.e(tag, message, t, keepLonger)
++  fun e(tag: String, message: String?, t: Throwable?, keepLonger: Boolean) = activeLogger.e(tag, message, t, keepLonger)
+ 
+   @JvmStatic
+   fun tag(clazz: KClass<*>): String {
+@@ -129,7 +136,7 @@ object Log {
+   @JvmStatic
+   fun internal(): Logger {
+     return if (internalCheck!!.isInternal()) {
+-      logger
++      activeLogger
+     } else {
+       NOOP_LOGGER
+     }
+@@ -137,7 +144,7 @@ object Log {
+ 
+   @JvmStatic
+   fun blockUntilAllWritesFinished() {
+-    logger.flush()
++    initializedLogger.flush()
+   }
+ 
+   abstract class Logger {

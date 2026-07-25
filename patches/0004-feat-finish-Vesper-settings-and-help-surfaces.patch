@@ -1,0 +1,818 @@
+From 9e3a8077b1990ee51c95521b90da1811c7f9b3f0 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:42 +0100
+Subject: [PATCH 4/8] feat: finish Vesper settings and help surfaces
+
+Adapted from Molly work by Oscar Mira and other Molly contributors.
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../securesms/ApplicationContext.java         |   6 +
+ .../securesms/apkupdate/ApkUpdateInstaller.kt |  14 ++-
+ .../settings/DSLSettingsActivity.kt           |  14 ++-
+ .../settings/app/AppSettingsFragment.kt       |  26 ++---
+ .../settings/app/AppSettingsState.kt          |   4 +-
+ .../settings/app/AppSettingsViewModel.kt      |   4 +-
+ .../settings/app/help/HelpSettingsFragment.kt | 107 ++++++++++++++++--
+ .../app/help/HelpSettingsViewModel.kt         |  53 +++++++++
+ .../settings/app/labs/LabsSettingsFragment.kt |   2 +-
+ .../StatusBarColorNestedScrollConnection.kt   |  19 +++-
+ .../securesms/jobs/ApkUpdateJob.kt            |  39 ++++---
+ .../securesms/keyvalue/LabsValues.kt          |  20 ++--
+ .../securesms/keyvalue/MiscellaneousValues.kt |  26 +++++
+ .../securesms/util/RemoteConfig.kt            |  14 +++
+ .../res/drawable/reaction_pill_background.xml |   2 +-
+ .../reaction_pill_background_selected.xml     |   2 +-
+ .../main/res/layout/dsl_settings_toolbar.xml  |   2 +-
+ app/src/main/res/values/strings.xml           |   5 +
+ .../securesms/jobs/ApkUpdateJobTest.kt        |  34 ++++++
+ 19 files changed, 324 insertions(+), 69 deletions(-)
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
+index d153524694..14d0df9ab6 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
+@@ -67,6 +67,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
+ import org.thoughtcrime.securesms.glide.SignalGlideComponents;
+ import org.thoughtcrime.securesms.jobmanager.impl.SealedSenderConstraint;
+ import org.thoughtcrime.securesms.jobs.AccountConsistencyWorkerJob;
++import org.thoughtcrime.securesms.jobs.ApkUpdateJob;
+ import org.thoughtcrime.securesms.jobs.BackupRefreshJob;
+ import org.thoughtcrime.securesms.jobs.BackupSubscriptionCheckJob;
+ import org.thoughtcrime.securesms.jobs.BuildExpirationConfirmationJob;
+@@ -279,6 +280,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
+       BackupRefreshJob.enqueueIfNecessary();
+       InAppPaymentAuthCheckJob.enqueueIfNeeded();
+       RemoteConfig.refreshIfNecessary();
++      if (BuildConfig.MANAGES_APP_UPDATES && RemoteConfig.internalUser()) {
++        Log.i(TAG, "Internal preferences enabled; checking for an app update.");
++        AppDependencies.getJobManager().add(new ApkUpdateJob());
++      }
+       RetrieveProfileJob.enqueueRoutineFetchIfNecessary();
+       executePendingContactSync();
+       KeyCachingService.onAppForegrounded(this);
+@@ -363,6 +368,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+   @VisibleForTesting
+   protected void initializeLogging() {
+     Log.initialize(RemoteConfig::internalUser, AndroidLogger.INSTANCE, PersistentLogger.getInstance(this));
++    Log.setLogging(TextSecurePreferences.isLogEnabled(this));
+ 
+     SignalProtocolLoggerProvider.setProvider(new CustomSignalProtocolLogger());
+     SignalProtocolLoggerProvider.initializeLogging(BuildConfig.LIBSIGNAL_LOG_LEVEL);
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt b/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt
+index af21018d7d..090d3d5ce2 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt
+@@ -11,12 +11,14 @@ import android.content.Context
+ import android.content.Intent
+ import android.content.pm.PackageInstaller
+ import android.os.Build
++import org.greenrobot.eventbus.EventBus
+ import org.signal.core.util.AppForegroundObserver
+ import org.signal.core.util.PendingIntentFlags
+ import org.signal.core.util.StreamUtil
+ import org.signal.core.util.getDownloadManager
+ import org.signal.core.util.logging.Log
+ import org.thoughtcrime.securesms.dependencies.AppDependencies
++import org.thoughtcrime.securesms.events.WebRtcViewModel
+ import org.thoughtcrime.securesms.jobs.ApkUpdateJob
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+ import org.thoughtcrime.securesms.util.FileUtils
+@@ -186,12 +188,12 @@ object ApkUpdateInstaller {
+   }
+ 
+   private fun shouldAutoUpdate(): Boolean {
+-    // Once we have designs for allowing users to opt-out of auto-updates, we can re-enable this
+-    return false
++    val webRtcViewModel = EventBus.getDefault().getStickyEvent(WebRtcViewModel::class.java)
++    val isCallActive = webRtcViewModel != null && webRtcViewModel.state != WebRtcViewModel.State.IDLE
+ 
+-//    val webRtcViewModel = EventBus.getDefault().getStickyEvent(WebRtcViewModel::class.java)
+-//    val isCallActive = webRtcViewModel != null && webRtcViewModel.state != WebRtcViewModel.State.IDLE
+-//
+-//    return Build.VERSION.SDK_INT >= 31 && SignalStore.apkUpdate.autoUpdate && !AppForegroundObserver.isForegrounded() && !isCallActive
++    return Build.VERSION.SDK_INT >= 31 &&
++      SignalStore.apkUpdate.autoUpdate &&
++      !AppForegroundObserver.isForegrounded() &&
++      !isCallActive
+   }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt
+index 59b7743999..ef3e175802 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt
+@@ -21,7 +21,19 @@ open class DSLSettingsActivity : PassphraseRequiredActivity() {
+   protected lateinit var navController: NavController
+     private set
+ 
++  private var themeAppliedBeforeInflation = false
++
++  override fun onPreCreate() {
++    super.onPreCreate()
++    dynamicTheme.onCreate(this)
++    themeAppliedBeforeInflation = true
++  }
++
+   override fun onCreate(savedInstanceState: Bundle?, ready: Boolean) {
++    check(themeAppliedBeforeInflation) {
++      "The dynamic settings theme must be applied before inflating views."
++    }
++
+     setContentView(R.layout.dsl_settings_activity)
+ 
+     if (savedInstanceState == null) {
+@@ -42,8 +54,6 @@ open class DSLSettingsActivity : PassphraseRequiredActivity() {
+       navController = fragment.navController
+     }
+ 
+-    dynamicTheme.onCreate(this)
+-
+     onBackPressedDispatcher.addCallback(this, OnBackPressed())
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
+index 7699a7c2b7..5b1b938397 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
+@@ -522,21 +522,21 @@ private fun AppSettingsContent(
+           )
+         }
+ 
+-        if (state.showInternalPreferences) {
+-          item {
+-            Dividers.Default()
+-          }
++        item {
++          Dividers.Default()
++        }
+ 
+-          item {
+-            Rows.TextRow(
+-              text = "Labs",
+-              icon = painterResource(R.drawable.symbol_flash_24),
+-              onClick = {
+-                callbacks.navigate(AppSettingsRoute.LabsRoute.Labs)
+-              }
+-            )
+-          }
++        item {
++          Rows.TextRow(
++            text = "Labs",
++            icon = painterResource(R.drawable.symbol_flash_24),
++            onClick = {
++              callbacks.navigate(AppSettingsRoute.LabsRoute.Labs)
++            }
++          )
++        }
+ 
++        if (state.showInternalPreferences) {
+           item {
+             Rows.TextRow(
+               text = stringResource(R.string.preferences__internal_preferences),
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsState.kt
+index 630e4f79aa..a4e7a879b5 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsState.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsState.kt
+@@ -1,8 +1,8 @@
+ package org.thoughtcrime.securesms.components.settings.app
+ 
+ import androidx.compose.runtime.Immutable
++import org.thoughtcrime.securesms.BuildConfig
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+-import org.thoughtcrime.securesms.util.Environment
+ import org.thoughtcrime.securesms.util.RemoteConfig
+ 
+ @Immutable
+@@ -15,7 +15,7 @@ data class AppSettingsState(
+   val clientDeprecated: Boolean,
+   val showInternalPreferences: Boolean = RemoteConfig.internalUser,
+   val showPayments: Boolean = SignalStore.payments.paymentsAvailability.showPaymentsMenu(),
+-  val showAppUpdates: Boolean = Environment.IS_NIGHTLY,
++  val showAppUpdates: Boolean = BuildConfig.MANAGES_APP_UPDATES,
+   val backupFailureState: BackupFailureState = BackupFailureState.NONE
+ ) {
+   fun isRegisteredAndUpToDate(): Boolean {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsViewModel.kt
+index 3972b61270..af8509cfab 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsViewModel.kt
+@@ -13,6 +13,7 @@ import org.thoughtcrime.securesms.database.model.InAppPaymentSubscriberRecord
+ import org.thoughtcrime.securesms.dependencies.AppDependencies
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+ import org.thoughtcrime.securesms.recipients.Recipient
++import org.thoughtcrime.securesms.util.RemoteConfig
+ import org.thoughtcrime.securesms.util.TextSecurePreferences
+ import org.thoughtcrime.securesms.util.livedata.Store
+ 
+@@ -65,7 +66,8 @@ class AppSettingsViewModel : ViewModel() {
+     store.update {
+       it.copy(
+         hasExpiredGiftBadge = SignalStore.inAppPayments.getExpiredGiftBadge() != null,
+-        backupFailureState = getBackupFailureState()
++        backupFailureState = getBackupFailureState(),
++        showInternalPreferences = RemoteConfig.internalUser
+       )
+     }
+   }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
+index 2c0c55bbb9..68247d948c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
+@@ -10,16 +10,36 @@ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.foundation.text.InlineTextContent
++import androidx.compose.foundation.text.appendInlineContent
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableIntStateOf
+ import androidx.compose.runtime.remember
++import androidx.compose.runtime.saveable.rememberSaveable
++import androidx.compose.runtime.setValue
+ import androidx.compose.ui.Alignment.Companion.CenterVertically
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.res.vectorResource
++import androidx.compose.ui.text.LinkAnnotation
++import androidx.compose.ui.text.Placeholder
++import androidx.compose.ui.text.PlaceholderVerticalAlign
++import androidx.compose.ui.text.SpanStyle
++import androidx.compose.ui.text.buildAnnotatedString
++import androidx.compose.ui.text.withLink
++import androidx.compose.ui.text.withStyle
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import androidx.fragment.app.viewModels
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.navigation.NavController
+ import androidx.navigation.fragment.findNavController
++import com.google.android.material.dialog.MaterialAlertDialogBuilder
+ import org.signal.core.ui.compose.ComposeFragment
+ import org.signal.core.ui.compose.Dividers
+ import org.signal.core.ui.compose.Rows
+@@ -35,11 +55,15 @@ import org.thoughtcrime.securesms.util.navigation.safeNavigate
+ 
+ class HelpSettingsFragment : ComposeFragment() {
+ 
++  private val viewModel: HelpSettingsViewModel by viewModels()
++
+   @Composable
+   override fun FragmentContent() {
++    val state by viewModel.state.collectAsStateWithLifecycle()
+     val navController: NavController = remember { findNavController() }
+ 
+     val context = LocalContext.current
++    var versionTapCount by rememberSaveable { mutableIntStateOf(0) }
+ 
+     Scaffolds.Settings(
+       title = stringResource(R.string.preferences__help),
+@@ -77,6 +101,18 @@ class HelpSettingsFragment : ComposeFragment() {
+           Rows.TextRow(
+             text = stringResource(R.string.HelpSettingsFragment__version),
+             label = BuildConfig.VERSION_NAME,
++            onClick = {
++              versionTapCount++
++              if (versionTapCount >= INTERNAL_SETTINGS_TAP_COUNT) {
++                versionTapCount = 0
++                val enabled = viewModel.toggleInternalUser()
++                Toast.makeText(
++                  context,
++                  if (enabled) R.string.HelpSettingsFragment__internal_settings_enabled else R.string.HelpSettingsFragment__internal_settings_disabled,
++                  Toast.LENGTH_SHORT
++                ).show()
++              }
++            },
+             onLongClick = {
+               Util.copyToClipboard(context, BuildConfig.VERSION_NAME)
+               Toast.makeText(context, R.string.HelpSettingsFragment__copied_to_clipboard, Toast.LENGTH_SHORT).show()
+@@ -84,8 +120,30 @@ class HelpSettingsFragment : ComposeFragment() {
+           )
+         }
+ 
++        item {
++          Rows.ToggleRow(
++            checked = state.logEnabled,
++            text = stringResource(id = R.string.preferences__enable_debug_log),
++            onCheckChanged = { checked ->
++              if (checked) {
++                viewModel.setLogEnabled(true)
++              } else {
++                MaterialAlertDialogBuilder(requireContext())
++                  .setMessage(R.string.HelpSettingsFragment_disable_and_delete_debug_log)
++                  .setPositiveButton(android.R.string.ok) { dialog, _ ->
++                    viewModel.setLogEnabled(false)
++                    dialog.dismiss()
++                  }
++                  .setNegativeButton(android.R.string.cancel, null)
++                  .show()
++              }
++            }
++          )
++        }
++
+         item {
+           Rows.TextRow(
++            enabled = state.logEnabled,
+             text = stringResource(id = R.string.HelpSettingsFragment__debug_log),
+             onClick = {
+               navController.safeNavigate(R.id.action_helpSettingsFragment_to_submitDebugLogActivity)
+@@ -113,6 +171,42 @@ class HelpSettingsFragment : ComposeFragment() {
+         }
+ 
+         item {
++          val externalLinkId = "vesper-website-icon"
++          val aboutLabel = buildAnnotatedString {
++            append(getString(R.string.HelpSettingsFragment__vesper_messenger_by))
++            append(" ")
++            withLink(
++              LinkAnnotation.Clickable("vesper-website") {
++                CommunicationActions.openBrowserLink(context, getString(R.string.vesper_website_url))
++              }
++            ) {
++              withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
++                append(getString(R.string.HelpSettingsFragment__amber_systems))
++                appendInlineContent(externalLinkId, "[external link]")
++              }
++            }
++            append("\n")
++            append(getString(R.string.HelpFragment__licenced_under_the_agplv3))
++            append("\n")
++            append(getString(R.string.HelpSettingsFragment__signal_is_a_501c3))
++          }
++          val inlineContent = mapOf(
++            externalLinkId to InlineTextContent(
++              placeholder = Placeholder(
++                width = 20.sp,
++                height = 16.sp,
++                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
++              )
++            ) {
++              Icon(
++                imageVector = ImageVector.vectorResource(R.drawable.symbol_open_20),
++                contentDescription = null,
++                tint = MaterialTheme.colorScheme.primary,
++                modifier = Modifier.padding(start = 4.dp)
++              )
++            }
++          )
++
+           Row(
+             modifier = Modifier
+               .fillMaxWidth()
+@@ -120,17 +214,16 @@ class HelpSettingsFragment : ComposeFragment() {
+             verticalAlignment = CenterVertically
+           ) {
+             TextAndLabel(
+-              label = StringBuilder().apply {
+-                append(getString(R.string.HelpFragment__copyright_signal_messenger))
+-                append("\n")
+-                append(getString(R.string.HelpFragment__licenced_under_the_agplv3))
+-                append("\n")
+-                append(getString(R.string.HelpSettingsFragment__signal_is_a_501c3))
+-              }.toString()
++              label = aboutLabel,
++              inlineContent = inlineContent
+             )
+           }
+         }
+       }
+     }
+   }
++
++  private companion object {
++    const val INTERNAL_SETTINGS_TAP_COUNT = 7
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
+new file mode 100644
+index 0000000000..99a298f2a2
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
+@@ -0,0 +1,53 @@
++package org.thoughtcrime.securesms.components.settings.app.help
++
++import android.app.Application
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.viewModelScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.launch
++import org.signal.core.util.logging.Log
++import org.thoughtcrime.securesms.database.LogDatabase
++import org.thoughtcrime.securesms.dependencies.AppDependencies
++import org.thoughtcrime.securesms.util.RemoteConfig
++import org.thoughtcrime.securesms.util.TextSecurePreferences
++
++class HelpSettingsViewModel : ViewModel() {
++
++  private val application: Application = AppDependencies.application
++  private val internalState = MutableStateFlow(getState())
++
++  val state: StateFlow<HelpSettingsState> = internalState
++
++  fun setLogEnabled(enabled: Boolean) {
++    TextSecurePreferences.setLogEnabled(application, enabled)
++    Log.setLogging(enabled)
++
++    if (!enabled) {
++      viewModelScope.launch(Dispatchers.IO) {
++        Log.blockUntilAllWritesFinished()
++        LogDatabase.getInstance(application).run {
++          logs.clearAll()
++          crashes.clear()
++          anrs.clear()
++        }
++      }
++    }
++
++    internalState.update { getState() }
++  }
++
++  fun toggleInternalUser(): Boolean {
++    val enabled = !RemoteConfig.internalUser
++    RemoteConfig.setInternalUserOverride(enabled)
++    return enabled
++  }
++
++  private fun getState(): HelpSettingsState {
++    return HelpSettingsState(
++      logEnabled = TextSecurePreferences.isLogEnabled(application)
++    )
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
+index 64c29a3cac..91fa7b8619 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
+@@ -81,7 +81,7 @@ private fun LabsSettingsContent(
+             modifier = Modifier.size(20.dp)
+           )
+           Text(
+-            text = "These are internal-only pre-release features. They are all in various unfinished states. They may need more polish, finalized designs, or cross-client compatibility before they can be released.",
++            text = "These are experimental pre-release features. They are all in various unfinished states. They may need more polish, finalized designs, or cross-client compatibility before they can be released.",
+             style = MaterialTheme.typography.bodyMedium,
+             color = MaterialTheme.colorScheme.onSurfaceVariant,
+             modifier = Modifier.padding(start = 12.dp)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt b/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt
+index 61018f672c..9f8de0a0d5 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt
+@@ -5,6 +5,7 @@ import android.app.Activity
+ import androidx.activity.compose.LocalActivity
+ import androidx.appcompat.app.AppCompatActivity
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.remember
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.geometry.Offset
+@@ -97,11 +98,17 @@ class StatusBarColorNestedScrollConnection(
+ fun rememberStatusBarColorNestedScrollModifier(): Modifier {
+   val activity = LocalActivity.current as? AppCompatActivity
+ 
+-  return remember {
+-    if (activity != null) {
+-      Modifier.nestedScroll(StatusBarColorNestedScrollConnection(activity))
+-    } else {
+-      Modifier
+-    }
++  if (activity == null) {
++    return Modifier
++  }
++
++  val connection = remember(activity) {
++    StatusBarColorNestedScrollConnection(activity)
+   }
++
++  LaunchedEffect(connection) {
++    connection.setColorImmediate()
++  }
++
++  return Modifier.nestedScroll(connection)
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
+index 4153c40fbc..93da6ff198 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
+@@ -17,11 +17,11 @@ import org.signal.core.util.requireInt
+ import org.signal.core.util.requireLong
+ import org.signal.core.util.requireString
+ import org.thoughtcrime.securesms.BuildConfig
++import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.apkupdate.ApkUpdateDownloadManagerReceiver
+ import org.thoughtcrime.securesms.jobmanager.Job
+ import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+-import org.thoughtcrime.securesms.util.Environment
+ import org.thoughtcrime.securesms.util.FileUtils
+ import java.io.FileInputStream
+ import java.io.IOException
+@@ -82,8 +82,8 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+       Log.d(TAG, "Got descriptor: $updateDescriptor")
+     }
+ 
+-    if (shouldUpdate(getCurrentAppVersionCode(), updateDescriptor, SignalStore.apkUpdate.lastApkUploadTime, Environment.IS_WEBSITE)) {
+-      Log.i(TAG, "Newer version code available. Current: (versionCode: ${getCurrentAppVersionCode()}, uploadTime: ${SignalStore.apkUpdate.lastApkUploadTime}), Update: (versionCode: ${updateDescriptor.versionCode}, uploadTime: ${updateDescriptor.uploadTimestamp})")
++    if (shouldUpdate(getCurrentAppVersionCode(), BuildConfig.BUILD_TIMESTAMP, updateDescriptor.versionCode, updateDescriptor.buildTimestamp)) {
++      Log.i(TAG, "Newer build available. Current: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), Update: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
+       val digest: ByteArray = Hex.fromStringCondensed(updateDescriptor.digest)
+       val downloadStatus: DownloadStatus = getDownloadStatus(updateDescriptor.url, digest)
+ 
+@@ -97,7 +97,7 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+         handleDownloadStart(updateDescriptor.url, updateDescriptor.versionName, digest, updateDescriptor.uploadTimestamp ?: 0)
+       }
+     } else {
+-      Log.d(TAG, "Version code is the same or older than our own. Current: (versionCode: ${getCurrentAppVersionCode()}, uploadTime: ${SignalStore.apkUpdate.lastApkUploadTime}), Update: (versionCode: ${updateDescriptor.versionCode}, uploadTime: ${updateDescriptor.uploadTimestamp})")
++      Log.d(TAG, "Installed build is current. Current: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), Update: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
+     }
+ 
+     SignalStore.apkUpdate.lastSuccessfulCheck = System.currentTimeMillis()
+@@ -161,8 +161,8 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+ 
+     val downloadRequest = DownloadManager.Request(Uri.parse(uri)).apply {
+       setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI)
+-      setTitle("Downloading Signal update")
+-      setDescription("Downloading Signal $versionName")
++      setTitle("Downloading ${context.getString(R.string.app_name)} update")
++      setDescription("Downloading ${context.getString(R.string.app_name)} $versionName")
+       setDestinationInExternalFilesDir(context, null, "signal-update.apk")
+       setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN)
+     }
+@@ -206,14 +206,6 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+     }
+   }
+ 
+-  private fun shouldUpdate(currentVersionCode: Int, updateDescriptor: UpdateDescriptor, lastApkUploadTime: Long, isWebsite: Boolean): Boolean {
+-    return if (isWebsite) {
+-      return updateDescriptor.versionCode > currentVersionCode
+-    } else {
+-      return updateDescriptor.versionCode > currentVersionCode || (updateDescriptor.versionCode == currentVersionCode && (updateDescriptor.uploadTimestamp ?: 0) > lastApkUploadTime)
+-    }
+-  }
+-
+   private data class UpdateDescriptor(
+     @JsonProperty
+     val versionCode: Int = 0,
+@@ -228,7 +220,10 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+     val digest: String? = null,
+ 
+     @JsonProperty
+-    val uploadTimestamp: Long? = null
++    val uploadTimestamp: Long? = null,
++
++    @JsonProperty
++    val buildTimestamp: Long? = null
+   )
+ 
+   private class DownloadStatus(val status: Status, val downloadId: Long) {
+@@ -245,3 +240,17 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+     }
+   }
+ }
++
++internal fun shouldUpdate(
++  currentVersionCode: Int,
++  currentBuildTimestamp: Long,
++  availableVersionCode: Int,
++  availableBuildTimestamp: Long?
++): Boolean {
++  return availableVersionCode > currentVersionCode ||
++    (
++      availableVersionCode == currentVersionCode &&
++        availableBuildTimestamp != null &&
++        availableBuildTimestamp > currentBuildTimestamp
++      )
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
+index 8ff1d4ab01..45aee6857a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
+@@ -1,7 +1,5 @@
+ package org.thoughtcrime.securesms.keyvalue
+ 
+-import org.thoughtcrime.securesms.util.RemoteConfig
+-
+ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(store) {
+   companion object {
+     const val INDIVIDUAL_CHAT_PLAINTEXT_EXPORT: String = "labs.individual_chat_plaintext_export"
+@@ -17,21 +15,17 @@ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(
+ 
+   public override fun getKeysToIncludeInBackup(): List<String> = emptyList()
+ 
+-  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true).falseForExternalUsers()
+-
+-  var storyArchive by booleanValue(STORY_ARCHIVE, true).falseForExternalUsers()
++  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true)
+ 
+-  var incognito by booleanValue(INCOGNITO, true).falseForExternalUsers()
++  var storyArchive by booleanValue(STORY_ARCHIVE, true)
+ 
+-  var betterSearch by booleanValue(BETTER_SEARCH, true).falseForExternalUsers()
++  var incognito by booleanValue(INCOGNITO, true)
+ 
+-  var starredMessages by booleanValue(STARRED_MESSAGES, true).falseForExternalUsers()
++  var betterSearch by booleanValue(BETTER_SEARCH, true)
+ 
+-  var stickerReplies by booleanValue(STICKER_REPLIES, false).falseForExternalUsers()
++  var starredMessages by booleanValue(STARRED_MESSAGES, true)
+ 
+-  var muteBreakthroughNotifications by booleanValue(MUTE_BREAKTHROUGH_NOTIFICATIONS, true).falseForExternalUsers()
++  var stickerReplies by booleanValue(STICKER_REPLIES, false)
+ 
+-  private fun SignalStoreValueDelegate<Boolean>.falseForExternalUsers(): SignalStoreValueDelegate<Boolean> {
+-    return this.map { actualValue -> RemoteConfig.internalUser && actualValue }
+-  }
++  var muteBreakthroughNotifications by booleanValue(MUTE_BREAKTHROUGH_NOTIFICATIONS, true)
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
+index c9afb24813..320cdf09b2 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
+@@ -55,6 +55,8 @@ class MiscellaneousValues internal constructor(store: KeyValueStore) : SignalSto
+     private const val LAST_SYNC_MESSAGE_SEEN_TIME_MS = "misc.last_sync_message_seen_time"
+     private const val LAST_APPLIED_PNI_CHANGE_SERVER_TIMESTAMP = "misc.last_applied_pni_change_server_timestamp"
+     private const val LAST_MISSING_PLAY_SERVICES_FCM_VERIFICATION_TIME = "misc.last_missing_play_services_fcm_verification_time"
++    private const val VESPER_INTERNAL_USER_OVERRIDE_SET = "misc.vesper_internal_user_override_set"
++    private const val VESPER_INTERNAL_USER_OVERRIDE = "misc.vesper_internal_user_override"
+   }
+ 
+   public override fun onFirstEverAppLaunch() {
+@@ -360,4 +362,28 @@ class MiscellaneousValues internal constructor(store: KeyValueStore) : SignalSto
+    * The last time we tried to get an FCM token for a user reporting missing Play Services.
+    */
+   var lastMissingPlayServicesFcmVerificationTime: Long by longValue(LAST_MISSING_PLAY_SERVICES_FCM_VERIFICATION_TIME, 0)
++
++  var vesperInternalUserOverride: Boolean?
++    get() {
++      return if (getBoolean(VESPER_INTERNAL_USER_OVERRIDE_SET, false)) {
++        getBoolean(VESPER_INTERNAL_USER_OVERRIDE, false)
++      } else {
++        null
++      }
++    }
++    set(value) {
++      if (value == null) {
++        store
++          .beginWrite()
++          .remove(VESPER_INTERNAL_USER_OVERRIDE_SET)
++          .remove(VESPER_INTERNAL_USER_OVERRIDE)
++          .apply()
++      } else {
++        store
++          .beginWrite()
++          .putBoolean(VESPER_INTERNAL_USER_OVERRIDE_SET, true)
++          .putBoolean(VESPER_INTERNAL_USER_OVERRIDE, value)
++          .apply()
++      }
++    }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
+index 105420e1c6..54a4ed2540 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
+@@ -90,9 +90,14 @@ object RemoteConfig {
+   @Volatile
+   var internalUserDisabled: Boolean = false
+ 
++  @Volatile
++  private var internalUserOverride: Boolean? = null
++
+   @JvmStatic
+   fun init() {
+     initLock.withLock {
++      internalUserOverride = SignalStore.misc.vesperInternalUserOverride
++
+       val current = parseStoredConfig(SignalStore.remoteConfig.currentConfig)
+       val pending = parseStoredConfig(SignalStore.remoteConfig.pendingConfig)
+       val changes = computeChanges(current, pending)
+@@ -107,6 +112,13 @@ object RemoteConfig {
+     }
+   }
+ 
++  @JvmStatic
++  fun setInternalUserOverride(enabled: Boolean) {
++    SignalStore.misc.vesperInternalUserOverride = enabled
++    internalUserOverride = enabled
++    internalUserDisabled = false
++  }
++
+   @JvmStatic
+   fun refreshIfNecessary() {
+     val timeSinceLastFetch = System.currentTimeMillis() - SignalStore.remoteConfig.lastFetchTime
+@@ -622,8 +634,10 @@ object RemoteConfig {
+     key = "android.internalUser",
+     hotSwappable = true
+   ) { value ->
++    val override = internalUserOverride
+     when {
+       internalUserDisabled -> false
++      override != null -> override
+       underTest -> value.asBoolean(false)
+       Environment.isInternal() -> true
+       else -> value.asBoolean(false)
+diff --git a/app/src/main/res/drawable/reaction_pill_background.xml b/app/src/main/res/drawable/reaction_pill_background.xml
+index a547a8078b..6c1c88f098 100644
+--- a/app/src/main/res/drawable/reaction_pill_background.xml
++++ b/app/src/main/res/drawable/reaction_pill_background.xml
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <shape xmlns:android="http://schemas.android.com/apk/res/android">
+     <corners android:radius="1000dp" />
+-    <solid android:color="?attr/colorSurfaceVariant" />
++    <solid android:color="?attr/conversation_item_recv_bubble_color_normal" />
+     <stroke android:color="?attr/colorSurface" android:width="1dp" />
+ </shape>
+diff --git a/app/src/main/res/drawable/reaction_pill_background_selected.xml b/app/src/main/res/drawable/reaction_pill_background_selected.xml
+index ead87f4275..37279c6f9a 100644
+--- a/app/src/main/res/drawable/reaction_pill_background_selected.xml
++++ b/app/src/main/res/drawable/reaction_pill_background_selected.xml
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <shape xmlns:android="http://schemas.android.com/apk/res/android">
+     <corners android:radius="1000dp" />
+-    <solid android:color="@color/signal_colorSurfaceVariant_32_no_alpha" />
++    <solid android:color="?attr/reactions_pill_selected_color" />
+     <stroke android:color="?attr/colorSurface" android:width="1dp" />
+ </shape>
+diff --git a/app/src/main/res/layout/dsl_settings_toolbar.xml b/app/src/main/res/layout/dsl_settings_toolbar.xml
+index 8cf26a497e..4435845403 100644
+--- a/app/src/main/res/layout/dsl_settings_toolbar.xml
++++ b/app/src/main/res/layout/dsl_settings_toolbar.xml
+@@ -19,4 +19,4 @@
+         app:titleTextAppearance="@style/Signal.Text.TitleLarge"
+         tools:title="Settings" />
+ 
+-</merge>
+\ No newline at end of file
++</merge>
+diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
+index 96a27ffd91..78e4ed0fcb 100644
+--- a/app/src/main/res/values/strings.xml
++++ b/app/src/main/res/values/strings.xml
+@@ -4397,6 +4397,8 @@
+ 
+     <!-- Internal only preferences -->
+     <string name="preferences__internal_preferences" translatable="false">Internal Preferences</string>
++    <string name="HelpSettingsFragment__internal_settings_enabled" translatable="false">Internal settings enabled</string>
++    <string name="HelpSettingsFragment__internal_settings_disabled" translatable="false">Internal settings disabled</string>
+     <string name="preferences__internal_details" translatable="false">Internal Details</string>
+     <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
+ 
+@@ -6043,6 +6045,9 @@
+     <string name="HelpFragment__licenced_under_the_agplv3">Licensed under the GNU AGPLv3</string>
+     <!-- Non-English translations should use "Signal is a nonprofit." instead, dropping the 501c3 reference. -->
+     <string name="HelpSettingsFragment__signal_is_a_501c3">Signal is a 501c3 nonprofit</string>
++    <string name="HelpSettingsFragment__vesper_messenger_by" translatable="false">Vesper Messenger by</string>
++    <string name="HelpSettingsFragment__amber_systems" translatable="false">amber.systems</string>
++    <string name="vesper_website_url" translatable="false">https://amber.systems/</string>
+ 
+     <!-- DataAndStorageSettingsFragment -->
+     <string name="DataAndStorageSettingsFragment__media_quality">Media quality</string>
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt b/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
+new file mode 100644
+index 0000000000..24bd3c580e
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
+@@ -0,0 +1,34 @@
++package org.thoughtcrime.securesms.jobs
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class ApkUpdateJobTest {
++
++  @Test
++  fun `newer version code is an update regardless of build timestamp`() {
++    assertTrue(shouldUpdate(100, 2_000, 101, 1_000))
++  }
++
++  @Test
++  fun `older version code is not an update regardless of build timestamp`() {
++    assertFalse(shouldUpdate(101, 1_000, 100, 2_000))
++  }
++
++  @Test
++  fun `same version code with newer build timestamp is an update`() {
++    assertTrue(shouldUpdate(100, 1_000, 100, 2_000))
++  }
++
++  @Test
++  fun `same version code with same or older build timestamp is not an update`() {
++    assertFalse(shouldUpdate(100, 2_000, 100, 2_000))
++    assertFalse(shouldUpdate(100, 2_000, 100, 1_000))
++  }
++
++  @Test
++  fun `same version code without build timestamp is backward-compatible`() {
++    assertFalse(shouldUpdate(100, 1_000, 100, null))
++  }
++}

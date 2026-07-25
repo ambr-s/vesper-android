@@ -1,0 +1,85 @@
+From b034143aa4c63cc13ee5c015c6d09901f454fcf1 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:43 +0100
+Subject: [PATCH 5/8] feat: add installable debug build variant
+
+Debug builds install alongside a release. They use a .debug application ID suffix, the name Vesper Debug and an amber launcher background. Release builds are unchanged.
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ app/build.gradle.kts                          |  3 +++
+ .../res/drawable/ic_launcher_background.xml   | 27 +++++++++++++++++++
+ app/src/debug/res/values/strings.xml          |  6 +++++
+ 3 files changed, 36 insertions(+)
+ create mode 100644 app/src/debug/res/drawable/ic_launcher_background.xml
+ create mode 100644 app/src/debug/res/values/strings.xml
+
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index c886f21793..96d8bf735f 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -87,8 +87,10 @@ val selectableVariants = listOf(
+   "playProdQuickstart",
+   "playStagingQuickstart",
+   "websiteProdSpinner",
++  "websiteProdDebug",
+   "websiteProdRelease",
+   "githubProdSpinner",
++  "githubProdDebug",
+   "githubProdRelease"
+ )
+ 
+@@ -334,6 +336,7 @@ android {
+       if (debugKeystorePropertiesProvider.orNull != null) {
+         signingConfig = signingConfigs["debug"]
+       }
++      applicationIdSuffix = ".debug"
+       isDefault = true
+       isMinifyEnabled = false
+       proguardFiles(
+diff --git a/app/src/debug/res/drawable/ic_launcher_background.xml b/app/src/debug/res/drawable/ic_launcher_background.xml
+new file mode 100644
+index 0000000000..dc11a45150
+--- /dev/null
++++ b/app/src/debug/res/drawable/ic_launcher_background.xml
+@@ -0,0 +1,27 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:aapt="http://schemas.android.com/aapt"
++    android:width="108dp"
++    android:height="108dp"
++    android:viewportWidth="108"
++    android:viewportHeight="108">
++  <group>
++    <path
++        android:pathData="M108 0H0v108h108V0Z">
++      <aapt:attr name="android:fillColor">
++        <gradient
++            android:type="linear"
++            android:startX="54"
++            android:startY="0"
++            android:endX="54"
++            android:endY="108">
++          <item
++              android:color="#FFFFB300"
++              android:offset="0"/>
++          <item
++              android:color="#FFFF8F00"
++              android:offset="1"/>
++        </gradient>
++      </aapt:attr>
++    </path>
++  </group>
++</vector>
+\ No newline at end of file
+diff --git a/app/src/debug/res/values/strings.xml b/app/src/debug/res/values/strings.xml
+new file mode 100644
+index 0000000000..6a8646f20e
+--- /dev/null
++++ b/app/src/debug/res/values/strings.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<resources>
++    <!-- Overrides the main source set so debug builds are distinguishable in the
++         launcher and everywhere the app refers to itself by name. -->
++    <string name="app_name" translatable="false">Vesper Debug</string>
++</resources>

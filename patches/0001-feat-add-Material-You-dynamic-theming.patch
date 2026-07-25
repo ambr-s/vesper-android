@@ -1,0 +1,3366 @@
+From 0b47fe275939ef2625a37abd115bfe8f90a7e76f Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 18:30:41 +0100
+Subject: [PATCH 1/8] feat: add Material You dynamic theming
+
+Adapted from Molly work by Oscar Mira and other Molly contributors.
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../securesms/AvatarPreviewActivity.java      |  16 +-
+ .../thoughtcrime/securesms/MainActivity.kt    |  12 +-
+ .../avatar/photo/PhotoEditorActivity.kt       |  13 +
+ .../securesms/calls/log/CallLogAdapter.kt     |   7 +-
+ .../components/ConversationItemFooter.java    |   5 +-
+ .../securesms/components/FromTextView.java    |   9 +-
+ .../securesms/components/InputPanel.java      |   3 +-
+ .../securesms/components/menu/ActionItem.kt   |   4 +-
+ .../components/menu/ContextMenuList.kt        |   4 +-
+ .../components/quotes/QuoteViewColorTheme.kt  |  52 +--
+ .../components/settings/DSLSettingsIcon.kt    |  16 +-
+ .../appearance/AppearanceSettingsFragment.kt  |  21 +-
+ .../app/appearance/AppearanceSettingsState.kt |   1 +
+ .../appearance/AppearanceSettingsViewModel.kt |   7 +-
+ .../donate/DonateToSignalFragment.kt          |   5 +-
+ .../manage/ManageDonationsFragment.kt         |   5 +-
+ .../main/QrImageSelectionActivity.kt          |   9 +
+ .../ConversationSettingsFragment.kt           |   7 +-
+ .../webrtc/v2/WebRtcCallActivity.kt           |   5 +
+ .../contacts/paged/ContactSearchModels.kt     |   2 +-
+ .../conversation/ConversationItem.java        |  19 +-
+ .../conversation/ConversationUpdateItem.java  |   6 +-
+ .../conversation/NewConversationActivity.kt   |  13 +
+ .../colors/ui/ChatColorPreviewView.kt         |   5 +-
+ .../conversation/v2/ConversationFragment.kt   |  21 +-
+ .../v2/ConversationToolbarOnScrollHelper.kt   |  26 +-
+ .../conversation/v2/DisabledInputView.kt      |   5 +-
+ .../conversationlist/ChatFolderAdapter.kt     |  10 +-
+ .../ConversationListItem.java                 |   3 +-
+ .../ConversationListFilterPullView.kt         |   6 +-
+ .../chatfilter/FilterCircleView.kt            |  10 +-
+ .../securesms/fonts/SignalSymbols.kt          |   9 +-
+ .../keyboard/emoji/KeyboardPageSearchView.kt  |   6 +-
+ .../securesms/keyvalue/SettingsValues.java    |  21 ++
+ .../logsubmit/SubmitDebugLogActivity.java     |  16 +-
+ .../securesms/main/MainNavigation.kt          |  15 +-
+ .../mediapreview/MediaPreviewV2Activity.kt    |  23 +-
+ .../mediasend/AvatarSelectionActivity.java    |  10 +
+ .../mediasend/v2/MediaSelectionActivity.kt    |  11 +
+ .../v2/stories/ChooseStoryTypeBottomSheet.kt  |   8 +-
+ .../MessageRequestBarColorTheme.kt            |  35 +-
+ .../preferences/model/PaymentItem.java        |   7 +-
+ .../viewholder/PaymentItemViewHolder.java     |   5 +-
+ .../preferences/EditProxyFragment.java        |   7 +-
+ .../profiles/manage/UsernameEditFragment.java |   4 +-
+ .../securesms/recipients/Recipient.kt         |   3 +-
+ .../recipients/ui/RecipientPicker.kt          |  11 +-
+ .../revealable/ViewOnceMessageActivity.java   |  15 +
+ .../ImageEditorStickerSelectActivity.java     |  10 +
+ .../stories/viewer/StoryViewerActivity.kt     |   9 +
+ .../DynamicConversationSettingsTheme.java     |   5 +
+ .../util/DynamicMediaPreviewTheme.java        |  18 +
+ .../util/DynamicNoActionBarTheme.java         |   5 +
+ .../util/DynamicRegistrationTheme.java        |   5 +
+ .../securesms/util/DynamicTheme.java          |  21 +-
+ .../securesms/util/Material3OnScrollHelper.kt |  86 +++--
+ .../thoughtcrime/securesms/util/SpanUtil.java |   4 +-
+ .../crop/WallpaperImageSelectionActivity.java |  10 +
+ .../signal_context_menu_background.xml        |   4 +-
+ .../layout/contact_photo_preview_activity.xml |   3 +-
+ .../layout/contact_search_unknown_item.xml    |   4 +-
+ ...ct_selection_find_by_phone_number_item.xml |   4 +-
+ ...ontact_selection_find_by_username_item.xml |   4 +-
+ .../contact_selection_find_contacts_item.xml  |   4 +-
+ .../contact_selection_invite_action_item.xml  |   4 +-
+ .../contact_selection_new_group_item.xml      |   4 +-
+ .../contact_selection_refresh_action_item.xml |   4 +-
+ .../res/layout/fragment_media_preview_v2.xml  |   9 +-
+ app/src/main/res/values-night-v31/themes.xml  |   2 +-
+ app/src/main/res/values/colors.xml            |   2 +-
+ app/src/main/res/values/signal_styles.xml     |  32 +-
+ app/src/main/res/values/themes.xml            | 345 +++++++++++++++---
+ .../org/signal/core/ui/compose/Buttons.kt     |  19 +-
+ .../core/ui/compose/theme/SignalTheme.kt      | 208 +++++++++--
+ .../org/signal/core/ui/util/ThemeUtil.java    |  27 +-
+ 75 files changed, 1026 insertions(+), 359 deletions(-)
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java b/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java
+index ff2e9a4ea0..ee08024712 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java
+@@ -35,6 +35,8 @@ import org.thoughtcrime.securesms.contacts.avatars.ContactPhoto;
+ import org.thoughtcrime.securesms.contacts.avatars.ProfileContactPhoto;
+ import org.thoughtcrime.securesms.recipients.Recipient;
+ import org.thoughtcrime.securesms.recipients.RecipientId;
++import org.thoughtcrime.securesms.util.DynamicMediaPreviewTheme;
++import org.thoughtcrime.securesms.util.DynamicTheme;
+ import org.thoughtcrime.securesms.util.FullscreenHelper;
+ 
+ /**
+@@ -51,6 +53,19 @@ public final class AvatarPreviewActivity extends PassphraseRequiredActivity {
+   private static final float ZOOM_LEVEL_MIN = 1.0f;
+   private static final float SMALL_IMAGES_ZOOM_LEVEL_MID = 3.0f;
+   private static final float SMALL_IMAGES_ZOOM_LEVEL_MAX = 8.0f;
++  private final DynamicTheme dynamicTheme = new DynamicMediaPreviewTheme();
++
++  @Override
++  protected void onPreCreate() {
++    super.onPreCreate();
++    dynamicTheme.onCreate(this);
++  }
++
++  @Override
++  protected void onResume() {
++    super.onResume();
++    dynamicTheme.onResume(this);
++  }
+ 
+   public static @NonNull Intent intentFromRecipientId(@NonNull Context context,
+                                                       @NonNull RecipientId recipientId)
+@@ -74,7 +89,6 @@ public final class AvatarPreviewActivity extends PassphraseRequiredActivity {
+   protected void onCreate(Bundle savedInstanceState, boolean ready) {
+     super.onCreate(savedInstanceState, ready);
+ 
+-    setTheme(R.style.TextSecure_MediaPreview);
+     setContentView(R.layout.contact_photo_preview_activity);
+ 
+     postponeEnterTransition();
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
+index bb63bf910a..815e1973ac 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
+@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.graphics.toArgb
+-import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.platform.LocalFocusManager
+ import androidx.compose.ui.platform.LocalResources
+ import androidx.compose.ui.unit.Dp
+@@ -92,10 +91,10 @@ import kotlinx.coroutines.withContext
+ import org.signal.core.ui.BottomSheetUtil
+ import org.signal.core.ui.compose.Snackbars
+ import org.signal.core.ui.compose.theme.SignalTheme
++import org.signal.core.ui.compose.theme.colorAttribute
+ import org.signal.core.ui.navigation.TransitionSpecs
+ import org.signal.core.ui.permissions.Permissions
+ import org.signal.core.ui.rememberIsSplitPane
+-import org.signal.core.ui.util.ThemeUtil
+ import org.signal.core.util.AppForegroundObserver
+ import org.signal.core.util.Util
+ import org.signal.core.util.concurrent.LifecycleDisposable
+@@ -579,7 +578,7 @@ class MainActivity :
+               Column(
+                 modifier = Modifier
+                   .clip(contentLayoutData.navigationBarShape)
+-                  .background(color = SignalTheme.colors.colorSurface2)
++                  .background(color = colorAttribute(R.attr.navbar_container_color))
+               ) {
+                 MainNavigationBar(
+                   state = mainNavigationState,
+@@ -800,9 +799,8 @@ class MainActivity :
+           SignalTheme.colors.colorSurface1
+         }
+ 
+-        val context = LocalContext.current
+         val isDarkTheme = isSystemInDarkTheme()
+-        val navBarColor = if (isSplitPane) backgroundColor.toArgb() else ThemeUtil.getThemedColor(context, org.signal.core.ui.R.attr.vesper_colorSurface2)
++        val navBarColor = if (isSplitPane) backgroundColor.toArgb() else 0
+         LaunchedEffect(isDarkTheme, navBarColor) {
+           if (Build.VERSION.SDK_INT >= 26) {
+             enableEdgeToEdge(
+@@ -815,6 +813,10 @@ class MainActivity :
+           } else {
+             enableEdgeToEdge()
+           }
++
++          if (Build.VERSION.SDK_INT >= 29) {
++            window.isNavigationBarContrastEnforced = false
++          }
+         }
+ 
+         val modifier = when {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/avatar/photo/PhotoEditorActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/avatar/photo/PhotoEditorActivity.kt
+index 59263d882f..232813e2f9 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/avatar/photo/PhotoEditorActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/avatar/photo/PhotoEditorActivity.kt
+@@ -10,8 +10,21 @@ import androidx.fragment.app.Fragment
+ import org.thoughtcrime.securesms.avatar.Avatar
+ import org.thoughtcrime.securesms.avatar.AvatarBundler
+ import org.thoughtcrime.securesms.components.FragmentWrapperActivity
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
++import org.thoughtcrime.securesms.util.DynamicTheme
+ 
+ class PhotoEditorActivity : FragmentWrapperActivity() {
++  private val theme: DynamicTheme = DynamicNoActionBarTheme()
++
++  override fun onPreCreate() {
++    super.onPreCreate()
++    theme.onCreate(this)
++  }
++
++  override fun onResume() {
++    super.onResume()
++    theme.onResume(this)
++  }
+ 
+   override fun attachBaseContext(newBase: Context) {
+     delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt b/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt
+index 775f41d1f3..b8787cca74 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt
+@@ -5,7 +5,6 @@ import android.text.style.TextAppearanceSpan
+ import android.view.View
+ import androidx.annotation.DrawableRes
+ import androidx.annotation.StringRes
+-import androidx.core.content.ContextCompat
+ import androidx.core.widget.TextViewCompat
+ import com.bumptech.glide.Glide
+ import org.signal.core.ui.util.ThemeUtil
+@@ -375,12 +374,12 @@ class CallLogAdapter(
+         start = getCallStateDrawableRes(call.record)
+       )
+ 
+-      val color = ContextCompat.getColor(
++      val color = ThemeUtil.getThemedColor(
+         context,
+         if (call.record.isDisplayedAsMissedCallInUi) {
+-          CoreUiR.color.signal_colorError
++          com.google.android.material.R.attr.colorError
+         } else {
+-          CoreUiR.color.signal_colorOnSurfaceVariant
++          com.google.android.material.R.attr.colorOnSurfaceVariant
+         }
+       )
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/ConversationItemFooter.java b/app/src/main/java/org/thoughtcrime/securesms/components/ConversationItemFooter.java
+index bebf8b99d8..f8de387889 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/ConversationItemFooter.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/ConversationItemFooter.java
+@@ -25,6 +25,8 @@ import com.airbnb.lottie.LottieAnimationView;
+ import com.airbnb.lottie.LottieProperty;
+ import com.airbnb.lottie.model.KeyPath;
+ 
++import org.signal.core.ui.permissions.Permissions;
++import org.signal.core.ui.util.ThemeUtil;
+ import org.signal.core.ui.view.Stub;
+ import org.signal.core.util.concurrent.SignalExecutors;
+ import org.thoughtcrime.securesms.R;
+@@ -35,7 +37,6 @@ import org.thoughtcrime.securesms.database.SignalDatabase;
+ import org.thoughtcrime.securesms.database.model.MessageRecord;
+ import org.thoughtcrime.securesms.database.model.MmsMessageRecord;
+ import org.thoughtcrime.securesms.dependencies.AppDependencies;
+-import org.signal.core.ui.permissions.Permissions;
+ import org.thoughtcrime.securesms.recipients.Recipient;
+ import org.thoughtcrime.securesms.util.DateUtils;
+ import org.thoughtcrime.securesms.util.MessageRecordUtil;
+@@ -116,7 +117,7 @@ public class ConversationItemFooter extends ConstraintLayout {
+         playbackSpeedToggleTextView.setTextColor(getResources().getColor(R.color.core_white));
+         playbackSpeedToggleTextView.setBackgroundTintList(AppCompatResources.getColorStateList(getContext(), R.color.transparent_white_20));
+       } else {
+-        playbackSpeedToggleTextView.setTextColor(getResources().getColor(R.color.signal_text_secondary));
++        playbackSpeedToggleTextView.setTextColor(ThemeUtil.getThemedColor(getContext(), R.attr.signal_text_secondary));
+         playbackSpeedToggleTextView.setBackgroundTintList(AppCompatResources.getColorStateList(getContext(), R.color.transparent_black_08));
+       }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java b/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
+index bb51b3f77b..3a39cf4946 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
+@@ -7,8 +7,7 @@ import android.util.AttributeSet;
+ 
+ import androidx.annotation.DrawableRes;
+ import androidx.annotation.Nullable;
+-import androidx.core.content.ContextCompat;
+-
++import org.signal.core.ui.util.ThemeUtil;
+ import org.signal.core.util.ContextUtil;
+ import org.thoughtcrime.securesms.R;
+ import org.thoughtcrime.securesms.components.emoji.SimpleEmojiTextView;
+@@ -86,17 +85,17 @@ public class FromTextView extends SimpleEmojiTextView {
+   }
+ 
+   private Drawable getMuted() {
+-    return getDrawable(R.drawable.ic_bell_disabled_16, R.color.signal_icon_tint_secondary);
++    return getDrawable(R.drawable.ic_bell_disabled_16, R.attr.signal_icon_tint_secondary);
+   }
+ 
+   private Drawable getPinned() {
+-    return getDrawable(R.drawable.symbol_pin_16, org.signal.core.ui.R.color.signal_colorOnSurface);
++    return getDrawable(R.drawable.symbol_pin_16, com.google.android.material.R.attr.colorOnSurface);
+   }
+ 
+   private Drawable getDrawable(@DrawableRes int drawable, int colorRes) {
+     Drawable mutedDrawable = ContextUtil.requireDrawable(getContext(), drawable);
+     mutedDrawable.setBounds(0, 0, ViewUtil.dpToPx(16), ViewUtil.dpToPx(16));
+-    DrawableUtil.tint(mutedDrawable, ContextCompat.getColor(getContext(), colorRes));
++    DrawableUtil.tint(mutedDrawable, ThemeUtil.getThemedColor(getContext(), colorRes));
+     return mutedDrawable;
+   }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
+index 4f43024887..76f48888d3 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
+@@ -1,7 +1,5 @@
+ package org.thoughtcrime.securesms.components;
+ 
+-import org.signal.core.ui.util.ThemeUtil;
+-
+ import android.animation.Animator;
+ import android.animation.ValueAnimator;
+ import android.content.Context;
+@@ -40,6 +38,7 @@ import com.bumptech.glide.RequestManager;
+ import com.bumptech.glide.load.engine.DiskCacheStrategy;
+ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+ 
++import org.signal.core.ui.util.ThemeUtil;
+ import org.signal.core.ui.view.Stub;
+ import org.signal.core.util.ThreadUtil;
+ import org.signal.core.util.concurrent.ListenableFuture;
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/menu/ActionItem.kt b/app/src/main/java/org/thoughtcrime/securesms/components/menu/ActionItem.kt
+index c64b263888..57ac1a1c7b 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/menu/ActionItem.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/menu/ActionItem.kt
+@@ -1,8 +1,6 @@
+ package org.thoughtcrime.securesms.components.menu
+ 
+-import androidx.annotation.ColorRes
+ import androidx.annotation.DrawableRes
+-import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+  * Represents an action to be rendered via [SignalContextMenu] or [SignalBottomActionBar]
+@@ -10,6 +8,6 @@ import org.signal.core.ui.R as CoreUiR
+ data class ActionItem @JvmOverloads constructor(
+   @DrawableRes val iconRes: Int,
+   val title: CharSequence,
+-  @ColorRes val tintRes: Int = CoreUiR.color.signal_colorOnSurface,
++  val tintRes: Int = com.google.android.material.R.attr.colorOnSurface,
+   val action: Runnable
+ )
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/menu/ContextMenuList.kt b/app/src/main/java/org/thoughtcrime/securesms/components/menu/ContextMenuList.kt
+index 7fbfb2a6bb..e0052cd511 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/menu/ContextMenuList.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/menu/ContextMenuList.kt
+@@ -3,9 +3,9 @@ package org.thoughtcrime.securesms.components.menu
+ import android.view.View
+ import android.widget.ImageView
+ import android.widget.TextView
+-import androidx.core.content.ContextCompat
+ import androidx.recyclerview.widget.LinearLayoutManager
+ import androidx.recyclerview.widget.RecyclerView
++import org.signal.core.ui.util.ThemeUtil
+ import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.util.adapter.mapping.LayoutFactory
+ import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
+@@ -81,7 +81,7 @@ class ContextMenuList(recyclerView: RecyclerView, onItemClick: () -> Unit) {
+         onItemClick()
+       }
+ 
+-      val tintColor = ContextCompat.getColor(context, model.item.tintRes)
++      val tintColor = ThemeUtil.getThemedColor(context, model.item.tintRes)
+       icon.setColorFilter(tintColor)
+       title.setTextColor(tintColor)
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/quotes/QuoteViewColorTheme.kt b/app/src/main/java/org/thoughtcrime/securesms/components/quotes/QuoteViewColorTheme.kt
+index 63e92e2e81..249a8071ba 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/quotes/QuoteViewColorTheme.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/quotes/QuoteViewColorTheme.kt
+@@ -1,46 +1,46 @@
+ package org.thoughtcrime.securesms.components.quotes
+ 
+ import android.content.Context
+-import androidx.annotation.ColorRes
+-import androidx.core.content.ContextCompat
++import androidx.annotation.AttrRes
++import org.signal.core.ui.util.ThemeUtil
+ import org.thoughtcrime.securesms.R
+ 
+ enum class QuoteViewColorTheme(
+-  @param:ColorRes private val backgroundColorRes: Int,
+-  @param:ColorRes private val barColorRes: Int,
+-  @param:ColorRes private val foregroundColorRes: Int,
+-  @param:ColorRes private val labelBackgroundColorRes: Int
++  @param:AttrRes private val backgroundColorRes: Int,
++  @param:AttrRes private val barColorRes: Int,
++  @param:AttrRes private val foregroundColorRes: Int,
++  @param:AttrRes private val labelBackgroundColorRes: Int
+ ) {
+ 
+   INCOMING_WALLPAPER(
+-    R.color.quote_view_background_incoming_wallpaper,
+-    R.color.quote_view_bar_incoming_wallpaper,
+-    R.color.quote_view_foreground_incoming_wallpaper,
+-    R.color.quote_view_label_background_incoming_wallpaper
++    R.attr.quote_view_background_incoming_wallpaper,
++    R.attr.quote_view_bar_incoming_wallpaper,
++    R.attr.quote_view_foreground_incoming_wallpaper,
++    R.attr.quote_view_label_background_incoming_wallpaper
+   ),
+   INCOMING_NORMAL(
+-    R.color.quote_view_background_incoming_normal,
+-    R.color.quote_view_bar_incoming_normal,
+-    R.color.quote_view_foreground_incoming_normal,
+-    R.color.quote_view_label_background_incoming_normal
++    R.attr.quote_view_background_incoming_normal,
++    R.attr.quote_view_bar_incoming_normal,
++    R.attr.quote_view_foreground_incoming_normal,
++    R.attr.quote_view_label_background_incoming_normal
+   ),
+   OUTGOING_WALLPAPER(
+-    R.color.quote_view_background_outgoing_wallpaper,
+-    R.color.quote_view_bar_outgoing_wallpaper,
+-    R.color.quote_view_foreground_outgoing_wallpaper,
+-    R.color.quote_view_label_background_outgoing_wallpaper
++    R.attr.quote_view_background_outgoing_wallpaper,
++    R.attr.quote_view_bar_outgoing_wallpaper,
++    R.attr.quote_view_foreground_outgoing_wallpaper,
++    R.attr.quote_view_label_background_outgoing_wallpaper
+   ),
+   OUTGOING_NORMAL(
+-    R.color.quote_view_background_outgoing_normal,
+-    R.color.quote_view_bar_outgoing_normal,
+-    R.color.quote_view_foreground_outgoing_normal,
+-    R.color.quote_view_label_background_outgoing_normal
++    R.attr.quote_view_background_outgoing_normal,
++    R.attr.quote_view_bar_outgoing_normal,
++    R.attr.quote_view_foreground_outgoing_normal,
++    R.attr.quote_view_label_background_outgoing_normal
+   );
+ 
+-  fun getBackgroundColor(context: Context) = ContextCompat.getColor(context, backgroundColorRes)
+-  fun getBarColor(context: Context) = ContextCompat.getColor(context, barColorRes)
+-  fun getForegroundColor(context: Context) = ContextCompat.getColor(context, foregroundColorRes)
+-  fun getLabelBackgroundColor(context: Context) = ContextCompat.getColor(context, labelBackgroundColorRes)
++  fun getBackgroundColor(context: Context) = ThemeUtil.getThemedColor(context, backgroundColorRes)
++  fun getBarColor(context: Context) = ThemeUtil.getThemedColor(context, barColorRes)
++  fun getForegroundColor(context: Context) = ThemeUtil.getThemedColor(context, foregroundColorRes)
++  fun getLabelBackgroundColor(context: Context) = ThemeUtil.getThemedColor(context, labelBackgroundColorRes)
+ 
+   companion object {
+     @JvmStatic
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsIcon.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsIcon.kt
+index 69f4bb0d25..0708b35bc9 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsIcon.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsIcon.kt
+@@ -6,10 +6,10 @@ import android.graphics.PorterDuffColorFilter
+ import android.graphics.drawable.Drawable
+ import android.graphics.drawable.InsetDrawable
+ import android.graphics.drawable.LayerDrawable
+-import androidx.annotation.ColorRes
+ import androidx.annotation.DrawableRes
+ import androidx.annotation.Px
+ import androidx.core.content.ContextCompat
++import org.signal.core.ui.util.ThemeUtil
+ import org.thoughtcrime.securesms.R
+ 
+ const val NO_TINT = -1
+@@ -18,20 +18,20 @@ sealed class DSLSettingsIcon {
+ 
+   private data class FromResource(
+     @DrawableRes private val iconId: Int,
+-    @ColorRes private val iconTintId: Int
++    private val iconTintId: Int
+   ) : DSLSettingsIcon() {
+     override fun resolve(context: Context) = requireNotNull(ContextCompat.getDrawable(context, iconId)).apply {
+       if (iconTintId != NO_TINT) {
+-        colorFilter = PorterDuffColorFilter(ContextCompat.getColor(context, iconTintId), PorterDuff.Mode.SRC_IN)
++        colorFilter = PorterDuffColorFilter(ThemeUtil.getThemedColor(context, iconTintId), PorterDuff.Mode.SRC_IN)
+       }
+     }
+   }
+ 
+   private data class FromResourceWithBackground(
+     @DrawableRes private val iconId: Int,
+-    @ColorRes private val iconTintId: Int,
++    private val iconTintId: Int,
+     @DrawableRes private val backgroundId: Int,
+-    @ColorRes private val backgroundTint: Int,
++    private val backgroundTint: Int,
+     @Px private val insetPx: Int
+   ) : DSLSettingsIcon() {
+     override fun resolve(context: Context): Drawable {
+@@ -56,16 +56,16 @@ sealed class DSLSettingsIcon {
+     @JvmStatic
+     fun from(
+       @DrawableRes iconId: Int,
+-      @ColorRes iconTintId: Int,
++      iconTintId: Int,
+       @DrawableRes backgroundId: Int,
+-      @ColorRes backgroundTint: Int,
++      backgroundTint: Int,
+       @Px insetPx: Int = 0
+     ): DSLSettingsIcon {
+       return FromResourceWithBackground(iconId, iconTintId, backgroundId, backgroundTint, insetPx)
+     }
+ 
+     @JvmStatic
+-    fun from(@DrawableRes iconId: Int, @ColorRes iconTintId: Int = R.color.signal_icon_tint_primary): DSLSettingsIcon = FromResource(iconId, iconTintId)
++    fun from(@DrawableRes iconId: Int, iconTintId: Int = R.attr.signal_icon_tint_primary): DSLSettingsIcon = FromResource(iconId, iconTintId)
+ 
+     @JvmStatic
+     fun from(drawable: Drawable): DSLSettingsIcon = FromDrawable(drawable)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
+index a4bf3dc441..b8a7dc919c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
+@@ -26,6 +26,7 @@ import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.components.settings.app.appearance.navbar.ChooseNavigationBarStyleFragment
+ import org.thoughtcrime.securesms.compose.rememberStatusBarColorNestedScrollModifier
+ import org.thoughtcrime.securesms.keyvalue.SettingsValues
++import org.thoughtcrime.securesms.util.DynamicTheme
+ import org.thoughtcrime.securesms.util.navigation.safeNavigate
+ 
+ /**
+@@ -67,8 +68,8 @@ class AppearanceSettingsFragment : ComposeFragment() {
+         .show()
+     }
+ 
+-    override fun onThemeSelected(selection: String) {
+-      viewModel.setTheme(activity, SettingsValues.Theme.deserialize(selection))
++    override fun onThemeSelected(selection: String, useDynamicColors: Boolean) {
++      viewModel.setTheme(activity, SettingsValues.Theme.deserialize(selection), useDynamicColors)
+     }
+ 
+     override fun onChatColorAndWallpaperClick() {
+@@ -92,7 +93,7 @@ class AppearanceSettingsFragment : ComposeFragment() {
+ interface AppearanceSettingsCallbacks {
+   fun onNavigationClick() = Unit
+   fun onLanguageSelected(selection: String) = Unit
+-  fun onThemeSelected(selection: String) = Unit
++  fun onThemeSelected(selection: String, useDynamicColors: Boolean) = Unit
+   fun onChatColorAndWallpaperClick() = Unit
+   fun onAppIconClick() = Unit
+   fun onMessageFontSizeSelected(selection: String) = Unit
+@@ -132,10 +133,21 @@ private fun AppearanceSettingsScreen(
+           labels = stringArrayResource(R.array.pref_theme_entries),
+           values = stringArrayResource(R.array.pref_theme_values),
+           selectedValue = state.theme.serialize(),
+-          onSelected = callbacks::onThemeSelected
++          onSelected = { callbacks.onThemeSelected(it, state.dynamicColors) }
+         )
+       }
+ 
++      if (DynamicTheme.isDynamicColorsAvailable()) {
++        item {
++          Rows.ToggleRow(
++            text = stringResource(R.string.preferences_appearance__dynamic_colors),
++            label = stringResource(R.string.preferences_appearance__use_system_colors_for_the_app_theme),
++            checked = state.dynamicColors,
++            onCheckChanged = { callbacks.onThemeSelected(state.theme.serialize(), it) }
++          )
++        }
++      }
++
+       item {
+         Rows.TextRow(
+           text = stringResource(R.string.preferences__chat_color_and_wallpaper),
+@@ -186,6 +198,7 @@ private fun AppearanceSettingsScreenPreview() {
+     AppearanceSettingsScreen(
+       state = AppearanceSettingsState(
+         theme = SettingsValues.Theme.SYSTEM,
++        dynamicColors = true,
+         messageFontSize = 0,
+         language = "en-US",
+         isCompactNavigationBar = false
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt
+index 9e080f65b8..d65ba284d3 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt
+@@ -4,6 +4,7 @@ import org.thoughtcrime.securesms.keyvalue.SettingsValues
+ 
+ data class AppearanceSettingsState(
+   val theme: SettingsValues.Theme,
++  val dynamicColors: Boolean,
+   val messageFontSize: Int,
+   val language: String,
+   val isCompactNavigationBar: Boolean
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
+index b8d0f12674..e7fb539d5c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
+@@ -20,9 +20,9 @@ class AppearanceSettingsViewModel : ViewModel() {
+     store.update { getState() }
+   }
+ 
+-  fun setTheme(activity: Activity?, theme: Theme) {
+-    store.update { it.copy(theme = theme) }
+-    SignalStore.settings.theme = theme
++  fun setTheme(activity: Activity?, theme: Theme, useDynamicColors: Boolean) {
++    store.update { it.copy(theme = theme, dynamicColors = useDynamicColors) }
++    SignalStore.settings.setTheme(theme, useDynamicColors)
+     SplashScreenUtil.setSplashScreenThemeIfNecessary(activity, theme)
+   }
+ 
+@@ -41,6 +41,7 @@ class AppearanceSettingsViewModel : ViewModel() {
+   private fun getState(): AppearanceSettingsState {
+     return AppearanceSettingsState(
+       SignalStore.settings.theme,
++      SignalStore.settings.isDynamicColorsEnabled,
+       SignalStore.settings.messageFontSize,
+       SignalStore.settings.language,
+       SignalStore.settings.useCompactNavigationBar
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
+index 5624daa009..a8fcf7c964 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
+@@ -53,7 +53,6 @@ import org.thoughtcrime.securesms.util.navigation.safeNavigate
+ import org.whispersystems.signalservice.api.subscriptions.ActiveSubscription
+ import java.math.BigDecimal
+ import java.util.Currency
+-import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+  * Unified donation fragment which allows users to choose between monthly or one-time donations.
+@@ -115,8 +114,8 @@ class DonateToSignalFragment :
+ 
+   override fun getMaterial3OnScrollHelper(toolbar: Toolbar?): Material3OnScrollHelper {
+     return object : Material3OnScrollHelper(activity = requireActivity(), views = listOf(toolbar!!), lifecycleOwner = viewLifecycleOwner) {
+-      override val activeColorSet: ColorSet = ColorSet(R.color.transparent, CoreUiR.color.signal_colorBackground)
+-      override val inactiveColorSet: ColorSet = ColorSet(R.color.transparent, CoreUiR.color.signal_colorBackground)
++      override val activeColorSet: ColorSet = ColorSet.from(requireContext(), R.color.transparent, com.google.android.material.R.attr.colorSurface)
++      override val inactiveColorSet: ColorSet = ColorSet.from(requireContext(), R.color.transparent, com.google.android.material.R.attr.colorSurface)
+     }
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt
+index bd25324e99..794dadb095 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt
+@@ -42,7 +42,6 @@ import org.thoughtcrime.securesms.util.SpanUtil
+ import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
+ import org.thoughtcrime.securesms.util.navigation.safeNavigate
+ import kotlin.time.Duration.Companion.seconds
+-import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+  * Fragment displayed when a user enters "Subscriptions" via app settings but is already
+@@ -138,8 +137,8 @@ class ManageDonationsFragment :
+ 
+   override fun getMaterial3OnScrollHelper(toolbar: Toolbar?): Material3OnScrollHelper {
+     return object : Material3OnScrollHelper(activity = requireActivity(), views = listOf(toolbar!!), lifecycleOwner = viewLifecycleOwner) {
+-      override val activeColorSet: ColorSet = ColorSet(R.color.transparent, CoreUiR.color.signal_colorBackground)
+-      override val inactiveColorSet: ColorSet = ColorSet(R.color.transparent, CoreUiR.color.signal_colorBackground)
++      override val activeColorSet: ColorSet = ColorSet.from(requireContext(), R.color.transparent, com.google.android.material.R.attr.colorSurface)
++      override val inactiveColorSet: ColorSet = ColorSet.from(requireContext(), R.color.transparent, com.google.android.material.R.attr.colorSurface)
+     }
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/usernamelinks/main/QrImageSelectionActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/usernamelinks/main/QrImageSelectionActivity.kt
+index 33c699eece..862c54ac81 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/usernamelinks/main/QrImageSelectionActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/usernamelinks/main/QrImageSelectionActivity.kt
+@@ -16,11 +16,19 @@ import androidx.appcompat.app.AppCompatDelegate
+ import org.signal.core.models.media.Media
+ import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.mediasend.v2.gallery.MediaGalleryFragment
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
++import org.thoughtcrime.securesms.util.DynamicTheme
+ 
+ /**
+  * Select qr code from gallery instead of using camera. Used in usernames and when linking devices
+  */
+ class QrImageSelectionActivity : AppCompatActivity(), MediaGalleryFragment.Callbacks {
++  private val theme: DynamicTheme = DynamicNoActionBarTheme()
++
++  override fun onResume() {
++    super.onResume()
++    theme.onResume(this)
++  }
+ 
+   override fun attachBaseContext(newBase: Context) {
+     delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
+@@ -28,6 +36,7 @@ class QrImageSelectionActivity : AppCompatActivity(), MediaGalleryFragment.Callb
+   }
+ 
+   override fun onCreate(savedInstanceState: Bundle?) {
++    theme.onCreate(this)
+     super.onCreate(savedInstanceState)
+     window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
+     setContentView(R.layout.username_qr_image_selection_activity)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt
+index 7889be34a1..fb5b4e3bbb 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt
+@@ -281,9 +281,10 @@ class ConversationSettingsFragment :
+         }
+       }
+     ) {
+-      override val inactiveColorSet = ColorSet(
+-        toolbarColorRes = CoreUiR.color.signal_colorBackground_0,
+-        statusBarColorRes = CoreUiR.color.signal_colorBackground
++      override val inactiveColorSet = ColorSet.from(
++        requireContext(),
++        toolbarColorRef = CoreUiR.color.signal_colorBackground_0,
++        statusBarColorRef = com.google.android.material.R.attr.colorSurface
+       )
+     }
+   }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
+index b8fd8831fc..c331f20aca 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
+@@ -83,6 +83,8 @@ import org.thoughtcrime.securesms.safety.SafetyNumberBottomSheet
+ import org.thoughtcrime.securesms.service.webrtc.CallLinkDisconnectReason
+ import org.thoughtcrime.securesms.service.webrtc.SignalCallManager
+ import org.thoughtcrime.securesms.sms.MessageSender
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
++import org.thoughtcrime.securesms.util.DynamicTheme
+ import org.thoughtcrime.securesms.util.FullscreenHelper
+ import org.thoughtcrime.securesms.util.RemoteConfig
+ import org.thoughtcrime.securesms.util.TextSecurePreferences
+@@ -127,6 +129,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
+   private var ephemeralStateDisposable = Disposable.empty()
+   private val callPermissionsDialogController = CallPermissionsDialogController()
+   private val eventBusSubscriber = EventBusSubscriber()
++  private val theme: DynamicTheme = DynamicNoActionBarTheme()
+   private val mediaProjectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+     if (result.resultCode == RESULT_OK && result.data != null) {
+       AppDependencies.signalCallManager.startScreenShare(result.data!!)
+@@ -145,6 +148,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
+ 
+   @SuppressLint("MissingInflatedId")
+   override fun onCreate(savedInstanceState: Bundle?) {
++    theme.onCreate(this)
+     val callIntent: CallIntent = getCallIntent()
+     Log.i(TAG, "onCreate(${callIntent.isStartedFromFullScreen})")
+ 
+@@ -258,6 +262,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
+   override fun onResume() {
+     Log.i(TAG, "onResume()")
+     super.onResume()
++    theme.onResume(this)
+ 
+     initializeScreenshotSecurity()
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
+index 129558d369..0003ec9c38 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
+@@ -422,7 +422,7 @@ object ContactSearchModels {
+         ActionItem(CoreUiR.drawable.symbol_settings_android_24, context.getString(R.string.ContactSearchItems__story_settings)) {
+           callbacks.onOpenStorySettings(model.story)
+         },
+-        ActionItem(CoreUiR.drawable.symbol_trash_24, context.getString(R.string.ContactSearchItems__delete_story), CoreUiR.color.signal_colorError) {
++        ActionItem(CoreUiR.drawable.symbol_trash_24, context.getString(R.string.ContactSearchItems__delete_story), com.google.android.material.R.attr.colorError) {
+           callbacks.onDeletePrivateStory(model.story, model.isSelected)
+         }
+       )
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
+index 5849d510c6..0118c5c74f 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
+@@ -128,6 +128,7 @@ import org.thoughtcrime.securesms.linkpreview.LinkPreview;
+ import org.thoughtcrime.securesms.mediapreview.MediaIntentFactory;
+ import org.thoughtcrime.securesms.mediapreview.MediaPreviewCache;
+ import org.thoughtcrime.securesms.mediapreview.MediaPreviewV2Fragment;
++import org.thoughtcrime.securesms.messages.PreservedRemoteDelete;
+ import org.thoughtcrime.securesms.mms.ImageSlide;
+ import org.thoughtcrime.securesms.mms.PartAuthority;
+ import org.thoughtcrime.securesms.mms.Slide;
+@@ -1378,8 +1379,8 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
+       CallLinkRootKey callLinkRootKey = CallLinks.isCallLink(linkPreview.getUrl()) ? CallLinks.parseUrl(linkPreview.getUrl()) : null;
+       if (callLinkRootKey != null) {
+         joinCallLinkStub.setVisibility(View.VISIBLE);
+-        joinCallLinkStub.get().setTextColor(ContextCompat.getColor(context, messageRecord.isOutgoing() ? org.signal.core.ui.R.color.signal_light_colorOnPrimary : org.signal.core.ui.R.color.signal_colorOnPrimaryContainer));
+-        joinCallLinkStub.get().setBackgroundColor(ContextCompat.getColor(context, messageRecord.isOutgoing() ? org.signal.core.ui.R.color.signal_light_colorTransparent2 : org.signal.core.ui.R.color.signal_colorOnPrimary));
++      joinCallLinkStub.get().setTextColor(ThemeUtil.getThemedColor(context, messageRecord.isOutgoing() ? org.signal.core.ui.R.color.signal_light_colorOnPrimary : com.google.android.material.R.attr.colorOnPrimaryContainer));
++      joinCallLinkStub.get().setBackgroundColor(ThemeUtil.getThemedColor(context, messageRecord.isOutgoing() ? org.signal.core.ui.R.color.signal_light_colorTransparent2 : com.google.android.material.R.attr.colorOnPrimary));
+         joinCallLinkStub.get().setOnClickListener(v -> {
+           if (eventListener != null) {
+             eventListener.onJoinCallLink(callLinkRootKey);
+@@ -1801,7 +1802,7 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
+         int end   = messageBody.getSpanEnd(placeholder);
+         URLSpan span = new InterceptableLongClickCopyLinkSpan(placeholder.getValue(),
+                                                               urlClickListener,
+-                                                              ContextCompat.getColor(getContext(), isReleaseNotes ? R.color.release_notes_bubble_text : R.color.signal_accent_primary),
++                                                              ThemeUtil.getThemedColor(getContext(), isReleaseNotes ? R.color.release_notes_bubble_text : R.attr.signal_accent_primary),
+                                                               isReleaseNotes);
+ 
+         messageBody.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+@@ -1974,11 +1975,15 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
+   private void setReactionsWithWidth(@NonNull MessageRecord current, int width) {
+     reactionsView.setReactions(current.getReactions());
+     reactionsView.setBubbleWidth(width);
+-    reactionsView.setOnClickListener(v -> {
+-      if (eventListener == null) return;
++    if (PreservedRemoteDelete.hasUserReactions(current.getReactions())) {
++      reactionsView.setOnClickListener(v -> {
++        if (eventListener == null) return;
+ 
+-      eventListener.onReactionClicked(new MultiselectPart.Message(conversationMessage), current.getId(), current.isMms());
+-    });
++        eventListener.onReactionClicked(new MultiselectPart.Message(conversationMessage), current.getId(), current.isMms());
++      });
++    } else {
++      reactionsView.setOnClickListener(null);
++    }
+   }
+ 
+   private void setFooter(@NonNull MessageRecord current, @NonNull Optional<MessageRecord> next, @NonNull Locale locale, boolean isGroupThread, boolean hasWallpaper) {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
+index b627867d8d..e1d80e9955 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
+@@ -854,11 +854,11 @@ public final class ConversationUpdateItem extends FrameLayout
+       CollapsibleEvents.CollapsibleType collapsibleType = CollapsibleEvents.getCollapsibleType(messageRecord.getType(), messageRecord.getMessageExtras());
+       if (collapsibleType != null) {
+         SpannableStringBuilder text = new SpannableStringBuilder()
+-                                          .append(SignalSymbols.getSpannedString(getContext(), SignalSymbols.Weight.BOLD, getCollapsibleSymbol(collapsibleType), org.signal.core.ui.R.color.signal_colorOnSurfaceVariant))
++                                          .append(SignalSymbols.getSpannedString(getContext(), SignalSymbols.Weight.BOLD, getCollapsibleSymbol(collapsibleType), com.google.android.material.R.attr.colorOnSurfaceVariant))
+                                           .append(" ")
+                                           .append(getCollapsibleString(collapsibleType))
+                                           .append(" ")
+-                                          .append(SignalSymbols.getSpannedString(getContext(), SignalSymbols.Weight.BOLD, collapsedState == CollapsedState.HEAD_EXPANDED ? SignalSymbols.Glyph.CHEVRON_UP : SignalSymbols.Glyph.CHEVRON_DOWN, org.signal.core.ui.R.color.signal_colorOnSurfaceVariant));
++                                          .append(SignalSymbols.getSpannedString(getContext(), SignalSymbols.Weight.BOLD, collapsedState == CollapsedState.HEAD_EXPANDED ? SignalSymbols.Glyph.CHEVRON_UP : SignalSymbols.Glyph.CHEVRON_DOWN, com.google.android.material.R.attr.colorOnSurfaceVariant));
+         collapsedButton.setText(text);
+         collapsedButton.setOnClickListener(v -> {
+           if (eventListener != null) {
+@@ -878,7 +878,7 @@ public final class ConversationUpdateItem extends FrameLayout
+           collapsedButton.setBackgroundTintList(null);
+         } else {
+           collapsedButton.setBackgroundResource(R.drawable.rounded_rectangle_38);
+-          collapsedButton.setBackgroundTintList(AppCompatResources.getColorStateList(getContext(), org.signal.core.ui.R.color.signal_colorSurface1));
++          collapsedButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(getContext(), com.google.android.material.R.attr.colorSurfaceContainerLow)));
+         }
+ 
+         collapsedButton.setVisibility(VISIBLE);
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/NewConversationActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/NewConversationActivity.kt
+index d716936f5c..1c192f3863 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/NewConversationActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/NewConversationActivity.kt
+@@ -61,11 +61,24 @@ import org.thoughtcrime.securesms.recipients.ui.RecipientSelection
+ import org.thoughtcrime.securesms.recipients.ui.findby.FindByActivity
+ import org.thoughtcrime.securesms.recipients.ui.findby.FindByMode
+ import org.thoughtcrime.securesms.util.CommunicationActions
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
+ 
+ /**
+  * Allows the user to start a new conversation by selecting a recipient.
+  */
+ class NewConversationActivity : PassphraseRequiredActivity() {
++  private val theme = DynamicNoActionBarTheme()
++
++  override fun onPreCreate() {
++    super.onPreCreate()
++    theme.onCreate(this)
++  }
++
++  override fun onResume() {
++    super.onResume()
++    theme.onResume(this)
++  }
++
+   companion object {
+     @JvmOverloads
+     @JvmStatic
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ui/ChatColorPreviewView.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ui/ChatColorPreviewView.kt
+index 5b58874ee0..10a6aab945 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ui/ChatColorPreviewView.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ui/ChatColorPreviewView.kt
+@@ -10,7 +10,6 @@ import android.view.View
+ import android.widget.ImageView
+ import android.widget.TextView
+ import androidx.constraintlayout.widget.ConstraintLayout
+-import androidx.core.content.ContextCompat
+ import org.signal.core.ui.util.ThemeUtil
+ import org.signal.core.util.logging.Log
+ import org.thoughtcrime.securesms.R
+@@ -143,12 +142,12 @@ class ChatColorPreviewView @JvmOverloads constructor(
+     val backgroundColor = if (chatWallpaper != null) {
+       R.color.conversation_item_recv_bubble_color_wallpaper
+     } else {
+-      R.color.signal_background_secondary
++      R.attr.signal_background_secondary
+     }
+ 
+     listOf(recv1, recv2).forEach {
+       it.bubble.background.colorFilter = PorterDuffColorFilter(
+-        ContextCompat.getColor(context, backgroundColor),
++        ThemeUtil.getThemedColor(context, backgroundColor),
+         PorterDuff.Mode.SRC_IN
+       )
+     }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
+index fc530fe4d3..a1c71e36f3 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
+@@ -396,6 +396,7 @@ import java.util.Optional
+ import java.util.concurrent.ExecutionException
+ import kotlin.time.Duration.Companion.days
+ import kotlin.time.Duration.Companion.milliseconds
++import com.google.android.material.R as MaterialR
+ import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+@@ -1820,9 +1821,9 @@ class ConversationFragment :
+     if (!resources.isSplitPane() || isFullScreenPane) {
+       binding.toolbar.setNavigationIcon(CoreUiR.drawable.symbol_arrow_start_24)
+       binding.toolbar.navigationIcon?.setTint(
+-        ContextCompat.getColor(
++        ThemeUtil.getThemedColor(
+           requireContext(),
+-          if (viewModel.wallpaperSnapshot != null) CoreUiR.color.signal_colorNeutralInverse else CoreUiR.color.signal_colorOnSurface
++          if (viewModel.wallpaperSnapshot != null) CoreUiR.color.signal_colorNeutralInverse else MaterialR.attr.colorOnSurfaceVariant
+         )
+       )
+       binding.toolbar.setNavigationContentDescription(R.string.ConversationFragment__content_description_back_button)
+@@ -1906,12 +1907,12 @@ class ConversationFragment :
+ 
+     val wallpaperEnabled = chatWallpaper != null || recipient.isReleaseNotes
+ 
+-    val toolbarTint = ContextCompat.getColor(
++    val toolbarTint = ThemeUtil.getThemedColor(
+       requireContext(),
+       if (wallpaperEnabled) {
+         CoreUiR.color.signal_colorNeutralInverse
+       } else {
+-        CoreUiR.color.signal_colorOnSurface
++        MaterialR.attr.colorOnSurface
+       }
+     )
+ 
+@@ -1937,9 +1938,9 @@ class ConversationFragment :
+     )
+ 
+     binding.scrollDateHeader.setTextColor(
+-      ContextCompat.getColor(
++      ThemeUtil.getThemedColor(
+         requireContext(),
+-        if (wallpaperEnabled) R.color.sticky_header_foreground_wallpaper else CoreUiR.color.signal_colorOnSurfaceVariant
++        if (wallpaperEnabled) R.color.sticky_header_foreground_wallpaper else MaterialR.attr.colorOnSurfaceVariant
+       )
+     )
+ 
+@@ -1979,10 +1980,10 @@ class ConversationFragment :
+     val navColor = if (hasWallpaper) {
+       R.color.conversation_navigation_wallpaper
+     } else {
+-      CoreUiR.color.signal_colorBackground
++      MaterialR.attr.colorSurface
+     }
+ 
+-    binding.navBar.setBackgroundColor(ContextCompat.getColor(requireContext(), navColor))
++    binding.navBar.setBackgroundColor(ThemeUtil.getThemedColor(requireContext(), navColor))
+   }
+ 
+   private fun presentChatColors(chatColors: ChatColors) {
+@@ -4298,12 +4299,12 @@ class ConversationFragment :
+         }
+       }
+ 
+-      val toolbarTextAndIconColor = ContextCompat.getColor(
++      val toolbarTextAndIconColor = ThemeUtil.getThemedColor(
+         requireContext(),
+         if (viewModel.wallpaperSnapshot != null) {
+           CoreUiR.color.signal_colorNeutralInverse
+         } else {
+-          CoreUiR.color.signal_colorOnSurface
++          MaterialR.attr.colorOnSurface
+         }
+       )
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationToolbarOnScrollHelper.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationToolbarOnScrollHelper.kt
+index 4629f25676..ceb3a90b6a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationToolbarOnScrollHelper.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationToolbarOnScrollHelper.kt
+@@ -7,7 +7,7 @@ import androidx.lifecycle.LifecycleOwner
+ import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.util.Material3OnScrollHelper
+ import org.thoughtcrime.securesms.wallpaper.ChatWallpaper
+-import org.signal.core.ui.R as CoreUiR
++import com.google.android.material.R as MaterialR
+ 
+ /**
+  * Scroll helper to manage the color state of the top bar and status bar.
+@@ -25,27 +25,27 @@ class ConversationToolbarOnScrollHelper(
+   lifecycleOwner = lifecycleOwner,
+   setStatusBarColor = {}
+ ) {
+-  override val activeColorSet: ColorSet
+-    get() = when {
+-      incognito -> ColorSet(R.color.conversation_toolbar_color_incognito)
+-      releaseNotesProvider() -> ColorSet(R.color.release_notes_toolbar_scrolled)
+-      else -> ColorSet(getActiveToolbarColor(wallpaperProvider() != null))
++  override val activeColorSet: ColorSet =
++    when {
++      incognito -> ColorSet.from(activity, R.color.conversation_toolbar_color_incognito)
++      releaseNotesProvider() -> ColorSet.from(activity, R.color.release_notes_toolbar_scrolled)
++      else -> ColorSet.from(activity, getActiveToolbarColor(wallpaperProvider() != null))
+     }
+ 
+-  override val inactiveColorSet: ColorSet
+-    get() = when {
+-      incognito -> ColorSet(R.color.conversation_toolbar_color_incognito)
+-      releaseNotesProvider() -> ColorSet(R.color.release_notes_toolbar_transparent)
+-      else -> ColorSet(getInactiveToolbarColor(wallpaperProvider() != null))
++  override val inactiveColorSet: ColorSet =
++    when {
++      incognito -> ColorSet.from(activity, R.color.conversation_toolbar_color_incognito)
++      releaseNotesProvider() -> ColorSet.from(activity, R.color.release_notes_toolbar_transparent)
++      else -> ColorSet.from(activity, getInactiveToolbarColor(wallpaperProvider() != null))
+     }
+ 
+   @ColorRes
+   private fun getActiveToolbarColor(hasWallpaper: Boolean): Int {
+-    return if (hasWallpaper) R.color.conversation_toolbar_color_wallpaper_scrolled else CoreUiR.color.signal_colorSurface2
++    return if (hasWallpaper) R.color.conversation_toolbar_color_wallpaper_scrolled else MaterialR.attr.colorSurfaceContainer
+   }
+ 
+   @ColorRes
+   private fun getInactiveToolbarColor(hasWallpaper: Boolean): Int {
+-    return if (hasWallpaper) R.color.conversation_toolbar_color_wallpaper else CoreUiR.color.signal_colorBackground
++    return if (hasWallpaper) R.color.conversation_toolbar_color_wallpaper else MaterialR.attr.colorSurface
+   }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/DisabledInputView.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/DisabledInputView.kt
+index 7872237f35..5998b0f3bc 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/DisabledInputView.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/DisabledInputView.kt
+@@ -13,9 +13,9 @@ import android.view.View
+ import android.view.ViewGroup
+ import android.widget.FrameLayout
+ import android.widget.TextView
+-import androidx.core.content.ContextCompat
+ import com.google.android.material.button.MaterialButton
+ import com.google.android.material.dialog.MaterialAlertDialogBuilder
++import org.signal.core.ui.util.ThemeUtil
+ import org.signal.core.util.logging.Log
+ import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+@@ -24,7 +24,6 @@ import org.thoughtcrime.securesms.messagerequests.MessageRequestsBottomView
+ import org.thoughtcrime.securesms.recipients.Recipient
+ import org.thoughtcrime.securesms.util.SpanUtil
+ import org.thoughtcrime.securesms.util.visible
+-import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+  * A one-stop-view for all your conversation input disabled needs.
+@@ -224,7 +223,7 @@ class DisabledInputView @JvmOverloads constructor(
+   }
+ 
+   fun setWallpaperEnabled(wallpaperEnabled: Boolean) {
+-    color = ContextCompat.getColor(context, if (wallpaperEnabled) R.color.wallpaper_bubble_color else CoreUiR.color.signal_colorBackground)
++    color = ThemeUtil.getThemedColor(context, if (wallpaperEnabled) R.color.wallpaper_bubble_color else com.google.android.material.R.attr.colorSurface)
+     setBackgroundColor(color)
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ChatFolderAdapter.kt b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ChatFolderAdapter.kt
+index a383e0d872..52d106744d 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ChatFolderAdapter.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ChatFolderAdapter.kt
+@@ -13,6 +13,8 @@ import org.thoughtcrime.securesms.util.adapter.mapping.LayoutFactory
+ import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
+ import org.thoughtcrime.securesms.util.adapter.mapping.MappingViewHolder
+ import org.thoughtcrime.securesms.util.visible
++import com.google.android.material.R as MaterialR
++import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+ * RecyclerView adapter for the chat folders displayed on conversation list
+@@ -56,14 +58,14 @@ class ChatFolderAdapter(val callbacks: Callbacks) : MappingAdapter() {
+       }
+       if (model.isSelected) {
+         itemView.backgroundTintList = if (callbacks.isScrolled()) {
+-          ColorStateList.valueOf(ThemeUtil.getThemedColor(itemView.context, com.google.android.material.R.attr.colorSurface))
++          ColorStateList.valueOf(ThemeUtil.getThemedColor(itemView.context, MaterialR.attr.colorSurface))
+         } else {
+-          ColorStateList.valueOf(ThemeUtil.getThemedColor(itemView.context, org.signal.core.ui.R.attr.vesper_colorSurface2))
++          ColorStateList.valueOf(ThemeUtil.getThemedColor(itemView.context, CoreUiR.attr.vesper_colorSurface2))
+         }
+-        name.setTextColor(ThemeUtil.getThemedColor(itemView.context, com.google.android.material.R.attr.colorOnSurface))
++        name.setTextColor(ThemeUtil.getThemedColor(itemView.context, MaterialR.attr.colorOnSurface))
+       } else {
+         itemView.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(itemView.context, R.color.transparent))
+-        name.setTextColor(ThemeUtil.getThemedColor(itemView.context, com.google.android.material.R.attr.colorOnSurfaceVariant))
++        name.setTextColor(ThemeUtil.getThemedColor(itemView.context, MaterialR.attr.colorOnSurfaceVariant))
+       }
+     }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java
+index d001e8809a..e25f68127f 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java
+@@ -16,8 +16,6 @@
+  */
+ package org.thoughtcrime.securesms.conversationlist;
+ 
+-import org.signal.core.ui.util.ThemeUtil;
+-
+ import android.content.Context;
+ import android.graphics.Rect;
+ import android.graphics.Typeface;
+@@ -54,6 +52,7 @@ import org.signal.core.util.DimensionUnit;
+ import org.signal.core.util.StringUtil;
+ import org.signal.core.util.Util;
+ import org.signal.core.util.logging.Log;
++import org.signal.core.ui.util.ThemeUtil;
+ import org.signal.glide.decryptableuri.DecryptableUri;
+ import org.thoughtcrime.securesms.BindableConversationListItem;
+ import org.thoughtcrime.securesms.OverlayTransformation;
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/ConversationListFilterPullView.kt b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/ConversationListFilterPullView.kt
+index 60e3f66b0b..da3cae06a2 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/ConversationListFilterPullView.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/ConversationListFilterPullView.kt
+@@ -26,6 +26,8 @@ import kotlin.math.max
+ import kotlin.math.min
+ import kotlin.time.Duration
+ import kotlin.time.Duration.Companion.milliseconds
++import com.google.android.material.R as MaterialR
++import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+  * Encapsulates the push / pull latch for enabling and disabling
+@@ -79,8 +81,8 @@ class ConversationListFilterPullView @JvmOverloads constructor(
+   private var helpTextStartFraction = 0.35f
+   private var previousDragProgress: Float? = null
+ 
+-  private val pillDefaultBackgroundTint = ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorSecondaryContainer)
+-  private val pillWillCloseBackgroundTint = ThemeUtil.getThemedColor(context, org.signal.core.ui.R.attr.vesper_colorSurface1)
++  private val pillDefaultBackgroundTint = ThemeUtil.getThemedColor(context, MaterialR.attr.colorSecondaryContainer)
++  private val pillWillCloseBackgroundTint = ThemeUtil.getThemedColor(context, CoreUiR.attr.vesper_colorSurface1)
+ 
+   fun setPillText(@StringRes textId: Int) {
+     binding.filterText.setText(textId)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/FilterCircleView.kt b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/FilterCircleView.kt
+index 4dc14cff90..19ad9ec5cb 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/FilterCircleView.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/chatfilter/FilterCircleView.kt
+@@ -17,6 +17,8 @@ import org.signal.core.util.dp
+ import kotlin.math.max
+ import kotlin.time.Duration
+ import kotlin.time.Duration.Companion.milliseconds
++import com.google.android.material.R as MaterialR
++import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+  * Renders the filter-circle at any given position
+@@ -76,10 +78,10 @@ class FilterCircleView @JvmOverloads constructor(
+   }
+ 
+   private val circleRadius = 38.dp / 2f
+-  private val circleBackgroundColor = ThemeUtil.getThemedColor(context, org.signal.core.ui.R.attr.vesper_colorSurface1)
+-  private val strokeColor = ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorSecondary)
+-  private val circleActiveBackgroundColor = ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorSecondaryContainer)
+-  private val strokeActiveColor = ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorPrimary)
++  private val circleBackgroundColor = ThemeUtil.getThemedColor(context, CoreUiR.attr.vesper_colorSurface1)
++  private val strokeColor = ThemeUtil.getThemedColor(context, MaterialR.attr.colorSecondary)
++  private val circleActiveBackgroundColor = ThemeUtil.getThemedColor(context, MaterialR.attr.colorSecondaryContainer)
++  private val strokeActiveColor = ThemeUtil.getThemedColor(context, MaterialR.attr.colorPrimary)
+ 
+   private var circleColorAnimator: ValueAnimator? = null
+   private var strokeColorAnimator: ValueAnimator? = null
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/fonts/SignalSymbols.kt b/app/src/main/java/org/thoughtcrime/securesms/fonts/SignalSymbols.kt
+index 76940def22..6b8c8b1837 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/fonts/SignalSymbols.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/fonts/SignalSymbols.kt
+@@ -10,7 +10,6 @@ import android.graphics.Typeface
+ import android.text.SpannableStringBuilder
+ import android.text.TextPaint
+ import android.text.style.MetricAffectingSpan
+-import androidx.annotation.ColorRes
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.platform.LocalContext
+@@ -21,8 +20,8 @@ import androidx.compose.ui.text.font.FontFamily
+ import androidx.compose.ui.text.style.BaselineShift
+ import androidx.compose.ui.text.withStyle
+ import androidx.compose.ui.unit.TextUnit
+-import androidx.core.content.ContextCompat
+ import androidx.core.text.buildSpannedString
++import org.signal.core.ui.util.ThemeUtil
+ import org.signal.core.util.BidiUtil
+ import org.thoughtcrime.securesms.util.SpanUtil
+ import org.thoughtcrime.securesms.util.ViewUtil
+@@ -215,7 +214,7 @@ object SignalSymbols {
+     context: Context,
+     weight: Weight,
+     glyph: Glyph,
+-    @ColorRes colorRes: Int = -1
++    colorRef: Int = -1
+   ): CharSequence {
+     val typeface = getTypeface(context, weight)
+     val span = CustomTypefaceSpan(typeface)
+@@ -223,8 +222,8 @@ object SignalSymbols {
+     val text = SpannableStringBuilder(glyph.unicode.toString())
+     text.setSpan(span, 0, text.length, 0)
+ 
+-    return if (colorRes != -1) {
+-      SpanUtil.color(ContextCompat.getColor(context, colorRes), text)
++    return if (colorRef != -1) {
++      SpanUtil.color(ThemeUtil.getThemedColor(context, colorRef), text)
+     } else {
+       text
+     }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyboard/emoji/KeyboardPageSearchView.kt b/app/src/main/java/org/thoughtcrime/securesms/keyboard/emoji/KeyboardPageSearchView.kt
+index 0b2327b9c3..e4e604106b 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyboard/emoji/KeyboardPageSearchView.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyboard/emoji/KeyboardPageSearchView.kt
+@@ -9,7 +9,6 @@ import android.view.View
+ import android.widget.EditText
+ import androidx.appcompat.widget.AppCompatImageView
+ import androidx.constraintlayout.widget.ConstraintLayout
+-import androidx.core.content.ContextCompat
+ import androidx.core.content.res.use
+ import androidx.core.view.ViewCompat
+ import androidx.core.widget.ImageViewCompat
+@@ -20,6 +19,7 @@ import org.thoughtcrime.securesms.animation.AnimationCompleteListener
+ import org.thoughtcrime.securesms.animation.ResizeAnimation
+ import org.thoughtcrime.securesms.util.ViewUtil
+ import org.thoughtcrime.securesms.util.visible
++import com.google.android.material.R as MaterialR
+ import org.signal.core.ui.R as CoreUiR
+ 
+ private const val REVEAL_DURATION = 250L
+@@ -89,13 +89,13 @@ class KeyboardPageSearchView @JvmOverloads constructor(
+ 
+       input.hint = typedArray.getString(R.styleable.KeyboardPageSearchView_search_hint) ?: ""
+ 
+-      val backgroundTint = typedArray.getColor(R.styleable.KeyboardPageSearchView_search_bar_tint, ThemeUtil.getThemedColor(context, R.attr.signal_background_primary))
++      val backgroundTint = typedArray.getColor(R.styleable.KeyboardPageSearchView_search_bar_tint, ThemeUtil.getThemedColor(context, MaterialR.attr.colorSurfaceContainerHighest))
+       val backgroundTintList = ColorStateList.valueOf(backgroundTint)
+       input.background = ColorDrawable(backgroundTint)
+       ViewCompat.setBackgroundTintList(findViewById(R.id.emoji_search_nav), backgroundTintList)
+       ViewCompat.setBackgroundTintList(findViewById(R.id.emoji_search_clear), backgroundTintList)
+ 
+-      val iconTint = typedArray.getColorStateList(R.styleable.KeyboardPageSearchView_search_icon_tint) ?: ContextCompat.getColorStateList(context, R.color.signal_icon_tint_primary)
++      val iconTint = typedArray.getColorStateList(R.styleable.KeyboardPageSearchView_search_icon_tint) ?: ColorStateList.valueOf(ThemeUtil.getThemedColor(context, MaterialR.attr.colorOnSurfaceVariant))
+       ImageViewCompat.setImageTintList(navButton, iconTint)
+       ImageViewCompat.setImageTintList(clearButton, iconTint)
+       input.setHintTextColor(iconTint)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
+index 125cc28a32..53537b8db2 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
+@@ -41,6 +41,7 @@ public final class SettingsValues extends SignalStoreValues {
+   public static final String THREAD_TRIM_ENABLED = "pref_trim_threads";
+ 
+   public static final  String THEME                                   = "settings.theme";
++  public static final  String DYNAMIC_COLORS_ENABLED                  = "settings.dynamicColors";
+   public static final  String MESSAGE_FONT_SIZE                       = "settings.message.font.size";
+   public static final  String LANGUAGE                                = "settings.language";
+   public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
+@@ -70,6 +71,7 @@ public final class SettingsValues extends SignalStoreValues {
+   private static final String KEEP_MUTED_CHATS_ARCHIVED               = "settings.keepMutedChatsArchived";
+   private static final String USE_COMPACT_NAVIGATION_BAR              = "settings.useCompactNavigationBar";
+   private static final String THREAD_TRIM_SYNC_TO_LINKED_DEVICES      = "settings.storage.syncThreadTrimDeletes";
++  private static final String IGNORE_REMOTE_DELETE                    = "settings.ignore.remote.delete";
+   private static final String PASSPHRASE_DISABLED                     = "settings.passphrase.disabled";
+   private static final String PASSPHRASE_TIMEOUT_ENABLED              = "settings.passphrase.timeout.enabled";
+   private static final String PASSPHRASE_TIMEOUT                      = "settings.passphrase.timeout";
+@@ -128,6 +130,7 @@ public final class SettingsValues extends SignalStoreValues {
+                          THREAD_TRIM_ENABLED,
+                          LANGUAGE,
+                          THEME,
++                         DYNAMIC_COLORS_ENABLED,
+                          MESSAGE_FONT_SIZE,
+                          PREFER_SYSTEM_EMOJI,
+                          ENTER_KEY_SENDS,
+@@ -149,6 +152,7 @@ public final class SettingsValues extends SignalStoreValues {
+                          KEEP_MUTED_CHATS_ARCHIVED,
+                          USE_COMPACT_NAVIGATION_BAR,
+                          THREAD_TRIM_SYNC_TO_LINKED_DEVICES,
++                         IGNORE_REMOTE_DELETE,
+                          PASSPHRASE_DISABLED,
+                          PASSPHRASE_TIMEOUT_ENABLED,
+                          PASSPHRASE_TIMEOUT,
+@@ -242,10 +246,19 @@ public final class SettingsValues extends SignalStoreValues {
+   }
+ 
+   public void setTheme(@NonNull Theme theme) {
++    setTheme(theme, isDynamicColorsEnabled());
++  }
++
++  public void setTheme(@NonNull Theme theme, boolean useDynamicColors) {
+     putString(THEME, theme.serialize());
++    putBoolean(DYNAMIC_COLORS_ENABLED, useDynamicColors);
+     onConfigurationSettingChanged.postValue(THEME);
+   }
+ 
++  public boolean isDynamicColorsEnabled() {
++    return getBoolean(DYNAMIC_COLORS_ENABLED, false);
++  }
++
+   public int getMessageFontSize() {
+     return getInteger(MESSAGE_FONT_SIZE, TextSecurePreferences.getMessageBodyTextSize(AppDependencies.getApplication()));
+   }
+@@ -522,6 +535,14 @@ public final class SettingsValues extends SignalStoreValues {
+     return getBoolean(USE_COMPACT_NAVIGATION_BAR, false);
+   }
+ 
++  public boolean isIgnoreRemoteDeleteEnabled() {
++    return getBoolean(IGNORE_REMOTE_DELETE, false);
++  }
++
++  public void setIgnoreRemoteDelete(boolean enabled) {
++    putBoolean(IGNORE_REMOTE_DELETE, enabled);
++  }
++
+   public void setPassphraseDisabled(boolean disabled) {
+     putBoolean(PASSPHRASE_DISABLED, disabled);
+   }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java b/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java
+index 3231401bd4..052b6532c4 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java
+@@ -251,7 +251,7 @@ public class SubmitDebugLogActivity extends BaseActivity {
+   }
+ 
+   private void onFilterLevel(View view, boolean isChecked) {
+-    view.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, (isChecked) ? R.color.transparent_black_25 : R.color.signal_background_secondary)));
++    view.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(this, isChecked ? R.color.transparent_black_25 : R.attr.signal_background_secondary)));
+ 
+     List<String> selectedLevels = new ArrayList<>();
+ 
+@@ -274,12 +274,14 @@ public class SubmitDebugLogActivity extends BaseActivity {
+     isError    = false;
+     isUncaught = false;
+ 
+-    verboseButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(this, R.attr.signal_background_secondary)));
+-    debugButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(this, R.attr.signal_background_secondary)));
+-    infoButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(this, R.attr.signal_background_secondary)));
+-    warningButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(this, R.attr.signal_background_secondary)));
+-    errorButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(this, R.attr.signal_background_secondary)));
+-    uncaughtButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtil.getThemedColor(this, R.attr.signal_background_secondary)));
++    int backgroundColor = ThemeUtil.getThemedColor(this, R.attr.signal_background_secondary);
++
++    verboseButton.setBackgroundTintList(ColorStateList.valueOf(backgroundColor));
++    debugButton.setBackgroundTintList(ColorStateList.valueOf(backgroundColor));
++    infoButton.setBackgroundTintList(ColorStateList.valueOf(backgroundColor));
++    warningButton.setBackgroundTintList(ColorStateList.valueOf(backgroundColor));
++    errorButton.setBackgroundTintList(ColorStateList.valueOf(backgroundColor));
++    uncaughtButton.setBackgroundTintList(ColorStateList.valueOf(backgroundColor));
+ 
+     DebugLogsViewer.onFilterLevel(logWebView, "[]");
+   }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/main/MainNavigation.kt b/app/src/main/java/org/thoughtcrime/securesms/main/MainNavigation.kt
+index 84034df524..a05ccc0fad 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/main/MainNavigation.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/main/MainNavigation.kt
+@@ -22,8 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.NavigationBar
+ import androidx.compose.material3.NavigationBarItem
++import androidx.compose.material3.NavigationBarItemDefaults
+ import androidx.compose.material3.NavigationRail
+ import androidx.compose.material3.NavigationRailItem
++import androidx.compose.material3.NavigationRailItemDefaults
+ import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
+@@ -56,7 +58,7 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperties
+ import com.airbnb.lottie.compose.rememberLottieDynamicProperty
+ import org.signal.core.ui.compose.DayNightPreviews
+ import org.signal.core.ui.compose.Previews
+-import org.signal.core.ui.compose.theme.SignalTheme
++import org.signal.core.ui.compose.theme.colorAttribute
+ import org.thoughtcrime.securesms.R
+ 
+ private val LOTTIE_SIZE = 28.dp
+@@ -106,7 +108,7 @@ fun MainNavigationBar(
+   onDestinationSelected: (MainNavigationListLocation) -> Unit
+ ) {
+   NavigationBar(
+-    containerColor = SignalTheme.colors.colorSurface2,
++    containerColor = colorAttribute(R.attr.navbar_container_color),
+     contentColor = MaterialTheme.colorScheme.onSurface,
+     modifier = Modifier.height(if (state.compact) 48.dp else 80.dp),
+     windowInsets = WindowInsets(0, 0, 0, 0)
+@@ -130,6 +132,10 @@ fun MainNavigationBar(
+ 
+       val selected = state.currentListLocation == destination
+       NavigationBarItem(
++        colors = NavigationBarItemDefaults.colors(
++          indicatorColor = colorAttribute(R.attr.navbar_active_indicator_color),
++          selectedTextColor = MaterialTheme.colorScheme.onSurface
++        ),
+         selected = selected,
+         icon = {
+           NavigationDestinationIcon(
+@@ -218,7 +224,7 @@ fun MainNavigationRail(
+   onDestinationSelected: (MainNavigationListLocation) -> Unit
+ ) {
+   NavigationRail(
+-    containerColor = SignalTheme.colors.colorSurface1
++    containerColor = colorAttribute(R.attr.navbar_container_color)
+   ) {
+     Spacer(modifier = Modifier.height(40.dp).weight(1f, fill = false))
+ 
+@@ -249,6 +255,9 @@ fun MainNavigationRail(
+ 
+       Box {
+         NavigationRailItem(
++          colors = NavigationRailItemDefaults.colors(
++            indicatorColor = colorAttribute(R.attr.navbar_active_indicator_color)
++          ),
+           modifier = Modifier.padding(bottom = if (MainNavigationListLocation.entries.lastIndex == idx) 0.dp else 16.dp),
+           icon = {
+             NavigationDestinationIcon(
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt b/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt
+index 9b017367b3..8b4d33b3ac 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt
+@@ -7,7 +7,6 @@ import android.view.ViewGroup.LayoutParams
+ import android.widget.ImageView
+ import androidx.activity.viewModels
+ import androidx.appcompat.app.AppCompatDelegate
+-import androidx.core.content.ContextCompat
+ import androidx.core.transition.addListener
+ import androidx.core.view.animation.PathInterpolatorCompat
+ import androidx.core.view.updateLayoutParams
+@@ -20,8 +19,8 @@ import org.thoughtcrime.securesms.PassphraseRequiredActivity
+ import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaController
+ import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaControllerOwner
+-import org.thoughtcrime.securesms.util.WindowUtil
+-import org.signal.core.ui.R as CoreUiR
++import org.thoughtcrime.securesms.util.DynamicMediaPreviewTheme
++import org.thoughtcrime.securesms.util.DynamicTheme
+ 
+ class MediaPreviewV2Activity : PassphraseRequiredActivity(), VoiceNoteMediaControllerOwner {
+ 
+@@ -34,6 +33,17 @@ class MediaPreviewV2Activity : PassphraseRequiredActivity(), VoiceNoteMediaContr
+   }
+ 
+   private lateinit var transitionImageView: ImageView
++  private val theme: DynamicTheme = DynamicMediaPreviewTheme()
++
++  override fun onPreCreate() {
++    super.onPreCreate()
++    theme.onCreate(this)
++  }
++
++  override fun onResume() {
++    super.onResume()
++    theme.onResume(this)
++  }
+ 
+   override fun attachBaseContext(newBase: Context) {
+     delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
+@@ -86,7 +96,6 @@ class MediaPreviewV2Activity : PassphraseRequiredActivity(), VoiceNoteMediaContr
+     }
+ 
+     super.onCreate(savedInstanceState, ready)
+-    setTheme(R.style.TextSecure_MediaPreview)
+     setContentView(R.layout.activity_mediapreview_v2)
+ 
+     transitionImageView = findViewById(R.id.transition_image_view)
+@@ -127,12 +136,6 @@ class MediaPreviewV2Activity : PassphraseRequiredActivity(), VoiceNoteMediaContr
+ 
+     voiceNoteMediaController = VoiceNoteMediaController(this, false)
+ 
+-    val systemBarColor = ContextCompat.getColor(this, CoreUiR.color.signal_dark_colorSurface)
+-    window.statusBarColor = systemBarColor
+-    window.navigationBarColor = systemBarColor
+-    WindowUtil.clearLightStatusBar(window)
+-    WindowUtil.clearLightNavigationBar(window)
+-
+     if (savedInstanceState == null) {
+       val bundle = Bundle()
+       bundle.putParcelable(MediaPreviewV2Fragment.ARGS_KEY, args)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java b/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java
+index 1bba004d42..e87d7ffc9b 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java
+@@ -26,6 +26,8 @@ import org.thoughtcrime.securesms.mms.PushMediaConstraints;
+ import org.thoughtcrime.securesms.profiles.AvatarHelper;
+ import org.signal.core.util.contentproviders.BlobProvider;
+ import org.thoughtcrime.securesms.scribbles.ImageEditorFragment;
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme;
++import org.thoughtcrime.securesms.util.DynamicTheme;
+ import org.thoughtcrime.securesms.util.MediaUtil;
+ 
+ import java.io.FileDescriptor;
+@@ -42,6 +44,13 @@ public class AvatarSelectionActivity extends AppCompatActivity implements Camera
+   public static final String EXTRA_MEDIA = "avatar.media";
+ 
+   private Media currentMedia;
++  private final DynamicTheme dynamicTheme = new DynamicNoActionBarTheme();
++
++  @Override
++  protected void onResume() {
++    super.onResume();
++    dynamicTheme.onResume(this);
++  }
+ 
+   public static Intent getIntentForCameraCapture(@NonNull Context context) {
+     return new Intent(context, AvatarSelectionActivity.class);
+@@ -63,6 +72,7 @@ public class AvatarSelectionActivity extends AppCompatActivity implements Camera
+ 
+   @Override
+   protected void onCreate(@Nullable Bundle savedInstanceState) {
++    dynamicTheme.onCreate(this);
+     super.onCreate(savedInstanceState);
+ 
+     getWindow().addFlags(
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
+index f6949f254a..455657e161 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
+@@ -50,6 +50,8 @@ import org.thoughtcrime.securesms.mediasend.v2.text.send.TextStoryPostSendReposi
+ import org.thoughtcrime.securesms.recipients.RecipientId
+ import org.thoughtcrime.securesms.safety.SafetyNumberBottomSheet
+ import org.thoughtcrime.securesms.stories.Stories
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
++import org.thoughtcrime.securesms.util.DynamicTheme
+ import org.thoughtcrime.securesms.util.FullscreenHelper
+ import org.thoughtcrime.securesms.util.WindowUtil
+ import org.thoughtcrime.securesms.util.navigation.safeNavigate
+@@ -93,6 +95,12 @@ class MediaSelectionActivity :
+     get() = intent.getCharSequenceExtra(MESSAGE)
+ 
+   private val debouncer = Debouncer(200)
++  private val theme: DynamicTheme = DynamicNoActionBarTheme()
++
++  override fun onResume() {
++    super.onResume()
++    theme.onResume(this)
++  }
+ 
+   override fun attachBaseContext(newBase: Context) {
+     delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
+@@ -100,6 +108,9 @@ class MediaSelectionActivity :
+   }
+ 
+   override fun onPreCreate() {
++    super.onPreCreate()
++    theme.onCreate(this)
++
+     val sendType: MessageSendType = requireNotNull(intent.getParcelableExtraCompat(MESSAGE_SEND_TYPE, MessageSendType::class.java))
+     val initialMedia: List<Media> = intent.getParcelableArrayListExtraCompat(MEDIA, Media::class.java) ?: listOf()
+     val message: CharSequence? = if (shareToTextStory) null else draftText
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/stories/ChooseStoryTypeBottomSheet.kt b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/stories/ChooseStoryTypeBottomSheet.kt
+index c333d12197..a6f66ab725 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/stories/ChooseStoryTypeBottomSheet.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/stories/ChooseStoryTypeBottomSheet.kt
+@@ -40,9 +40,9 @@ class ChooseStoryTypeBottomSheet : DSLSettingsBottomSheetFragment(
+           ),
+           icon = DSLSettingsIcon.from(
+             iconId = R.drawable.symbol_stories_24,
+-            iconTintId = CoreUiR.color.signal_colorOnSurface,
++            iconTintId = com.google.android.material.R.attr.colorOnSurface,
+             backgroundId = R.drawable.circle_tintable,
+-            backgroundTint = CoreUiR.color.signal_colorSurface5,
++            backgroundTint = CoreUiR.attr.vesper_colorSurface5,
+             insetPx = DimensionUnit.DP.toPixels(8f).toInt()
+           ),
+           onClick = {
+@@ -62,9 +62,9 @@ class ChooseStoryTypeBottomSheet : DSLSettingsBottomSheetFragment(
+           ),
+           icon = DSLSettingsIcon.from(
+             iconId = R.drawable.ic_group_outline_24,
+-            iconTintId = CoreUiR.color.signal_colorOnSurface,
++            iconTintId = com.google.android.material.R.attr.colorOnSurface,
+             backgroundId = R.drawable.circle_tintable,
+-            backgroundTint = CoreUiR.color.signal_colorSurface5,
++            backgroundTint = CoreUiR.attr.vesper_colorSurface5,
+             insetPx = DimensionUnit.DP.toPixels(8f).toInt()
+           ),
+           onClick = {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messagerequests/MessageRequestBarColorTheme.kt b/app/src/main/java/org/thoughtcrime/securesms/messagerequests/MessageRequestBarColorTheme.kt
+index 68e1def4f0..28c54a942e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/messagerequests/MessageRequestBarColorTheme.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/messagerequests/MessageRequestBarColorTheme.kt
+@@ -1,40 +1,41 @@
+ package org.thoughtcrime.securesms.messagerequests
+ 
+ import android.content.Context
++import androidx.annotation.AttrRes
+ import androidx.annotation.ColorInt
+-import androidx.core.content.ContextCompat
++import org.signal.core.ui.util.ThemeUtil
+ import org.thoughtcrime.securesms.R
+ 
+ enum class MessageRequestBarColorTheme(
+-  private val containerBackgroundColor: Int,
+-  private val buttonBackgroundColor: Int,
+-  private val buttonForegroundDenyColor: Int,
+-  private val buttonForegroundAcceptColor: Int
++  @param:AttrRes private val containerBackgroundColor: Int,
++  @param:AttrRes private val buttonBackgroundColor: Int,
++  @param:AttrRes private val buttonForegroundDenyColor: Int,
++  @param:AttrRes private val buttonForegroundAcceptColor: Int
+ ) {
+   WALLPAPER(
+-    R.color.message_request_bar_container_background_wallpaper,
+-    R.color.message_request_bar_background_wallpaper,
+-    R.color.message_request_bar_denyForeground_wallpaper,
+-    R.color.message_request_bar_acceptForeground_wallpaper
++    R.attr.message_request_bar_container_background_wallpaper,
++    R.attr.message_request_bar_background_wallpaper,
++    R.attr.message_request_bar_denyForeground_wallpaper,
++    R.attr.message_request_bar_acceptForeground_wallpaper
+   ),
+   NORMAL(
+-    R.color.message_request_bar_container_background_normal,
+-    R.color.message_request_bar_background_normal,
+-    R.color.message_request_bar_denyForeground_normal,
+-    R.color.message_request_bar_acceptForeground_normal
++    R.attr.message_request_bar_container_background_normal,
++    R.attr.message_request_bar_background_normal,
++    R.attr.message_request_bar_denyForeground_normal,
++    R.attr.message_request_bar_acceptForeground_normal
+   );
+ 
+   @ColorInt
+-  fun getContainerButtonBackgroundColor(context: Context): Int = ContextCompat.getColor(context, containerBackgroundColor)
++  fun getContainerButtonBackgroundColor(context: Context): Int = ThemeUtil.getThemedColor(context, containerBackgroundColor)
+ 
+   @ColorInt
+-  fun getButtonBackgroundColor(context: Context): Int = ContextCompat.getColor(context, buttonBackgroundColor)
++  fun getButtonBackgroundColor(context: Context): Int = ThemeUtil.getThemedColor(context, buttonBackgroundColor)
+ 
+   @ColorInt
+-  fun getButtonForegroundDenyColor(context: Context): Int = ContextCompat.getColor(context, buttonForegroundDenyColor)
++  fun getButtonForegroundDenyColor(context: Context): Int = ThemeUtil.getThemedColor(context, buttonForegroundDenyColor)
+ 
+   @ColorInt
+-  fun getButtonForegroundAcceptColor(context: Context): Int = ContextCompat.getColor(context, buttonForegroundAcceptColor)
++  fun getButtonForegroundAcceptColor(context: Context): Int = ThemeUtil.getThemedColor(context, buttonForegroundAcceptColor)
+ 
+   companion object {
+     @JvmStatic
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/model/PaymentItem.java b/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/model/PaymentItem.java
+index 05305aeb85..34ffc1eebb 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/model/PaymentItem.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/model/PaymentItem.java
+@@ -2,7 +2,6 @@ package org.thoughtcrime.securesms.payments.preferences.model;
+ 
+ import android.content.Context;
+ 
+-import androidx.annotation.ColorRes;
+ import androidx.annotation.DrawableRes;
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+@@ -98,17 +97,17 @@ public final class PaymentItem implements MappingModel<PaymentItem> {
+                                             .build());
+   }
+ 
+-  public @ColorRes int getAmountColor() {
++  public int getAmountColor() {
+     if (isInProgress()) {
+       return R.color.signal_text_primary_disabled;
+     } else if (payment.getState() == State.FAILED) {
+-      return R.color.signal_text_secondary;
++      return R.attr.signal_text_secondary;
+     } else if (paymentType == PaymentType.REQUEST) {
+       return R.color.core_grey_45;
+     } else if (payment.getDirection().isReceived()) {
+       return R.color.core_green;
+     } else {
+-      return R.color.signal_text_primary;
++      return R.attr.signal_text_primary;
+     }
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/viewholder/PaymentItemViewHolder.java b/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/viewholder/PaymentItemViewHolder.java
+index c26ddbf4ba..855d5e12a7 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/viewholder/PaymentItemViewHolder.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/payments/preferences/viewholder/PaymentItemViewHolder.java
+@@ -4,8 +4,7 @@ import android.view.View;
+ import android.widget.TextView;
+ 
+ import androidx.annotation.NonNull;
+-import androidx.core.content.ContextCompat;
+-
++import org.signal.core.ui.util.ThemeUtil;
+ import org.thoughtcrime.securesms.R;
+ import org.thoughtcrime.securesms.components.AvatarImageView;
+ import org.thoughtcrime.securesms.payments.preferences.PaymentsHomeAdapter;
+@@ -50,7 +49,7 @@ public class PaymentItemViewHolder extends MappingViewHolder<PaymentItem> {
+ 
+     inProgress.setVisibility(model.isInProgress() ? View.VISIBLE : View.GONE);
+     date.setText(model.getDate(context));
+-    amount.setText(SpanUtil.color(ContextCompat.getColor(context, model.getAmountColor()), model.getAmount(getContext())));
++    amount.setText(SpanUtil.color(ThemeUtil.getThemedColor(context, model.getAmountColor()), model.getAmount(getContext())));
+ 
+     itemView.setOnClickListener(v -> callbacks.onPaymentItem(model));
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java b/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java
+index 36c8d26752..7c8c96b11a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java
+@@ -19,13 +19,14 @@ import androidx.navigation.Navigation;
+ 
+ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+ 
++import org.signal.core.ui.util.ThemeUtil;
++import org.signal.core.util.Util;
++import org.signal.core.util.concurrent.LifecycleDisposable;
+ import org.thoughtcrime.securesms.R;
+ import org.thoughtcrime.securesms.contactshare.SimpleTextWatcher;
+ import org.thoughtcrime.securesms.keyvalue.SignalStore;
+ import org.thoughtcrime.securesms.util.CommunicationActions;
+-import org.signal.core.util.concurrent.LifecycleDisposable;
+ import org.thoughtcrime.securesms.util.SignalProxyUtil;
+-import org.signal.core.util.Util;
+ import org.thoughtcrime.securesms.util.ViewUtil;
+ import org.thoughtcrime.securesms.util.views.CircularProgressMaterialButton;
+ import org.thoughtcrime.securesms.util.views.LearnMoreTextView;
+@@ -144,7 +145,7 @@ public class EditProxyFragment extends Fragment {
+         case DISCONNECTING:
+         case CONNECTING:
+           proxyStatus.setText(R.string.preferences_connecting_to_proxy);
+-          proxyStatus.setTextColor(getResources().getColor(R.color.signal_text_secondary));
++          proxyStatus.setTextColor(ThemeUtil.getThemedColor(requireContext(), R.attr.signal_text_secondary));
+           break;
+         case CONNECTED:
+           proxyStatus.setText(R.string.preferences_connected_to_proxy);
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
+index 9014ce3544..2f38d0629c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
+@@ -187,8 +187,8 @@ public class UsernameEditFragment extends LoggingFragment {
+       case DISCRIMINATOR_CANNOT_START_WITH_0 -> getString(R.string.UsernameEditFragment__this_number_cant_start_with_0);
+     };
+ 
+-    int colorRes = error != null ? org.signal.core.ui.R.color.signal_colorError : org.signal.core.ui.R.color.signal_colorPrimary;
+-    int color = ContextCompat.getColor(requireContext(), colorRes);
++    int colorRes = error != null ? com.google.android.material.R.attr.colorError : com.google.android.material.R.attr.colorPrimary;
++    int color = ThemeUtil.getThemedColor(requireContext(), colorRes);
+ 
+     binding.usernameTextFocusedStroke.setBackgroundColor(color);
+     binding.usernameTextWrapper.setHintTextColor(ColorStateList.valueOf(color));
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
+index e29346bd2c..21a4233180 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
+@@ -61,7 +61,6 @@ import org.whispersystems.signalservice.api.util.OptionalUtil
+ import java.util.LinkedList
+ import java.util.Objects
+ import java.util.Optional
+-import org.signal.core.ui.R as CoreUiR
+ 
+ /**
+  * A recipient represents something you can send messages to or receive messages from. They could be individuals, groups, or even distribution lists.
+@@ -694,7 +693,7 @@ class Recipient(
+ 
+       if (isIndividual && !isSelf) {
+         val isLtr = ViewUtil.isLtr(context)
+-        val chevronGlyph = SignalSymbols.getSpannedString(context, SignalSymbols.Weight.BOLD, if (isLtr) SignalSymbols.Glyph.CHEVRON_RIGHT else SignalSymbols.Glyph.CHEVRON_LEFT, CoreUiR.color.signal_colorOutline)
++        val chevronGlyph = SignalSymbols.getSpannedString(context, SignalSymbols.Weight.BOLD, if (isLtr) SignalSymbols.Glyph.CHEVRON_RIGHT else SignalSymbols.Glyph.CHEVRON_LEFT, com.google.android.material.R.attr.colorOutline)
+           .let { SpanUtil.ofSize(it, 24) }
+ 
+         if (isLtr) {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/RecipientPicker.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/RecipientPicker.kt
+index 6ad102c399..510325646e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/RecipientPicker.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/RecipientPicker.kt
+@@ -58,7 +58,6 @@ import org.thoughtcrime.securesms.recipients.ui.RecipientPicker.DisplayMode.Comp
+ import org.thoughtcrime.securesms.recipients.ui.RecipientPicker.KeyboardType
+ import java.util.Optional
+ import java.util.function.Consumer
+-import org.signal.core.ui.R as CoreUiR
+ 
+ private typealias AndroidKeyboardType = androidx.compose.ui.text.input.KeyboardType
+ 
+@@ -320,7 +319,7 @@ private suspend fun showItemContextMenu(
+     val messageItem = ActionItem(
+       iconRes = R.drawable.ic_chat_message_24,
+       title = context.getString(R.string.NewConversationActivity__message),
+-      tintRes = CoreUiR.color.signal_colorOnSurface,
++      tintRes = com.google.android.material.R.attr.colorOnSurface,
+       action = { callbacks.onMessage(recipient.id) }
+     )
+     add(messageItem)
+@@ -329,7 +328,7 @@ private suspend fun showItemContextMenu(
+       val voiceCallItem = ActionItem(
+         iconRes = R.drawable.ic_phone_right_24,
+         title = context.getString(R.string.NewConversationActivity__audio_call),
+-        tintRes = CoreUiR.color.signal_colorOnSurface,
++        tintRes = com.google.android.material.R.attr.colorOnSurface,
+         action = { callbacks.onVoiceCall(recipient) }
+       )
+       add(voiceCallItem)
+@@ -339,7 +338,7 @@ private suspend fun showItemContextMenu(
+       val videoCallItem = ActionItem(
+         iconRes = R.drawable.ic_video_call_24,
+         title = context.getString(R.string.NewConversationActivity__video_call),
+-        tintRes = CoreUiR.color.signal_colorOnSurface,
++        tintRes = com.google.android.material.R.attr.colorOnSurface,
+         action = { callbacks.onVideoCall(recipient) }
+       )
+       add(videoCallItem)
+@@ -349,7 +348,7 @@ private suspend fun showItemContextMenu(
+       val removeItem = ActionItem(
+         iconRes = R.drawable.ic_minus_circle_20,
+         title = context.getString(R.string.NewConversationActivity__remove),
+-        tintRes = CoreUiR.color.signal_colorOnSurface,
++        tintRes = com.google.android.material.R.attr.colorOnSurface,
+         action = { callbacks.onRemove(recipient) }
+       )
+       add(removeItem)
+@@ -359,7 +358,7 @@ private suspend fun showItemContextMenu(
+       val blockItem = ActionItem(
+         iconRes = R.drawable.ic_block_tinted_24,
+         title = context.getString(R.string.NewConversationActivity__block),
+-        tintRes = CoreUiR.color.signal_colorError,
++        tintRes = com.google.android.material.R.attr.colorError,
+         action = { callbacks.onBlock(recipient) }
+       )
+       add(blockItem)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/revealable/ViewOnceMessageActivity.java b/app/src/main/java/org/thoughtcrime/securesms/revealable/ViewOnceMessageActivity.java
+index 6ebcae2c9a..9995c2f85a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/revealable/ViewOnceMessageActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/revealable/ViewOnceMessageActivity.java
+@@ -25,6 +25,8 @@ import org.thoughtcrime.securesms.PassphraseRequiredActivity;
+ import org.thoughtcrime.securesms.R;
+ import org.thoughtcrime.securesms.dependencies.AppDependencies;
+ import org.thoughtcrime.securesms.mms.PartAuthority;
++import org.thoughtcrime.securesms.util.DynamicMediaPreviewTheme;
++import org.thoughtcrime.securesms.util.DynamicTheme;
+ import org.thoughtcrime.securesms.util.MediaUtil;
+ 
+ import java.util.concurrent.TimeUnit;
+@@ -42,6 +44,19 @@ public class ViewOnceMessageActivity extends PassphraseRequiredActivity implemen
+   private TextView                 duration;
+   private ViewOnceMessageViewModel viewModel;
+   private Uri                      uri;
++  private final DynamicTheme       dynamicTheme = new DynamicMediaPreviewTheme();
++
++  @Override
++  protected void onPreCreate() {
++    super.onPreCreate();
++    dynamicTheme.onCreate(this);
++  }
++
++  @Override
++  protected void onResume() {
++    super.onResume();
++    dynamicTheme.onResume(this);
++  }
+ 
+   private final Handler  handler                = new Handler(Looper.getMainLooper());
+   private final Runnable durationUpdateRunnable = () -> {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java b/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java
+index ad34d8192b..0547d741c9 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java
+@@ -22,11 +22,20 @@ import org.thoughtcrime.securesms.scribbles.stickers.FeatureSticker;
+ import org.thoughtcrime.securesms.scribbles.stickers.ScribbleStickersFragment;
+ import org.thoughtcrime.securesms.stickers.StickerEventListener;
+ import org.thoughtcrime.securesms.stickers.manage.StickerManagementScreen;
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme;
++import org.thoughtcrime.securesms.util.DynamicTheme;
+ import org.thoughtcrime.securesms.util.ViewUtil;
+ 
+ public final class ImageEditorStickerSelectActivity extends AppCompatActivity implements StickerEventListener, MediaKeyboard.MediaKeyboardListener, StickerKeyboardPageFragment.Callback, ScribbleStickersFragment.Callback {
+ 
+   public static final String EXTRA_FEATURE_STICKER = "imageEditor.featureSticker";
++  private final DynamicTheme dynamicTheme = new DynamicNoActionBarTheme();
++
++  @Override
++  protected void onResume() {
++    super.onResume();
++    dynamicTheme.onResume(this);
++  }
+ 
+   @Override
+   protected void attachBaseContext(@NonNull Context newBase) {
+@@ -36,6 +45,7 @@ public final class ImageEditorStickerSelectActivity extends AppCompatActivity im
+ 
+   @Override
+   protected void onCreate(@Nullable Bundle savedInstanceState) {
++    dynamicTheme.onCreate(this);
+     super.onCreate(savedInstanceState);
+     setContentView(R.layout.scribble_select_new_sticker_activity);
+   }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt
+index 3916927806..5e2df30e1d 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt
+@@ -27,6 +27,8 @@ import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaControllerOwner
+ import org.thoughtcrime.securesms.stories.StoryViewerArgs
+ import org.thoughtcrime.securesms.stories.viewer.page.StoryViewStateCache
+ import org.thoughtcrime.securesms.stories.viewer.page.StoryViewStateViewModel
++import org.thoughtcrime.securesms.util.DynamicMediaPreviewTheme
++import org.thoughtcrime.securesms.util.DynamicTheme
+ import org.thoughtcrime.securesms.util.ViewUtil
+ import kotlin.math.max
+ import kotlin.math.min
+@@ -35,6 +37,12 @@ class StoryViewerActivity : PassphraseRequiredActivity(), VoiceNoteMediaControll
+ 
+   private val viewModel: StoryVolumeViewModel by viewModels()
+   private val storyViewStateViewModel: StoryViewStateViewModel by viewModels()
++  private val theme: DynamicTheme = DynamicMediaPreviewTheme()
++
++  override fun onPreCreate() {
++    super.onPreCreate()
++    theme.onCreate(this)
++  }
+ 
+   val ringerModeReceiver = RingerModeReceiver()
+ 
+@@ -106,6 +114,7 @@ class StoryViewerActivity : PassphraseRequiredActivity(), VoiceNoteMediaControll
+ 
+   override fun onResume() {
+     super.onResume()
++    theme.onResume(this)
+     registerReceiver(ringerModeReceiver, IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
+     if (StoryMutePolicy.isContentMuted) {
+       viewModel.mute()
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
+index 75411f8dfb..25a4de392a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
+@@ -9,4 +9,9 @@ public class DynamicConversationSettingsTheme extends DynamicTheme {
+   protected @StyleRes int getTheme() {
+     return R.style.Signal_DayNight_ConversationSettings;
+   }
++
++  @Override
++  protected @StyleRes int getDynamicTheme() {
++    return R.style.Theme_Vesper_Dynamic_ConversationSettings;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
+new file mode 100644
+index 0000000000..5758653f63
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
+@@ -0,0 +1,18 @@
++package org.thoughtcrime.securesms.util;
++
++import androidx.annotation.StyleRes;
++
++import org.thoughtcrime.securesms.R;
++
++public class DynamicMediaPreviewTheme extends DynamicTheme {
++
++  @Override
++  protected @StyleRes int getTheme() {
++    return R.style.TextSecure_MediaPreview;
++  }
++
++  @Override
++  protected @StyleRes int getDynamicTheme() {
++    return R.style.Theme_Vesper_Dynamic_MediaPreview;
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java
+index 53e27e72a5..9cbbb139a6 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java
+@@ -9,4 +9,9 @@ public class DynamicNoActionBarTheme extends DynamicTheme {
+   protected @StyleRes int getTheme() {
+     return R.style.Signal_DayNight_NoActionBar;
+   }
++
++  @Override
++  protected @StyleRes int getDynamicTheme() {
++    return R.style.Theme_Vesper_Dynamic_NoActionBar;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java
+index f5d5f07b68..ce691bfcf6 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java
+@@ -9,4 +9,9 @@ public class DynamicRegistrationTheme extends DynamicTheme {
+   protected @StyleRes int getTheme() {
+     return R.style.Signal_DayNight_Registration;
+   }
++
++  @Override
++  protected @StyleRes int getDynamicTheme() {
++    return R.style.Theme_Vesper_Dynamic_Registration;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java
+index e58338bee0..a49c5956dd 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java
+@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
+ import androidx.annotation.StyleRes;
+ import androidx.appcompat.app.AppCompatDelegate;
+ 
++import com.google.android.material.color.DynamicColors;
++
+ import org.signal.core.util.logging.Log;
+ import org.thoughtcrime.securesms.R;
+ import org.thoughtcrime.securesms.keyvalue.SettingsValues.Theme;
+@@ -29,7 +31,7 @@ public class DynamicTheme {
+     onCreateNightModeConfiguration = ConfigurationUtil.getNightModeConfiguration(activity);
+     globalNightModeConfiguration   = onCreateNightModeConfiguration;
+ 
+-    activity.setTheme(getTheme());
++    activity.setTheme(getTheme(activity));
+ 
+     if (previousGlobalConfiguration != globalNightModeConfiguration) {
+       Log.d(TAG, "Previous night mode has changed previous: " + previousGlobalConfiguration + " now: " + globalNightModeConfiguration);
+@@ -48,6 +50,23 @@ public class DynamicTheme {
+     return R.style.Signal_DayNight;
+   }
+ 
++  protected @StyleRes int getDynamicTheme() {
++    return getTheme();
++  }
++
++  public final @StyleRes int getTheme(@NonNull Context context) {
++    return useDynamicColors(context) ? getDynamicTheme() : getTheme();
++  }
++
++  public static boolean useDynamicColors(@NonNull Context context) {
++    return DynamicColors.isDynamicColorAvailable() &&
++           SignalStore.settings().isDynamicColorsEnabled();
++  }
++
++  public static boolean isDynamicColorsAvailable() {
++    return DynamicColors.isDynamicColorAvailable();
++  }
++
+   public static boolean systemThemeAvailable() {
+     return Build.VERSION.SDK_INT >= 29;
+   }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt b/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
+index 965b37d35a..4f8ab29c70 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
+@@ -1,10 +1,9 @@
+ package org.thoughtcrime.securesms.util
+ 
+ import android.animation.ValueAnimator
++import android.content.Context
+ import android.view.View
+ import androidx.annotation.ColorInt
+-import androidx.annotation.ColorRes
+-import androidx.core.content.ContextCompat
+ import androidx.core.widget.NestedScrollView
+ import androidx.fragment.app.FragmentActivity
+ import androidx.lifecycle.DefaultLifecycleObserver
+@@ -12,8 +11,9 @@ import androidx.lifecycle.LifecycleOwner
+ import androidx.recyclerview.widget.RecyclerView
+ import com.google.android.material.animation.ArgbEvaluatorCompat
+ import com.google.android.material.appbar.AppBarLayout
++import org.signal.core.ui.util.ThemeUtil
+ import org.signal.core.ui.view.Stub
+-import org.signal.core.ui.R as CoreUiR
++import com.google.android.material.R as MaterialR
+ 
+ /**
+  * Sets the view's isActivated state when the content of the attached recycler can scroll up.
+@@ -41,15 +41,17 @@ open class Material3OnScrollHelper(
+     }
+   }
+ 
+-  open val activeColorSet: ColorSet = ColorSet(
+-    toolbarColorRes = CoreUiR.color.signal_colorSurface2,
+-    statusBarColorRes = CoreUiR.color.signal_colorSurface2,
+-    chatFolderColorRes = CoreUiR.color.signal_colorBackground
++  open val activeColorSet: ColorSet = ColorSet.from(
++    activity,
++    toolbarColorRes = MaterialR.attr.colorSurfaceContainer,
++    statusBarColorRes = MaterialR.attr.colorSurfaceContainer,
++    chatFolderColorRes = MaterialR.attr.colorSurface
+   )
+-  open val inactiveColorSet: ColorSet = ColorSet(
+-    toolbarColorRes = CoreUiR.color.signal_colorBackground,
+-    statusBarColorRes = CoreUiR.color.signal_colorBackground,
+-    chatFolderColorRes = CoreUiR.color.signal_colorSurface2
++  open val inactiveColorSet: ColorSet = ColorSet.from(
++    activity,
++    toolbarColorRes = MaterialR.attr.colorSurface,
++    statusBarColorRes = MaterialR.attr.colorSurface,
++    chatFolderColorRes = MaterialR.attr.colorSurfaceContainer
+   )
+ 
+   protected var previousStatusBarColor: Int = getStatusBarColor()
+@@ -79,11 +81,10 @@ open class Material3OnScrollHelper(
+   }
+ 
+   fun attach(recyclerView: RecyclerView) {
+-    recyclerView.addOnScrollListener(
+-      OnScrollListener().apply {
+-        onScrolled(recyclerView, 0, 0)
+-      }
+-    )
++    // RecyclerView can report synthetic scroll deltas while an adapter is initially
++    // populated. Keep the unscrolled surface until a drag or fling actually begins.
++    updateActiveState(false)
++    recyclerView.addOnScrollListener(OnScrollListener())
+   }
+ 
+   fun attach(appBarLayout: AppBarLayout) {
+@@ -104,9 +105,9 @@ open class Material3OnScrollHelper(
+ 
+     animator?.cancel()
+     val colorSet = if (active == true) activeColorSet else inactiveColorSet
+-    setToolbarColor(ContextCompat.getColor(activity, colorSet.toolbarColorRes))
+-    setStatusBarColor(ContextCompat.getColor(activity, colorSet.statusBarColorRes))
+-    setChatFolderColor(ContextCompat.getColor(activity, colorSet.chatFolderColorRes))
++    setToolbarColor(colorSet.toolbarColor)
++    setStatusBarColor(colorSet.statusBarColor)
++    setChatFolderColor(colorSet.chatFolderColor)
+   }
+ 
+   private fun updateActiveState(isActive: Boolean) {
+@@ -127,12 +128,12 @@ open class Material3OnScrollHelper(
+       val endColorSet = if (isActive) activeColorSet else inactiveColorSet
+ 
+       if (hadActiveState) {
+-        val startToolbarColor = ContextCompat.getColor(activity, startColorSet.toolbarColorRes)
+-        val endToolbarColor = ContextCompat.getColor(activity, endColorSet.toolbarColorRes)
+-        val startStatusBarColor = ContextCompat.getColor(activity, startColorSet.statusBarColorRes)
+-        val endStatusBarColor = ContextCompat.getColor(activity, endColorSet.statusBarColorRes)
+-        val startChatFolderColor = ContextCompat.getColor(activity, startColorSet.chatFolderColorRes)
+-        val endChatFolderColor = ContextCompat.getColor(activity, endColorSet.chatFolderColorRes)
++        val startToolbarColor = startColorSet.toolbarColor
++        val endToolbarColor = endColorSet.toolbarColor
++        val startStatusBarColor = startColorSet.statusBarColor
++        val endStatusBarColor = endColorSet.statusBarColor
++        val startChatFolderColor = startColorSet.chatFolderColor
++        val endChatFolderColor = endColorSet.chatFolderColor
+ 
+         animator = ValueAnimator.ofFloat(0f, 1f).apply {
+           duration = 200
+@@ -156,10 +157,16 @@ open class Material3OnScrollHelper(
+   }
+ 
+   private inner class OnScrollListener : RecyclerView.OnScrollListener(), AppBarLayout.OnOffsetChangedListener, NestedScrollView.OnScrollChangeListener {
+-    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
++    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+       updateActiveState(recyclerView.canScrollVertically(-1))
+     }
+ 
++    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
++      if (recyclerView.scrollState != RecyclerView.SCROLL_STATE_IDLE) {
++        updateActiveState(recyclerView.canScrollVertically(-1))
++      }
++    }
++
+     override fun onOffsetChanged(appBarLayout: AppBarLayout, verticalOffset: Int) {
+       updateActiveState(verticalOffset != 0)
+     }
+@@ -173,11 +180,28 @@ open class Material3OnScrollHelper(
+    * A pair of colors tied to a specific state.
+    */
+   data class ColorSet(
+-    @ColorRes val toolbarColorRes: Int,
+-    @ColorRes val statusBarColorRes: Int,
+-    @ColorRes val chatFolderColorRes: Int
++    @ColorInt val toolbarColor: Int,
++    @ColorInt val statusBarColor: Int,
++    @ColorInt val chatFolderColor: Int
+   ) {
+-    constructor(@ColorRes color: Int) : this(color, color)
+-    constructor(@ColorRes toolbarColorRes: Int, @ColorRes statusBarColorRes: Int) : this(toolbarColorRes, statusBarColorRes, toolbarColorRes)
++    constructor(@ColorInt color: Int) : this(color, color, color)
++    constructor(@ColorInt toolbarColor: Int, @ColorInt statusBarColor: Int) : this(toolbarColor, statusBarColor, toolbarColor)
++
++    companion object {
++      fun from(context: Context, colorRef: Int) = ColorSet(
++        ThemeUtil.getThemedColor(context, colorRef)
++      )
++
++      fun from(context: Context, toolbarColorRef: Int, statusBarColorRef: Int) = ColorSet(
++        ThemeUtil.getThemedColor(context, toolbarColorRef),
++        ThemeUtil.getThemedColor(context, statusBarColorRef)
++      )
++
++      fun from(context: Context, toolbarColorRes: Int, statusBarColorRes: Int, chatFolderColorRes: Int) = ColorSet(
++        ThemeUtil.getThemedColor(context, toolbarColorRes),
++        ThemeUtil.getThemedColor(context, statusBarColorRes),
++        ThemeUtil.getThemedColor(context, chatFolderColorRes)
++      )
++    }
+   }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/SpanUtil.java b/app/src/main/java/org/thoughtcrime/securesms/util/SpanUtil.java
+index f8a7609237..28a2e4aa60 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/SpanUtil.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/SpanUtil.java
+@@ -201,7 +201,7 @@ public final class SpanUtil {
+   }
+ 
+   public static Spannable clickSubstring(@NonNull Context context, @StringRes int mainString, @StringRes int clickableString, @NonNull View.OnClickListener clickListener) {
+-    return clickSubstring(context, mainString, clickableString, clickListener, false, R.color.signal_accent_primary);
++    return clickSubstring(context, mainString, clickableString, clickListener, false, R.attr.signal_accent_primary);
+   }
+ 
+   /**
+@@ -238,7 +238,7 @@ public final class SpanUtil {
+       public void updateDrawState(@NonNull TextPaint ds) {
+         super.updateDrawState(ds);
+         ds.setUnderlineText(shouldUnderline);
+-        ds.setColor(context.getResources().getColor(linkColor));
++        ds.setColor(ThemeUtil.getThemedColor(context, linkColor));
+       }
+     }, start, start + clickable.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperImageSelectionActivity.java b/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperImageSelectionActivity.java
+index 5ca8d88d1f..67fc97110a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperImageSelectionActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperImageSelectionActivity.java
+@@ -14,12 +14,21 @@ import org.thoughtcrime.securesms.R;
+ import org.signal.core.models.media.Media;
+ import org.thoughtcrime.securesms.mediasend.v2.gallery.MediaGalleryFragment;
+ import org.thoughtcrime.securesms.recipients.RecipientId;
++import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme;
++import org.thoughtcrime.securesms.util.DynamicTheme;
+ 
+ public final class WallpaperImageSelectionActivity extends AppCompatActivity
+         implements MediaGalleryFragment.Callbacks
+ {
+   private static final String EXTRA_RECIPIENT_ID = "RECIPIENT_ID";
+   private static final int    CROP               = 901;
++  private final DynamicTheme  dynamicTheme       = new DynamicNoActionBarTheme();
++
++  @Override
++  protected void onResume() {
++    super.onResume();
++    dynamicTheme.onResume(this);
++  }
+ 
+   public static Intent getIntent(@NonNull Context context,
+                                  @Nullable RecipientId recipientId)
+@@ -37,6 +46,7 @@ public final class WallpaperImageSelectionActivity extends AppCompatActivity
+ 
+   @Override
+   protected void onCreate(@Nullable Bundle savedInstanceState) {
++    dynamicTheme.onCreate(this);
+     super.onCreate(savedInstanceState);
+ 
+     getWindow().addFlags(
+diff --git a/app/src/main/res/drawable/signal_context_menu_background.xml b/app/src/main/res/drawable/signal_context_menu_background.xml
+index 4b7312abba..337ea4d08f 100644
+--- a/app/src/main/res/drawable/signal_context_menu_background.xml
++++ b/app/src/main/res/drawable/signal_context_menu_background.xml
+@@ -4,6 +4,6 @@
+     android:shape="rectangle">
+ 
+     <corners android:radius="@dimen/signal_context_menu_corner_radius" />
+-    <solid android:color="?attr/vesper_colorSurface2" />
++    <solid android:color="?attr/context_menu_container_color" />
+ 
+-</shape>
+\ No newline at end of file
++</shape>
+diff --git a/app/src/main/res/layout/contact_photo_preview_activity.xml b/app/src/main/res/layout/contact_photo_preview_activity.xml
+index 752aac4be3..8af1f644e4 100644
+--- a/app/src/main/res/layout/contact_photo_preview_activity.xml
++++ b/app/src/main/res/layout/contact_photo_preview_activity.xml
+@@ -4,8 +4,7 @@
+     tools:viewBindingIgnore="true"
+     xmlns:tools="http://schemas.android.com/tools"
+     android:layout_width="match_parent"
+-    android:layout_height="match_parent"
+-    android:background="@color/core_grey_95">
++    android:layout_height="match_parent">
+ 
+     <com.github.chrisbanes.photoview.PhotoView
+         android:id="@+id/avatar"
+diff --git a/app/src/main/res/layout/contact_search_unknown_item.xml b/app/src/main/res/layout/contact_search_unknown_item.xml
+index 49f58ee7eb..06a305214c 100644
+--- a/app/src/main/res/layout/contact_search_unknown_item.xml
++++ b/app/src/main/res/layout/contact_search_unknown_item.xml
+@@ -23,7 +23,7 @@
+         android:layout_height="40dp"
+         android:layout_marginVertical="12dp"
+         android:layout_marginStart="@dimen/gutter"
+-        android:background="?attr/colorSurfaceVariant"
++        android:background="?attr/filled_tonal_icon_button_container_color"
+         android:importantForAccessibility="no"
+         app:contentPadding="8dp"
+         app:layout_constraintBottom_toBottomOf="parent"
+@@ -31,7 +31,7 @@
+         app:layout_constraintTop_toBottomOf="@id/contact_header"
+         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+         app:srcCompat="@drawable/symbol_search_24"
+-        app:tint="?attr/colorOnSecondaryContainer"
++        app:tint="?attr/filled_tonal_icon_button_icon_color"
+         tools:ignore="UnusedAttribute" />
+ 
+     <androidx.appcompat.widget.AppCompatCheckBox
+diff --git a/app/src/main/res/layout/contact_selection_find_by_phone_number_item.xml b/app/src/main/res/layout/contact_selection_find_by_phone_number_item.xml
+index 6cb38bfb6c..0a7fe66318 100644
+--- a/app/src/main/res/layout/contact_selection_find_by_phone_number_item.xml
++++ b/app/src/main/res/layout/contact_selection_find_by_phone_number_item.xml
+@@ -14,7 +14,7 @@
+         android:id="@+id/invite_image"
+         android:layout_width="40dp"
+         android:layout_height="40dp"
+-        android:background="?attr/colorSurfaceVariant"
++        android:background="?attr/filled_tonal_icon_button_container_color"
+         android:importantForAccessibility="no"
+         app:contentPadding="8dp"
+         app:layout_constraintBottom_toBottomOf="parent"
+@@ -22,7 +22,7 @@
+         app:layout_constraintTop_toTopOf="parent"
+         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+         app:srcCompat="@drawable/symbol_number_24"
+-        app:tint="?attr/colorOnSecondaryContainer" />
++        app:tint="?attr/filled_tonal_icon_button_icon_color" />
+ 
+     <TextView
+         android:id="@+id/invite_text"
+diff --git a/app/src/main/res/layout/contact_selection_find_by_username_item.xml b/app/src/main/res/layout/contact_selection_find_by_username_item.xml
+index 5b0e95c069..9b50c6ade7 100644
+--- a/app/src/main/res/layout/contact_selection_find_by_username_item.xml
++++ b/app/src/main/res/layout/contact_selection_find_by_username_item.xml
+@@ -14,7 +14,7 @@
+         android:id="@+id/invite_image"
+         android:layout_width="40dp"
+         android:layout_height="40dp"
+-        android:background="?attr/colorSurfaceVariant"
++        android:background="?attr/filled_tonal_icon_button_container_color"
+         android:importantForAccessibility="no"
+         app:srcCompat="@drawable/symbol_at_24"
+         app:contentPadding="8dp"
+@@ -22,7 +22,7 @@
+         app:layout_constraintStart_toStartOf="parent"
+         app:layout_constraintTop_toTopOf="parent"
+         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+-        app:tint="?attr/colorOnSecondaryContainer" />
++        app:tint="?attr/filled_tonal_icon_button_icon_color" />
+ 
+     <TextView
+         android:id="@+id/invite_text"
+diff --git a/app/src/main/res/layout/contact_selection_find_contacts_item.xml b/app/src/main/res/layout/contact_selection_find_contacts_item.xml
+index c780320756..348f16c4e0 100644
+--- a/app/src/main/res/layout/contact_selection_find_contacts_item.xml
++++ b/app/src/main/res/layout/contact_selection_find_contacts_item.xml
+@@ -14,7 +14,7 @@
+         android:id="@+id/image"
+         android:layout_width="40dp"
+         android:layout_height="40dp"
+-        android:background="?attr/colorSurfaceVariant"
++        android:background="?attr/filled_tonal_icon_button_container_color"
+         android:importantForAccessibility="no"
+         android:scaleType="centerInside"
+         app:layout_constraintBottom_toBottomOf="parent"
+@@ -22,7 +22,7 @@
+         app:layout_constraintTop_toTopOf="parent"
+         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+         app:srcCompat="@drawable/symbol_person_circle_24"
+-        app:tint="?attr/colorOnSurface" />
++        app:tint="?attr/filled_tonal_icon_button_icon_color" />
+ 
+     <TextView
+         android:id="@+id/title"
+diff --git a/app/src/main/res/layout/contact_selection_invite_action_item.xml b/app/src/main/res/layout/contact_selection_invite_action_item.xml
+index eaea72ef82..cd0b5c00e1 100644
+--- a/app/src/main/res/layout/contact_selection_invite_action_item.xml
++++ b/app/src/main/res/layout/contact_selection_invite_action_item.xml
+@@ -14,11 +14,11 @@
+         android:id="@+id/invite_image"
+         android:layout_width="40dp"
+         android:layout_height="40dp"
+-        android:background="?attr/colorSurfaceVariant"
++        android:background="?attr/filled_tonal_icon_button_container_color"
+         android:importantForAccessibility="no"
+         android:scaleType="centerInside"
+         android:src="@drawable/symbol_invite_24"
+-        app:tint="?attr/colorOnSurface"
++        app:tint="?attr/filled_tonal_icon_button_icon_color"
+         app:layout_constraintBottom_toBottomOf="parent"
+         app:layout_constraintStart_toStartOf="parent"
+         app:layout_constraintTop_toTopOf="parent"
+diff --git a/app/src/main/res/layout/contact_selection_new_group_item.xml b/app/src/main/res/layout/contact_selection_new_group_item.xml
+index 65cd30d496..2c87976ddd 100644
+--- a/app/src/main/res/layout/contact_selection_new_group_item.xml
++++ b/app/src/main/res/layout/contact_selection_new_group_item.xml
+@@ -14,7 +14,7 @@
+         android:id="@+id/invite_image"
+         android:layout_width="40dp"
+         android:layout_height="40dp"
+-        android:background="?attr/colorSurfaceVariant"
++        android:background="?attr/filled_tonal_icon_button_container_color"
+         android:importantForAccessibility="no"
+         app:srcCompat="@drawable/symbol_group_24"
+         app:contentPadding="8dp"
+@@ -22,7 +22,7 @@
+         app:layout_constraintStart_toStartOf="parent"
+         app:layout_constraintTop_toTopOf="parent"
+         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+-        app:tint="?attr/colorOnSecondaryContainer" />
++        app:tint="?attr/filled_tonal_icon_button_icon_color" />
+ 
+     <TextView
+         android:id="@+id/invite_text"
+diff --git a/app/src/main/res/layout/contact_selection_refresh_action_item.xml b/app/src/main/res/layout/contact_selection_refresh_action_item.xml
+index 545b98372c..25837ed798 100644
+--- a/app/src/main/res/layout/contact_selection_refresh_action_item.xml
++++ b/app/src/main/res/layout/contact_selection_refresh_action_item.xml
+@@ -14,7 +14,7 @@
+         android:id="@+id/image"
+         android:layout_width="40dp"
+         android:layout_height="40dp"
+-        android:background="?attr/colorSurfaceVariant"
++        android:background="?attr/filled_tonal_icon_button_container_color"
+         android:importantForAccessibility="no"
+         android:scaleType="centerInside"
+         app:layout_constraintBottom_toBottomOf="parent"
+@@ -22,7 +22,7 @@
+         app:layout_constraintTop_toTopOf="parent"
+         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+         app:srcCompat="@drawable/symbol_refresh_24"
+-        app:tint="?attr/colorOnSurface" />
++        app:tint="?attr/filled_tonal_icon_button_icon_color" />
+ 
+     <TextView
+         android:id="@+id/title"
+diff --git a/app/src/main/res/layout/fragment_media_preview_v2.xml b/app/src/main/res/layout/fragment_media_preview_v2.xml
+index 622371e0fd..7bf37474d6 100644
+--- a/app/src/main/res/layout/fragment_media_preview_v2.xml
++++ b/app/src/main/res/layout/fragment_media_preview_v2.xml
+@@ -3,8 +3,7 @@
+     xmlns:app="http://schemas.android.com/apk/res-auto"
+     xmlns:tools="http://schemas.android.com/tools"
+     android:layout_width="match_parent"
+-    android:layout_height="match_parent"
+-    android:background="@color/signal_dark_colorSurface">
++    android:layout_height="match_parent">
+ 
+     <androidx.viewpager2.widget.ViewPager2
+         android:id="@+id/media_pager"
+@@ -21,7 +20,7 @@
+         android:layout_gravity="bottom"
+         android:alpha="0"
+         android:animateLayoutChanges="false"
+-        android:background="@color/signal_dark_colorSurface_87"
++        android:background="@color/media_preview_bar_background"
+         android:gravity="bottom"
+         android:orientation="vertical"
+         android:visibility="invisible"
+@@ -54,7 +53,7 @@
+         android:id="@+id/toolbar_layout"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+-        android:background="@color/signal_dark_colorSurface_87"
++        android:background="@color/media_preview_bar_background"
+         app:elevation="0dp">
+ 
+         <View
+@@ -74,4 +73,4 @@
+ 
+     </com.google.android.material.appbar.AppBarLayout>
+ 
+-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+\ No newline at end of file
++</androidx.coordinatorlayout.widget.CoordinatorLayout>
+diff --git a/app/src/main/res/values-night-v31/themes.xml b/app/src/main/res/values-night-v31/themes.xml
+index da485359b5..e8bd1b2026 100644
+--- a/app/src/main/res/values-night-v31/themes.xml
++++ b/app/src/main/res/values-night-v31/themes.xml
+@@ -1,6 +1,6 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+-    <style name="Theme.Signal.DayNight.NoActionBar" parent="TextSecure.LightNoActionBar">
++    <style name="Theme.Signal.DayNight.NoActionBar" parent="TextSecure.DarkNoActionBar">
+         <item name="android:windowSplashScreenBackground">?attr/signal_background_primary</item>
+         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+     </style>
+diff --git a/app/src/main/res/values/colors.xml b/app/src/main/res/values/colors.xml
+index 8302373a99..8d10f353c4 100644
+--- a/app/src/main/res/values/colors.xml
++++ b/app/src/main/res/values/colors.xml
+@@ -50,7 +50,7 @@
+     <color name="transparent">#00FFFFFF</color>
+     <color name="transparent_black">#00000000</color>
+ 
+-    <color name="media_preview_bar_background">#90010101</color>
++    <color name="media_preview_bar_background">@color/signal_dark_colorNeutral_87</color>
+ 
+     <color name="storage_color_empty">@color/core_grey_50</color>
+     <color name="storage_color_photos">#ff5951C8</color>
+diff --git a/app/src/main/res/values/signal_styles.xml b/app/src/main/res/values/signal_styles.xml
+index e37c905beb..e7e575d7a8 100644
+--- a/app/src/main/res/values/signal_styles.xml
++++ b/app/src/main/res/values/signal_styles.xml
+@@ -274,8 +274,6 @@
+     <style name="Signal.ThemeOverlay.Calendar" parent="@style/ThemeOverlay.Material3.MaterialCalendar">
+         <item name="colorSurface">?attr/signal_background_dialog</item>
+         <item name="borderlessButtonStyle">@style/Signal.Widget.Button.Dialog</item>
+-
+-
+         <item name="colorAccent">?attr/signal_accent_primary</item>
+         <item name="colorSurfaceContainer">?attr/colorSurface</item>
+         <item name="colorSurfaceContainerHigh">?attr/colorSurface</item>
+@@ -315,8 +313,6 @@
+     </style>
+ 
+     <style name="ThemeOverlay.Signal.CircularProgressIndicator.Tonal" parent="ThemeOverlay.Material3">
+-
+-
+         <item name="circularProgressMaterialButtonStyle">@style/Signal.Widget.Button.Large.Tonal</item>
+         <item name="circularProgressIndicatorStyle">@style/Widget.Signal.CircularProgressIndicator.Medium.Indeterminate</item>
+     </style>
+@@ -330,33 +326,21 @@
+     </style>
+ 
+     <style name="Widget.Signal.CompoundButton.MaterialSwitch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+-        <item name="materialThemeOverlay">@style/ThemeOverlay.Signal.MaterialSwitch</item>
++        <item name="materialThemeOverlay">?attr/switchThemeOverlay</item>
+     </style>
+ 
+     <style name="Signal.ThemeOverlay.TextInputLayout" parent="ThemeOverlay.Material3">
+-
+-
+-
+-
+-
+-
+     </style>
+ 
+     <style name="ThemeOverlay.Signal.MaterialSwitch" parent="ThemeOverlay.Material3">
++    </style>
+ 
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
++    <style name="ThemeOverlay.MaterialSwitch.DayNight" parent="ThemeOverlay.Material3">
++        <item name="colorSurface">?attr/colorSurfaceContainer</item>
++        <item name="colorOnSurfaceVariant">?attr/colorPrimary</item>
++        <item name="colorOutline">?attr/colorOutlineVariant</item>
+     </style>
+ 
++    <style name="ThemeOverlay.MaterialSwitch.Dynamic" parent="ThemeOverlay.Material3.DynamicColors.DayNight" />
++
+ </resources>
+diff --git a/app/src/main/res/values/themes.xml b/app/src/main/res/values/themes.xml
+index e6f309bc2b..71d1826422 100644
+--- a/app/src/main/res/values/themes.xml
++++ b/app/src/main/res/values/themes.xml
+@@ -139,12 +139,115 @@
+         <item name="android:backgroundDimEnabled">false</item>
+     </style>
+ 
++    <style name="Theme.Vesper.Material3.Light" parent="@style/Theme.Material3.Light">
++        <item name="colorPrimaryInverse">@color/vesper_primary_inverse_light</item>
++        <item name="colorPrimary">@color/vesper_primary_light</item>
++        <item name="colorPrimaryDark">@color/vesper_primary_light</item>
++        <item name="colorOnPrimary">@color/vesper_on_primary_light</item>
++        <item name="colorPrimaryContainer">@color/vesper_primary_container_light</item>
++        <item name="colorOnPrimaryContainer">@color/vesper_on_primary_container_light</item>
++        <item name="colorPrimaryFixed">@color/vesper_primary_fixed</item>
++        <item name="colorPrimaryFixedDim">@color/vesper_primary_fixed_dim</item>
++        <item name="colorOnPrimaryFixed">@color/vesper_on_primary_fixed</item>
++        <item name="colorSecondary">@color/vesper_secondary_light</item>
++        <item name="colorOnSecondary">@color/vesper_on_secondary_light</item>
++        <item name="colorSecondaryContainer">@color/vesper_secondary_container_light</item>
++        <item name="colorOnSecondaryContainer">@color/vesper_on_secondary_container_light</item>
++        <item name="colorSecondaryFixed">@color/vesper_secondary_fixed</item>
++        <item name="colorSecondaryFixedDim">@color/vesper_secondary_fixed_dim</item>
++        <item name="colorOnSecondaryFixed">@color/vesper_on_secondary_fixed</item>
++        <item name="colorSurfaceInverse">@color/vesper_surface_inverse_light</item>
++        <item name="colorSurfaceVariant">@color/vesper_surface_variant_light</item>
++        <item name="colorSurface">@color/vesper_surface_light</item>
++        <item name="colorSurfaceDim">@color/vesper_surface_dim_light</item>
++        <item name="colorSurfaceContainerHighest">@color/vesper_surface_container_highest_light</item>
++        <item name="colorSurfaceContainerHigh">@color/vesper_surface_container_high_light</item>
++        <item name="colorSurfaceContainer">@color/vesper_surface_container_light</item>
++        <item name="colorSurfaceContainerLow">@color/vesper_surface_container_low_light</item>
++        <item name="colorSurfaceBright">@color/vesper_surface_bright_light</item>
++        <item name="colorSurfaceContainerLowest">@color/vesper_surface_container_lowest_light</item>
++        <item name="colorOnSurfaceInverse">@color/vesper_on_surface_inverse_light</item>
++        <item name="colorOnSurface">@color/vesper_on_surface_light</item>
++        <item name="colorOnBackground">@color/vesper_on_background_light</item>
++        <item name="colorOnSurfaceVariant">@color/vesper_on_surface_variant_light</item>
++        <item name="colorOutline">@color/vesper_outline_light</item>
++        <item name="colorOutlineVariant">@color/vesper_outline_variant_light</item>
++        <item name="colorError">@color/vesper_error_light</item>
++        <item name="colorOnError">@color/vesper_on_error_light</item>
++        <item name="colorErrorContainer">@color/vesper_error_container_light</item>
++        <item name="colorOnErrorContainer">@color/vesper_on_error_container_light</item>
++        <item name="colorTertiary">@color/vesper_tertiary_light</item>
++        <item name="colorOnTertiary">@color/vesper_on_tertiary_light</item>
++        <item name="colorTertiaryContainer">@color/vesper_tertiary_container_light</item>
++        <item name="colorOnTertiaryContainer">@color/vesper_on_tertiary_container_light</item>
++        <item name="colorTertiaryFixed">@color/vesper_tertiary_fixed</item>
++        <item name="colorTertiaryFixedDim">@color/vesper_tertiary_fixed_dim</item>
++        <item name="colorOnTertiaryFixed">@color/vesper_on_tertiary_fixed</item>
++        <item name="colorOnTertiaryFixedVariant">@color/vesper_on_tertiary_fixed_variant</item>
++        <item name="colorAccent">@color/vesper_primary_light</item>
++        <item name="colorControlActivated">@color/vesper_primary_light</item>
++    </style>
++
++    <style name="Theme.Vesper.Material3.Dark" parent="@style/Theme.Material3.Dark">
++        <item name="colorPrimaryInverse">@color/vesper_primary_inverse_dark</item>
++        <item name="colorPrimary">@color/vesper_primary_dark</item>
++        <item name="colorPrimaryDark">@color/vesper_primary_dark</item>
++        <item name="colorOnPrimary">@color/vesper_on_primary_dark</item>
++        <item name="colorPrimaryContainer">@color/vesper_primary_container_dark</item>
++        <item name="colorOnPrimaryContainer">@color/vesper_on_primary_container_dark</item>
++        <item name="colorPrimaryFixed">@color/vesper_primary_fixed</item>
++        <item name="colorPrimaryFixedDim">@color/vesper_primary_fixed_dim</item>
++        <item name="colorOnPrimaryFixed">@color/vesper_on_primary_fixed</item>
++        <item name="colorSecondary">@color/vesper_secondary_dark</item>
++        <item name="colorOnSecondary">@color/vesper_on_secondary_dark</item>
++        <item name="colorSecondaryContainer">@color/vesper_secondary_container_dark</item>
++        <item name="colorOnSecondaryContainer">@color/vesper_on_secondary_container_dark</item>
++        <item name="colorSecondaryFixed">@color/vesper_secondary_fixed</item>
++        <item name="colorSecondaryFixedDim">@color/vesper_secondary_fixed_dim</item>
++        <item name="colorOnSecondaryFixed">@color/vesper_on_secondary_fixed</item>
++        <item name="colorSurfaceInverse">@color/vesper_surface_inverse_dark</item>
++        <item name="colorSurfaceVariant">@color/vesper_surface_variant_dark</item>
++        <item name="colorSurface">@color/vesper_surface_dark</item>
++        <item name="colorSurfaceBright">@color/vesper_surface_bright_dark</item>
++        <item name="colorSurfaceContainerHighest">@color/vesper_surface_container_highest_dark</item>
++        <item name="colorSurfaceContainerHigh">@color/vesper_surface_container_high_dark</item>
++        <item name="colorSurfaceContainer">@color/vesper_surface_container_dark</item>
++        <item name="colorSurfaceContainerLow">@color/vesper_surface_container_low_dark</item>
++        <item name="colorSurfaceDim">@color/vesper_surface_dim_dark</item>
++        <item name="colorSurfaceContainerLowest">@color/vesper_surface_container_lowest_dark</item>
++        <item name="colorOnSurfaceInverse">@color/vesper_on_surface_inverse_dark</item>
++        <item name="colorOnSurface">@color/vesper_on_surface_dark</item>
++        <item name="colorOnBackground">@color/vesper_on_background_dark</item>
++        <item name="colorOnSurfaceVariant">@color/vesper_on_surface_variant_dark</item>
++        <item name="colorOutline">@color/vesper_outline_dark</item>
++        <item name="colorOutlineVariant">@color/vesper_outline_variant_dark</item>
++        <item name="colorError">@color/vesper_error_dark</item>
++        <item name="colorOnError">@color/vesper_on_error_dark</item>
++        <item name="colorErrorContainer">@color/vesper_error_container_dark</item>
++        <item name="colorOnErrorContainer">@color/vesper_on_error_container_dark</item>
++        <item name="colorTertiary">@color/vesper_tertiary_dark</item>
++        <item name="colorOnTertiary">@color/vesper_on_tertiary_dark</item>
++        <item name="colorTertiaryContainer">@color/vesper_tertiary_container_dark</item>
++        <item name="colorOnTertiaryContainer">@color/vesper_on_tertiary_container_dark</item>
++        <item name="colorTertiaryFixed">@color/vesper_tertiary_fixed</item>
++        <item name="colorTertiaryFixedDim">@color/vesper_tertiary_fixed_dim</item>
++        <item name="colorOnTertiaryFixed">@color/vesper_on_tertiary_fixed</item>
++        <item name="colorOnTertiaryFixedVariant">@color/vesper_on_tertiary_fixed_variant</item>
++        <item name="colorAccent">@color/vesper_primary_dark</item>
++        <item name="colorControlActivated">@color/vesper_primary_dark</item>
++    </style>
++
+     <style name="TextSecure.LightTheme" parent="TextSecure.BaseLightTheme">
+         <!-- Allows for Overrides -->
+     </style>
+ 
+-    <style name="TextSecure.BaseLightTheme" parent="@style/Theme.Material3.Light">
++    <style name="TextSecure.BaseLightTheme" parent="@style/Theme.Vesper.Material3.Light">
+         <item name="theme_type">light</item>
++        <item name="dynamic_colors">false</item>
++        <item name="android:navigationBarColor">@color/vesper_surface_light</item>
++        <item name="android:statusBarColor">@color/vesper_surface_light</item>
++        <item name="android:windowLightNavigationBar">true</item>
++        <item name="android:windowLightStatusBar">true</item>
+         <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
+         <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
+         <item name="permissionsRationaleDialogTheme">@style/Theme.Signal.AlertDialog.Light.Cornered</item>
+@@ -152,26 +255,12 @@
+         <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
+ 
+         <!-- Material 3 -->
+-
+-        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+-
+-
+-
+-
+-
+-        <item name="colorSurfaceContainer">?attr/colorSurface</item>
+-
+-
+-
+-
+-
+-
+-
+-
+-        <item name="colorAccent">?attr/colorPrimary</item>
+-        <item name="colorControlActivated">?attr/colorPrimary</item>
++        <item name="vesper_colorSurface1">@color/signal_light_colorSurface1</item>
++        <item name="vesper_colorSurface2">@color/signal_light_colorSurface2</item>
++        <item name="vesper_colorSurface3">@color/signal_light_colorSurface3</item>
++        <item name="vesper_colorSurface4">@color/signal_light_colorSurface4</item>
++        <item name="vesper_colorSurface5">@color/signal_light_colorSurface5</item>
+         <item name="colorControlHighlight">@color/transparent_black_10</item>
+-        <item name="android:textColorHighlight">?attr/colorPrimaryContainer</item>
+ 
+         <item name="textAppearanceBodyMedium">@style/Signal.Text.BodyMedium</item>
+         <item name="textAppearanceBodyLarge">@style/Signal.Text.BodyLarge</item>
+@@ -189,8 +278,8 @@
+         <item name="bottomSheetDialogTheme">@style/Theme.Signal.Light.BottomSheetDialog</item>
+ 
+         <item name="contactCheckboxBackground">@drawable/contact_selection_checkbox</item>
+-        <item name="mediaKeyboardBackgroundColor">?attr/vesper_colorSurface2</item>
+-        <item name="mediaKeyboardBottomBarBackgroundColor">?attr/vesper_colorSurface5</item>
++        <item name="mediaKeyboardBackgroundColor">?attr/colorSurfaceContainer</item>
++        <item name="mediaKeyboardBottomBarBackgroundColor">?attr/colorSurfaceDim</item>
+ 
+         <item name="actionBarStyle">@style/TextSecure.LightActionBar</item>
+         <item name="actionBarTabBarStyle">@style/TextSecure.LightActionBar.TabBar</item>
+@@ -201,8 +290,8 @@
+         <item name="android:textColorSecondary">@color/text_color_secondary_light_theme</item>
+         <item name="android:windowBackground">?attr/colorSurface</item>
+         <item name="android:windowContentOverlay">@null</item>
+-        <item name="alertDialogTheme">@style/AppCompatAlertDialogStyleLight</item>
+-        <item name="android:alertDialogTheme">@style/AppCompatDialogStyleLight</item>
++        <item name="alertDialogTheme">@style/ThemeOverlay.Signal.MaterialAlertDialog</item>
++        <item name="android:alertDialogTheme">@style/ThemeOverlay.Signal.MaterialAlertDialog</item>
+         <item name="homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
+         <item name="android:homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
+ 
+@@ -234,14 +323,103 @@
+         <item name="materialCalendarTheme">@style/Signal.ThemeOverlay.Calendar</item>
+         <item name="materialCardViewOutlinedStyle">@style/Widget.Material3.CardView.Filled</item>
+         <item name="collapsingToolbarLayoutStyle">@style/Signal.Widget.CollapsingToolbar</item>
++
++        <!-- Legacy Signal semantic colors. Keep these as theme attributes so
++             legacy views and dynamic Material/Compose surfaces share a palette. -->
++        <item name="conversation_toolbar_color">?attr/colorSurface</item>
++        <item name="signal_accent_primary">@color/core_ultramarine</item>
++        <item name="signal_background_primary">?attr/colorSurface</item>
++        <item name="signal_background_secondary">?attr/colorSurfaceContainerLow</item>
++        <item name="signal_background_dialog">?attr/colorSurfaceContainer</item>
++        <item name="signal_background_dialog_secondary">?attr/colorSurfaceContainerLow</item>
++        <item name="signal_text_primary">?attr/colorOnSurface</item>
++        <item name="signal_text_secondary">?attr/colorOnSurfaceVariant</item>
++        <item name="signal_text_toolbar_title">?attr/colorSurface</item>
++        <item name="signal_icon_tint_primary">?attr/colorOnSurface</item>
++        <item name="signal_icon_tint_secondary">?attr/colorOnSurfaceVariant</item>
++        <item name="signal_icon_tint_action">@color/core_black</item>
++        <item name="signal_icon_tint_tab_selected">?attr/colorOnSurface</item>
++        <item name="signal_icon_tint_tab_unselected">?attr/colorOnSurfaceVariant</item>
++        <item name="signal_button_primary">@color/core_ultramarine</item>
++        <item name="signal_button_primary_ripple">@color/transparent_black_15</item>
++        <item name="signal_button_primary_text">@color/core_white</item>
++        <item name="signal_button_primary_text_disabled">@color/transparent_white_20</item>
++        <item name="signal_button_secondary">@color/core_grey_05</item>
++        <item name="signal_button_secondary_ripple">@color/core_grey_02</item>
++        <item name="signal_button_secondary_text">@color/core_ultramarine</item>
++        <item name="signal_button_secondary_text_disabled">@color/core_grey_25</item>
++        <item name="signal_button_secondary_stroke">@color/core_grey_15</item>
++        <item name="conversation_compose_background">?attr/colorSurfaceContainerHigh</item>
++        <item name="contact_filter_edit_background">?attr/colorSurfaceContainerHighest</item>
++        <item name="reactions_pill_selected_color">?attr/colorSurfaceContainer</item>
++        <item name="qr_card_color">?attr/colorSurfaceContainerLow</item>
++        <item name="qr_card_text_color">?attr/colorOnSurface</item>
++        <item name="conversation_item_update_text_color">?attr/colorOnSurfaceVariant</item>
++        <item name="conversation_item_quote_text_color">?attr/colorOnSurface</item>
++        <item name="conversation_item_quote_text_color_sent">?attr/colorOnSurface</item>
++        <item name="conversation_item_recv_bubble_color_normal">?attr/colorSurfaceContainerHigh</item>
++        <item name="conversation_item_incoming_audio_foreground_tint_normal">?attr/colorOnSurface</item>
++        <item name="conversation_typing_indicator_foreground_tint_normal">?attr/colorOnSurfaceVariant</item>
++        <item name="conversation_scroll_to_bottom_foreground_color">?attr/colorOnSurfaceVariant</item>
++        <item name="conversation_list_selected_color">?attr/colorSurfaceContainer</item>
++        <item name="reactions_pill_text_color">?attr/colorOnSurfaceVariant</item>
++        <item name="reactions_overlay_any_emoji_background">?attr/colorTertiaryContainer</item>
++        <item name="reactions_overlay_any_emoji_foreground">?attr/colorOnTertiaryContainer</item>
++        <item name="megaphone_body_text_color">?attr/colorOnSurfaceVariant</item>
++        <item name="tooltip_default_color">?attr/colorSecondaryContainer</item>
++        <item name="quote_view_background_incoming_wallpaper">@color/signal_colorTransparentInverse2</item>
++        <item name="quote_view_bar_incoming_wallpaper">@color/signal_colorTransparentInverse2</item>
++        <item name="quote_view_foreground_incoming_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="quote_view_background_outgoing_wallpaper">@color/signal_neutralSurface</item>
++        <item name="quote_view_bar_outgoing_wallpaper">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_outgoing_wallpaper">?attr/colorOnSurface</item>
++        <item name="quote_view_background_incoming_normal">@color/signal_colorTransparent3</item>
++        <item name="quote_view_bar_incoming_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_incoming_normal">?attr/colorOnSurface</item>
++        <item name="quote_view_background_outgoing_normal">@color/signal_colorTransparent4</item>
++        <item name="quote_view_bar_outgoing_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_outgoing_normal">?attr/colorOnSurface</item>
++        <item name="quote_view_label_background_incoming_normal">@color/signal_colorOnSurface_8</item>
++        <item name="quote_view_label_background_incoming_wallpaper">@color/signal_colorOnSurface_8</item>
++        <item name="quote_view_label_background_outgoing_normal">@color/transparent_white_36</item>
++        <item name="quote_view_label_background_outgoing_wallpaper">@color/transparent_white_36</item>
++        <item name="react_with_any_background">?attr/colorSurfaceContainerLow</item>
++        <item name="react_with_any_search_background">?attr/conversation_compose_background</item>
++        <item name="react_with_any_search_hint">?attr/colorOnSurfaceVariant</item>
++        <item name="react_with_any_customize_background">?attr/colorSurfaceVariant</item>
++        <item name="voice_note_player_view_background">?attr/colorSurfaceContainerLow</item>
++        <item name="message_request_bar_container_background_normal">?attr/colorSurface</item>
++        <item name="message_request_bar_background_normal">?attr/colorSurfaceContainerHigh</item>
++        <item name="message_request_bar_denyForeground_normal">?attr/colorError</item>
++        <item name="message_request_bar_acceptForeground_normal">?attr/colorSurfaceInverse</item>
++        <item name="message_request_bar_container_background_wallpaper">@color/wallpaper_bubble_color</item>
++        <item name="message_request_bar_background_wallpaper">@color/signal_colorNeutralVariant</item>
++        <item name="message_request_bar_denyForeground_wallpaper">?attr/colorError</item>
++        <item name="message_request_bar_acceptForeground_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="safety_tip_background">@color/core_white</item>
++        <item name="safety_tip_image_background">#99F3F0FF</item>
++
++        <item name="switchThemeOverlay">@style/ThemeOverlay.MaterialSwitch.DayNight</item>
++        <item name="extended_action_button_container_color">@color/vesper_tertiary_container_light</item>
++        <item name="extended_action_button_icon_color">@color/vesper_on_tertiary_container_light</item>
++        <item name="filled_tonal_icon_button_container_color">@color/vesper_surface_container_highest_light</item>
++        <item name="filled_tonal_icon_button_icon_color">@color/vesper_on_surface_light</item>
++        <item name="context_menu_container_color">@color/vesper_surface_container_light</item>
++        <item name="navbar_active_indicator_color">@color/vesper_secondary_container_light</item>
++        <item name="navbar_container_color">@color/vesper_surface_container_light</item>
+     </style>
+ 
+     <style name="TextSecure.DarkTheme" parent="@style/TextSecure.BaseDarkTheme">
+         <!-- leave empty to allow overriding -->
+     </style>
+ 
+-    <style name="TextSecure.BaseDarkTheme" parent="@style/Theme.Material3.Dark">
++    <style name="TextSecure.BaseDarkTheme" parent="@style/Theme.Vesper.Material3.Dark">
+         <item name="theme_type">dark</item>
++        <item name="dynamic_colors">false</item>
++        <item name="android:navigationBarColor">@color/vesper_surface_dark</item>
++        <item name="android:statusBarColor">@color/vesper_surface_dark</item>
++        <item name="android:windowLightNavigationBar">false</item>
++        <item name="android:windowLightStatusBar">false</item>
+         <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
+         <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
+         <item name="permissionsRationaleDialogTheme">@style/Theme.Signal.AlertDialog.Dark.Cornered</item>
+@@ -249,26 +427,12 @@
+         <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
+ 
+         <!-- Material 3 -->
+-
+-        <item name="colorPrimaryDark">?attr/colorPrimary</item>
+-
+-
+-
+-
+-
+-        <item name="colorSurfaceContainer">?attr/colorSurface</item>
+-
+-
+-
+-
+-
+-
+-
+-
+-        <item name="colorAccent">?attr/colorPrimary</item>
+-        <item name="colorControlActivated">?attr/colorPrimary</item>
++        <item name="vesper_colorSurface1">@color/signal_dark_colorSurface1</item>
++        <item name="vesper_colorSurface2">@color/signal_dark_colorSurface2</item>
++        <item name="vesper_colorSurface3">@color/signal_dark_colorSurface3</item>
++        <item name="vesper_colorSurface4">@color/signal_dark_colorSurface4</item>
++        <item name="vesper_colorSurface5">@color/signal_dark_colorSurface5</item>
+         <item name="colorControlHighlight">@color/transparent_white_10</item>
+-        <item name="android:textColorHighlight">?attr/colorPrimaryContainer</item>
+ 
+         <item name="textAppearanceBodyMedium">@style/Signal.Text.BodyMedium</item>
+         <item name="textAppearanceBodyLarge">@style/Signal.Text.BodyLarge</item>
+@@ -287,7 +451,7 @@
+ 
+         <item name="actionBarStyle">@style/TextSecure.DarkActionBar</item>
+         <item name="actionBarTabBarStyle">@style/TextSecure.DarkActionBar.TabBar</item>
+-        <item name="actionBarPopupTheme">@style/ThemeOverlay.AppCompat.Dark</item>
++        <item name="actionBarPopupTheme">@style/ThemeOverlay.Material3.Dark</item>
+         <item name="actionModeBackground">@color/transparent</item>
+         <item name="actionModeCloseDrawable">@drawable/ic_x_tinted</item>
+         <item name="actionModeStyle">@style/TextSecure.ActionModeStyle</item>
+@@ -296,16 +460,16 @@
+         <item name="android:colorControlHighlight" tools:ignore="NewApi">@color/transparent_white_10</item>
+         <item name="android:windowBackground">?attr/colorSurface</item>
+         <item name="android:windowContentOverlay">@null</item>
+-        <item name="alertDialogTheme">@style/AppCompatAlertDialogStyleDark</item>
+-        <item name="android:alertDialogTheme">@style/AppCompatDialogStyleDark</item>
++        <item name="alertDialogTheme">@style/ThemeOverlay.Signal.MaterialAlertDialog</item>
++        <item name="android:alertDialogTheme">@style/ThemeOverlay.Signal.MaterialAlertDialog</item>
+         <item name="homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
+         <item name="android:homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
+ 
+         <item name="settingsToolbarStyle">@style/TextSecure.DarkActionBar.Settings</item>
+ 
+         <item name="contactCheckboxBackground">@drawable/contact_selection_checkbox</item>
+-        <item name="mediaKeyboardBackgroundColor">?attr/vesper_colorSurface2</item>
+-        <item name="mediaKeyboardBottomBarBackgroundColor">?attr/vesper_colorSurface5</item>
++        <item name="mediaKeyboardBackgroundColor">?attr/colorSurfaceContainer</item>
++        <item name="mediaKeyboardBottomBarBackgroundColor">?attr/colorSurfaceBright</item>
+ 
+         <item name="contact_filter_toolbar_icon_tint">?attr/signal_icon_tint_primary</item>
+ 
+@@ -333,6 +497,89 @@
+         <item name="materialCalendarTheme">@style/Signal.ThemeOverlay.Calendar</item>
+         <item name="materialCardViewOutlinedStyle">@style/Widget.Material3.CardView.Filled</item>
+         <item name="collapsingToolbarLayoutStyle">@style/Signal.Widget.CollapsingToolbar</item>
++
++        <!-- Legacy Signal semantic colors. -->
++        <item name="conversation_toolbar_color">?attr/colorSurface</item>
++        <item name="signal_accent_primary">@color/core_ultramarine_light</item>
++        <item name="signal_background_primary">?attr/colorSurface</item>
++        <item name="signal_background_secondary">?attr/colorSurfaceContainerLow</item>
++        <item name="signal_background_dialog">@color/core_grey_75</item>
++        <item name="signal_background_dialog_secondary">@color/core_grey_65</item>
++        <item name="signal_text_primary">?attr/colorOnSurface</item>
++        <item name="signal_text_secondary">?attr/colorOnSurfaceVariant</item>
++        <item name="signal_text_toolbar_title">@color/transparent_white_90</item>
++        <item name="signal_icon_tint_primary">?attr/colorOnSurface</item>
++        <item name="signal_icon_tint_secondary">@color/core_grey_25</item>
++        <item name="signal_icon_tint_action">?attr/signal_icon_tint_primary</item>
++        <item name="signal_icon_tint_tab_selected">?attr/colorOnSurface</item>
++        <item name="signal_icon_tint_tab_unselected">?attr/colorOnSurfaceVariant</item>
++        <item name="signal_button_primary">@color/core_ultramarine_light</item>
++        <item name="signal_button_primary_ripple">@color/transparent_black_15</item>
++        <item name="signal_button_primary_text">@color/core_white</item>
++        <item name="signal_button_primary_text_disabled">@color/transparent_white_20</item>
++        <item name="signal_button_secondary">@color/core_grey_75</item>
++        <item name="signal_button_secondary_ripple">@color/core_grey_80</item>
++        <item name="signal_button_secondary_text">@color/core_ultramarine_light</item>
++        <item name="signal_button_secondary_text_disabled">@color/core_grey_45</item>
++        <item name="signal_button_secondary_stroke">@color/core_grey_45</item>
++        <item name="conversation_compose_background">?attr/colorSurfaceContainerHigh</item>
++        <item name="contact_filter_edit_background">?attr/colorSurfaceContainerHighest</item>
++        <item name="reactions_pill_selected_color">?attr/colorSurfaceContainer</item>
++        <item name="qr_card_color">@color/vesper_on_primary_light</item>
++        <item name="qr_card_text_color">?attr/colorOnSurfaceVariant</item>
++        <item name="conversation_item_update_text_color">?attr/colorOnSurfaceVariant</item>
++        <item name="conversation_item_quote_text_color">@color/core_grey_05</item>
++        <item name="conversation_item_quote_text_color_sent">?attr/colorOnSurface</item>
++        <item name="conversation_item_recv_bubble_color_normal">?attr/colorSurfaceContainerHigh</item>
++        <item name="conversation_item_incoming_audio_foreground_tint_normal">?attr/colorOnSurface</item>
++        <item name="conversation_typing_indicator_foreground_tint_normal">?attr/colorOnSurfaceVariant</item>
++        <item name="conversation_scroll_to_bottom_foreground_color">?attr/colorOnSurfaceVariant</item>
++        <item name="conversation_list_selected_color">?attr/colorSurfaceContainer</item>
++        <item name="reactions_pill_text_color">?attr/colorOnSurfaceVariant</item>
++        <item name="reactions_overlay_any_emoji_background">?attr/colorTertiaryContainer</item>
++        <item name="reactions_overlay_any_emoji_foreground">?attr/colorOnTertiaryContainer</item>
++        <item name="megaphone_body_text_color">?attr/colorOnSurfaceVariant</item>
++        <item name="tooltip_default_color">?attr/colorSecondaryContainer</item>
++        <item name="quote_view_background_incoming_wallpaper">@color/signal_colorTransparent2</item>
++        <item name="quote_view_bar_incoming_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="quote_view_foreground_incoming_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="quote_view_background_outgoing_wallpaper">@color/signal_colorTransparent4</item>
++        <item name="quote_view_bar_outgoing_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="quote_view_foreground_outgoing_wallpaper">@color/signal_colorNeutral</item>
++        <item name="quote_view_background_incoming_normal">@color/signal_colorTransparent3</item>
++        <item name="quote_view_bar_incoming_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_incoming_normal">?attr/colorOnSurface</item>
++        <item name="quote_view_background_outgoing_normal">@color/signal_colorTransparent4</item>
++        <item name="quote_view_bar_outgoing_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_outgoing_normal">?attr/colorOnSurfaceInverse</item>
++        <item name="quote_view_label_background_incoming_normal">@color/transparent_white_20</item>
++        <item name="quote_view_label_background_incoming_wallpaper">@color/transparent_white_20</item>
++        <item name="quote_view_label_background_outgoing_normal">@color/transparent_white_20</item>
++        <item name="quote_view_label_background_outgoing_wallpaper">@color/transparent_white_20</item>
++        <item name="react_with_any_background">?attr/colorSurfaceContainerLow</item>
++        <item name="react_with_any_search_background">?attr/conversation_compose_background</item>
++        <item name="react_with_any_search_hint">?attr/colorOnSurfaceVariant</item>
++        <item name="react_with_any_customize_background">?attr/colorSurfaceVariant</item>
++        <item name="voice_note_player_view_background">?attr/colorSurfaceContainerLow</item>
++        <item name="message_request_bar_container_background_normal">?attr/colorSurface</item>
++        <item name="message_request_bar_background_normal">?attr/colorSurfaceContainerHigh</item>
++        <item name="message_request_bar_denyForeground_normal">?attr/colorError</item>
++        <item name="message_request_bar_acceptForeground_normal">?attr/colorSurfaceInverse</item>
++        <item name="message_request_bar_container_background_wallpaper">@color/wallpaper_bubble_color</item>
++        <item name="message_request_bar_background_wallpaper">@color/signal_light_colorTransparent2</item>
++        <item name="message_request_bar_denyForeground_wallpaper">?attr/colorError</item>
++        <item name="message_request_bar_acceptForeground_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="safety_tip_background">?attr/colorSecondaryContainer</item>
++        <item name="safety_tip_image_background">?attr/colorSecondary</item>
++
++        <item name="switchThemeOverlay">@style/ThemeOverlay.MaterialSwitch.DayNight</item>
++        <item name="extended_action_button_container_color">@color/vesper_tertiary_container_dark</item>
++        <item name="extended_action_button_icon_color">@color/vesper_on_tertiary_container_dark</item>
++        <item name="filled_tonal_icon_button_container_color">@color/vesper_surface_container_highest_dark</item>
++        <item name="filled_tonal_icon_button_icon_color">@color/vesper_on_surface_dark</item>
++        <item name="context_menu_container_color">@color/vesper_surface_container_high_dark</item>
++        <item name="navbar_active_indicator_color">@color/vesper_surface_bright_dark</item>
++        <item name="navbar_container_color">@color/vesper_surface_container_dark</item>
+     </style>
+ 
+     <style name="Theme.Signal.AlertDialog.Light.Cornered" parent="MaterialAlertDialog.Material3">
+diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt b/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt
+index 254cfffa57..cea9e80f5c 100644
+--- a/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt
++++ b/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt
+@@ -27,6 +27,7 @@ import androidx.compose.material3.ButtonElevation
+ import androidx.compose.material3.FilledTonalButton
+ import androidx.compose.material3.FilledTonalIconButton
+ import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButtonDefaults
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.ProvideTextStyle
+ import androidx.compose.material3.Surface
+@@ -41,7 +42,9 @@ import androidx.compose.ui.res.painterResource
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.dp
++import org.signal.core.ui.R
+ import org.signal.core.ui.compose.theme.SignalTheme
++import org.signal.core.ui.compose.theme.colorAttribute
+ 
+ object Buttons {
+ 
+@@ -93,7 +96,10 @@ object Buttons {
+     modifier: Modifier = Modifier,
+     enabled: Boolean = true,
+     shape: Shape = ButtonDefaults.filledTonalShape,
+-    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
++    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(
++      containerColor = colorAttribute(R.attr.extended_action_button_container_color),
++      contentColor = colorAttribute(R.attr.extended_action_button_icon_color)
++    ),
+     elevation: ButtonElevation? = ButtonDefaults.filledTonalButtonElevation(),
+     border: BorderStroke? = null,
+     contentPadding: PaddingValues = largeButtonContentPadding,
+@@ -120,7 +126,10 @@ object Buttons {
+     modifier: Modifier = Modifier,
+     enabled: Boolean = true,
+     shape: Shape = ButtonDefaults.filledTonalShape,
+-    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
++    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(
++      containerColor = colorAttribute(R.attr.extended_action_button_container_color),
++      contentColor = colorAttribute(R.attr.extended_action_button_icon_color)
++    ),
+     elevation: ButtonElevation? = ButtonDefaults.filledTonalButtonElevation(),
+     border: BorderStroke? = null,
+     contentPadding: PaddingValues = mediumButtonContentPadding,
+@@ -193,7 +202,7 @@ object Buttons {
+         painter = painterResource(iconResId),
+         contentDescription = null,
+         modifier = Modifier.padding(16.dp),
+-        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSecondaryContainer)
++        colorFilter = ColorFilter.tint(colorAttribute(R.attr.extended_action_button_icon_color))
+       )
+     }
+   }
+@@ -214,6 +223,10 @@ object Buttons {
+         onClick = onClick,
+         shape = RoundedCornerShape(18.dp),
+         modifier = Modifier.size(56.dp),
++        colors = IconButtonDefaults.filledTonalIconButtonColors(
++          containerColor = colorAttribute(R.attr.extended_action_button_container_color),
++          contentColor = colorAttribute(R.attr.extended_action_button_icon_color)
++        ),
+         enabled = enabled,
+         content = imageContent
+       )
+diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
+index 2bb4bc7f6d..ace52d7bb6 100644
+--- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
++++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
+@@ -1,21 +1,31 @@
+ package org.signal.core.ui.compose.theme
+ 
++import android.content.Context
+ import android.content.res.Configuration
++import android.os.Build
++import android.util.TypedValue
++import androidx.annotation.AttrRes
+ import androidx.compose.foundation.layout.Column
++import androidx.compose.material3.ColorScheme
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.Text
+ import androidx.compose.material3.Typography
+ import androidx.compose.material3.darkColorScheme
++import androidx.compose.material3.dynamicDarkColorScheme
++import androidx.compose.material3.dynamicLightColorScheme
+ import androidx.compose.material3.lightColorScheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.CompositionLocalProvider
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.platform.LocalConfiguration
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.colorResource
+ import androidx.compose.ui.text.font.FontFamily
+ import androidx.compose.ui.text.font.FontStyle
+ import androidx.compose.ui.tooling.preview.Preview
+ import androidx.compose.ui.unit.sp
+ import org.signal.core.ui.CoreUiDependencies
++import org.signal.core.ui.R
+ import org.signal.core.ui.compose.ProvideIncognitoKeyboard
+ 
+ private val typography = Typography().run {
+@@ -81,13 +91,28 @@ private val typography = Typography().run {
+ }
+ 
+ private val lightColorScheme = lightColorScheme(
++  inversePrimary = Color(0xFFAA98FF),
++  surfaceDim = Color(0xFFDED6FF),
++  inverseSurface = Color(0xFF33276A),
++  surfaceBright = Color(0xFFF6F6FF),
++  surfaceContainerLowest = Color(0xFFF9F8FF),
++  surfaceContainerLow = Color(0xFFF3F0FF),
++  surfaceContainer = Color(0xFFEEEAFF),
++  surfaceContainerHigh = Color(0xFFEAE5FF),
++  surfaceContainerHighest = Color(0xFFE5DFFF),
++  inverseOnSurface = Color(0xFFF1EDF6),
++  outlineVariant = Color(0xFF9384E2),
++  onError = Color(0xFFFFFFFF),
++  onErrorContainer = Color(0xFF6D0028),
++  tertiary = Color(0xFF5A5379),
++  onTertiary = Color(0xFFFFFFFF),
++  tertiaryContainer = Color(0xFFD1C6FB),
++  onTertiaryContainer = Color(0xFF180D49),
+   primary = Color(0xFF5335DD),
+   primaryContainer = Color(0xFFC1B4FB),
+   secondary = Color(0xFFC5C1DD),
+   secondaryContainer = Color(0xFFE3DBF9),
+   surface = Color(0xFFF6F6FF),
+-  surfaceContainerLow = Color(0xFFF3F0FF),
+-  surfaceContainerHighest = Color(0xFFE7E6F2),
+   surfaceVariant = Color(0xFFE7E6F2),
+   background = Color(0xFFF6F6FF),
+   error = Color(0xFFE00052),
+@@ -132,7 +157,7 @@ private val lightExtendedColors = ExtendedColors(
+ private val darkExtendedColors = ExtendedColors(
+   neutralSurface = Color(0x14FFFFFF),
+   colorOnCustom = Color(0xFFFFFFFF),
+-  colorOnCustomVariant = Color(0x18FFFFFF),
++  colorOnCustomVariant = Color(0xB3FFFFFF),
+   colorSurface1 = Color(0xFF181137),
+   colorSurface2 = Color(0xFF1E1645),
+   colorSurface3 = Color(0xFF231A4E),
+@@ -157,13 +182,28 @@ private val darkExtendedColors = ExtendedColors(
+ )
+ 
+ private val darkColorScheme = darkColorScheme(
++  inversePrimary = Color(0xFF5335DD),
++  surfaceBright = Color(0xFF33276A),
++  inverseSurface = Color(0xFFE5DFFF),
++  surfaceDim = Color(0xFF100E1F),
++  surfaceContainerLowest = Color(0xFF0C0919),
++  surfaceContainerLow = Color(0xFF181137),
++  surfaceContainer = Color(0xFF1E1645),
++  surfaceContainerHigh = Color(0xFF231A4E),
++  surfaceContainerHighest = Color(0xFF281E57),
++  inverseOnSurface = Color(0xFF31303D),
++  outlineVariant = Color(0xFF464257),
++  onError = Color(0xFF63012C),
++  onErrorContainer = Color(0xFFFFDAD6),
++  tertiary = Color(0xFFB3ABDA),
++  onTertiary = Color(0xFF36304F),
++  tertiaryContainer = Color(0xFF423290),
++  onTertiaryContainer = Color(0xFFEAE5FF),
+   primary = Color(0xFFAA98FF),
+   primaryContainer = Color(0xFF483B6A),
+   secondary = Color(0xFFCBC4DE),
+   secondaryContainer = Color(0xFF434159),
+   surface = Color(0xFF100E1F),
+-  surfaceContainerLow = Color(0xFF181137),
+-  surfaceContainerHighest = Color(0xFF302F33),
+   surfaceVariant = Color(0xFF302F33),
+   background = Color(0xFF100E1F),
+   error = Color(0xFFFE006E),
+@@ -178,35 +218,38 @@ private val darkColorScheme = darkColorScheme(
+   outline = Color(0xFF5D5D66)
+ )
+ 
+-private val lightSnackbarColors = SnackbarColors(
+-  color = darkColorScheme.surface,
+-  contentColor = darkColorScheme.onSurface,
+-  actionColor = darkColorScheme.primary,
+-  actionContentColor = darkColorScheme.primary,
+-  dismissActionContentColor = darkColorScheme.onSurface
+-)
+-
+-private val darkSnackbarColors = SnackbarColors(
+-  color = darkColorScheme.surfaceVariant,
+-  contentColor = darkColorScheme.onSurfaceVariant,
+-  actionColor = darkColorScheme.primary,
+-  actionContentColor = darkColorScheme.primary,
+-  dismissActionContentColor = darkColorScheme.onSurfaceVariant
+-)
+-
+ @Composable
+ fun SignalTheme(
+   isDarkMode: Boolean = LocalConfiguration.current.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
+   incognitoKeyboardEnabled: Boolean = CoreUiDependencies.isIncognitoKeyboardEnabled,
++  useDynamicColors: Boolean? = null,
+   content: @Composable () -> Unit
+ ) {
+-  val extendedColors = if (isDarkMode) darkExtendedColors else lightExtendedColors
+-  val snackbarColors = if (isDarkMode) darkSnackbarColors else lightSnackbarColors
++  val context = LocalContext.current
++  val maySupportDynamicColor = Build.VERSION.SDK_INT >= 31
++  val dynamicColors = maySupportDynamicColor && (useDynamicColors ?: isThemeUsingDynamicColors(context))
++
++  // API 31–33's Compose fallback is substantially more saturated than the
++  // platform resource palette. Use the same resources as XML there so legacy
++  // views and Compose surfaces stay visually aligned.
++  val colorScheme = when {
++    dynamicColors -> {
++      if (Build.VERSION.SDK_INT >= 34) {
++        if (isDarkMode) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
++      } else {
++        if (isDarkMode) systemAlignedDarkColorScheme() else systemAlignedLightColorScheme()
++      }
++    }
++    isDarkMode -> darkColorScheme
++    else -> lightColorScheme
++  }
++  val extendedColors = extendedColors(colorScheme, isDarkMode, dynamicColors)
++  val snackbarColors = snackbarColors(colorScheme)
+ 
+   ProvideIncognitoKeyboard(enabled = incognitoKeyboardEnabled) {
+     CompositionLocalProvider(LocalExtendedColors provides extendedColors, LocalSnackbarColors provides snackbarColors) {
+       MaterialTheme(
+-        colorScheme = if (isDarkMode) darkColorScheme else lightColorScheme,
++        colorScheme = colorScheme,
+         typography = typography,
+         content = content
+       )
+@@ -214,6 +257,123 @@ fun SignalTheme(
+   }
+ }
+ 
++@Composable
++private fun systemAlignedLightColorScheme() = lightColorScheme(
++  primary = colorResource(R.color.dynamic_primary_light),
++  onPrimary = colorResource(R.color.dynamic_on_primary_light),
++  primaryContainer = colorResource(R.color.dynamic_primary_container_light),
++  onPrimaryContainer = colorResource(R.color.dynamic_on_primary_container_light),
++  inversePrimary = colorResource(R.color.dynamic_primary_inverse_light),
++  secondary = colorResource(R.color.dynamic_secondary_light),
++  onSecondary = colorResource(R.color.dynamic_on_secondary_light),
++  secondaryContainer = colorResource(R.color.dynamic_secondary_container_light),
++  onSecondaryContainer = colorResource(R.color.dynamic_on_secondary_container_light),
++  tertiary = colorResource(R.color.dynamic_tertiary_light),
++  onTertiary = colorResource(R.color.dynamic_on_tertiary_light),
++  tertiaryContainer = colorResource(R.color.dynamic_tertiary_container_light),
++  onTertiaryContainer = colorResource(R.color.dynamic_on_tertiary_container_light),
++  background = colorResource(R.color.dynamic_background_light),
++  onBackground = colorResource(R.color.dynamic_on_background_light),
++  surface = colorResource(R.color.dynamic_surface_light),
++  onSurface = colorResource(R.color.dynamic_on_surface_light),
++  surfaceVariant = colorResource(R.color.dynamic_surface_variant_light),
++  onSurfaceVariant = colorResource(R.color.dynamic_on_surface_variant_light),
++  inverseSurface = colorResource(R.color.dynamic_surface_inverse_light),
++  inverseOnSurface = colorResource(R.color.dynamic_on_surface_inverse_light),
++  error = colorResource(R.color.dynamic_error_light),
++  onError = colorResource(R.color.dynamic_on_error_light),
++  errorContainer = colorResource(R.color.dynamic_error_container_light),
++  onErrorContainer = colorResource(R.color.dynamic_on_error_container_light),
++  outline = colorResource(R.color.dynamic_outline_light),
++  outlineVariant = colorResource(R.color.dynamic_outline_variant_light),
++  surfaceBright = colorResource(R.color.dynamic_surface_bright_light),
++  surfaceContainer = colorResource(R.color.dynamic_surface_container_light),
++  surfaceContainerHigh = colorResource(R.color.dynamic_surface_container_high_light),
++  surfaceContainerHighest = colorResource(R.color.dynamic_surface_container_highest_light),
++  surfaceContainerLow = colorResource(R.color.dynamic_surface_container_low_light),
++  surfaceContainerLowest = colorResource(R.color.dynamic_surface_container_lowest_light),
++  surfaceDim = colorResource(R.color.dynamic_surface_dim_light)
++)
++
++@Composable
++private fun systemAlignedDarkColorScheme() = darkColorScheme(
++  primary = colorResource(R.color.dynamic_primary_dark),
++  onPrimary = colorResource(R.color.dynamic_on_primary_dark),
++  primaryContainer = colorResource(R.color.dynamic_primary_container_dark),
++  onPrimaryContainer = colorResource(R.color.dynamic_on_primary_container_dark),
++  inversePrimary = colorResource(R.color.dynamic_primary_inverse_dark),
++  secondary = colorResource(R.color.dynamic_secondary_dark),
++  onSecondary = colorResource(R.color.dynamic_on_secondary_dark),
++  secondaryContainer = colorResource(R.color.dynamic_secondary_container_dark),
++  onSecondaryContainer = colorResource(R.color.dynamic_on_secondary_container_dark),
++  tertiary = colorResource(R.color.dynamic_tertiary_dark),
++  onTertiary = colorResource(R.color.dynamic_on_tertiary_dark),
++  tertiaryContainer = colorResource(R.color.dynamic_tertiary_container_dark),
++  onTertiaryContainer = colorResource(R.color.dynamic_on_tertiary_container_dark),
++  background = colorResource(R.color.dynamic_background_dark),
++  onBackground = colorResource(R.color.dynamic_on_background_dark),
++  surface = colorResource(R.color.dynamic_surface_dark),
++  onSurface = colorResource(R.color.dynamic_on_surface_dark),
++  surfaceVariant = colorResource(R.color.dynamic_surface_variant_dark),
++  onSurfaceVariant = colorResource(R.color.dynamic_on_surface_variant_dark),
++  inverseSurface = colorResource(R.color.dynamic_surface_inverse_dark),
++  inverseOnSurface = colorResource(R.color.dynamic_on_surface_inverse_dark),
++  error = colorResource(R.color.dynamic_error_dark),
++  onError = colorResource(R.color.dynamic_on_error_dark),
++  errorContainer = colorResource(R.color.dynamic_error_container_dark),
++  onErrorContainer = colorResource(R.color.dynamic_on_error_container_dark),
++  outline = colorResource(R.color.dynamic_outline_dark),
++  outlineVariant = colorResource(R.color.dynamic_outline_variant_dark),
++  surfaceBright = colorResource(R.color.dynamic_surface_bright_dark),
++  surfaceContainer = colorResource(R.color.dynamic_surface_container_dark),
++  surfaceContainerHigh = colorResource(R.color.dynamic_surface_container_high_dark),
++  surfaceContainerHighest = colorResource(R.color.dynamic_surface_container_highest_dark),
++  surfaceContainerLow = colorResource(R.color.dynamic_surface_container_low_dark),
++  surfaceContainerLowest = colorResource(R.color.dynamic_surface_container_lowest_dark),
++  surfaceDim = colorResource(R.color.dynamic_surface_dim_dark)
++)
++
++private fun isThemeUsingDynamicColors(context: Context): Boolean {
++  val typedValue = TypedValue()
++  return context.theme.resolveAttribute(R.attr.dynamic_colors, typedValue, false) &&
++    typedValue.data != 0
++}
++
++private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDynamic: Boolean): ExtendedColors {
++  return when {
++    isDynamic -> lightExtendedColors.copy(
++      colorSurface1 = colorScheme.surfaceContainerLow,
++      colorSurface2 = colorScheme.surfaceContainer,
++      colorSurface3 = colorScheme.surfaceContainerHigh,
++      colorSurface4 = colorScheme.surfaceContainerHighest,
++      colorSurface5 = if (isDarkMode) colorScheme.surfaceBright else colorScheme.surfaceDim
++    )
++    isDarkMode -> darkExtendedColors
++    else -> lightExtendedColors
++  }
++}
++
++private fun snackbarColors(colorScheme: ColorScheme): SnackbarColors {
++  return SnackbarColors(
++    color = colorScheme.inverseSurface,
++    contentColor = colorScheme.inverseOnSurface,
++    actionColor = colorScheme.primary,
++    actionContentColor = colorScheme.primary,
++    dismissActionContentColor = colorScheme.inverseOnSurface
++  )
++}
++
++@Composable
++fun colorAttribute(@AttrRes id: Int): Color {
++  val typedValue = TypedValue()
++  val context = LocalContext.current
++  return if (context.theme.resolveAttribute(id, typedValue, true) && typedValue.resourceId != 0) {
++    androidx.compose.ui.res.colorResource(typedValue.resourceId)
++  } else {
++    Color.Unspecified
++  }
++}
++
+ @Preview(showBackground = true)
+ @Composable
+ private fun TypographyPreview() {
+diff --git a/core/ui/src/main/java/org/signal/core/ui/util/ThemeUtil.java b/core/ui/src/main/java/org/signal/core/ui/util/ThemeUtil.java
+index 6e038b9c5f..19e7590658 100644
+--- a/core/ui/src/main/java/org/signal/core/ui/util/ThemeUtil.java
++++ b/core/ui/src/main/java/org/signal/core/ui/util/ThemeUtil.java
+@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
+ import androidx.annotation.StyleRes;
+ import androidx.appcompat.content.res.AppCompatResources;
+ import androidx.appcompat.view.ContextThemeWrapper;
++import androidx.core.content.ContextCompat;
+ 
+ import org.signal.core.ui.R;
+ 
+@@ -50,14 +51,30 @@ public class ThemeUtil {
+     return false;
+   }
+ 
+-  public static @ColorInt int getThemedColor(@NonNull Context context, @AttrRes int attr) {
++  /**
++   * Resolves either a color resource or a theme attribute to its final color.
++   */
++  public static @ColorInt int getThemedColor(@NonNull Context context, int colorRef) {
++    return getThemedColor(context, colorRef, context.getTheme());
++  }
++
++  public static @ColorInt int getThemedColor(@NonNull Context context, int colorRef, @NonNull Resources.Theme theme) {
+     TypedValue typedValue = new TypedValue();
+-    Resources.Theme theme = context.getTheme();
++    int        resourceId = colorRef;
+ 
+-    if (theme.resolveAttribute(attr, typedValue, true)) {
+-      return typedValue.data;
++    if (theme.resolveAttribute(resourceId, typedValue, true)) {
++      if (typedValue.resourceId != 0) {
++        resourceId = typedValue.resourceId;
++      } else {
++        return typedValue.data;
++      }
++    }
++
++    try {
++      return ContextCompat.getColor(context, resourceId);
++    } catch (Resources.NotFoundException e) {
++      return Color.RED;
+     }
+-    return Color.RED;
+   }
+ 
+   public static @Nullable Drawable getThemedDrawable(@NonNull Context context, @AttrRes int attr) {

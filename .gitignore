@@ -1,0 +1,30 @@
+# Materialized Signal checkout
+/work/
+
+# Local tools and working notes
+/.pytest_cache/
+/.superpowers/
+/.idea/
+/.gradle/
+/.wrangler/
+__pycache__/
+*.pyc
+
+# Android and signing state
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+*.gpg
+*.properties.local
+keystore*.properties
+signing*.properties
+local.properties
+.env.local
+.secrets
+.secrets.*
+
+# Platform noise
+.DS_Store
