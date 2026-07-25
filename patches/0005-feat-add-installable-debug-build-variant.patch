@@ -1,4 +1,4 @@
-From b034143aa4c63cc13ee5c015c6d09901f454fcf1 Mon Sep 17 00:00:00 2001
+From 3c16f7a68430a0eb869673bfd4a885d972c65389 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:43 +0100
 Subject: [PATCH 5/8] feat: add installable debug build variant
