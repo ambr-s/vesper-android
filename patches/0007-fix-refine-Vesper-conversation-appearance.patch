@@ -1,7 +1,7 @@
 From e7c3d286c8e7cc2eb5177d3dc9529a492d8b0b3f Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:44 +0100
-Subject: [PATCH 7/8] fix: refine Vesper conversation appearance
+Subject: [PATCH 7/9] fix: refine Vesper conversation appearance
 
 Signed-off-by: amber <amber@flourish.ch>
 ---

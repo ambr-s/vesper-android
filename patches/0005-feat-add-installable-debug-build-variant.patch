@@ -1,7 +1,7 @@
 From 3c16f7a68430a0eb869673bfd4a885d972c65389 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:43 +0100
-Subject: [PATCH 5/8] feat: add installable debug build variant
+Subject: [PATCH 5/9] feat: add installable debug build variant
 
 Debug builds install alongside a release. They use a .debug application ID suffix, the name Vesper Debug and an amber launcher background. Release builds are unchanged.
 

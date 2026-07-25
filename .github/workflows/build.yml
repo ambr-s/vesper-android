@@ -209,7 +209,13 @@ jobs:
           build_timestamp="$(
             sed -n 's/.*BUILD_TIMESTAMP = \([0-9][0-9]*\)L;.*/\1/p' "$build_config"
           )"
-          [[ -n "$version_code" && -n "$version_name" && -n "$build_timestamp" ]] || {
+          build_sequence="$(
+            sed -n 's/.*VESPER_BUILD_SEQUENCE = \([0-9][0-9]*\)L;.*/\1/p' "$build_config"
+          )"
+          build_id="$(
+            sed -n 's/.*VESPER_BUILD_ID = "\([^"]*\)";.*/\1/p' "$build_config"
+          )"
+          [[ -n "$version_code" && -n "$version_name" && -n "$build_timestamp" && -n "$build_sequence" && -n "$build_id" ]] || {
             echo "Could not read version metadata from signed APK." >&2
             exit 1
           }
@@ -221,6 +227,8 @@ jobs:
             --arg url "$UPDATE_ORIGIN/android/$APK_FILENAME" \
             --arg sha256sum "$sha256sum" \
             --argjson buildTimestamp "$build_timestamp" \
+            --argjson buildSequence "$build_sequence" \
+            --arg buildId "$build_id" \
             --argjson uploadTimestamp "$(date +%s%3N)" \
             '{
               versionCode: $versionCode,
@@ -228,6 +236,8 @@ jobs:
               url: $url,
               sha256sum: $sha256sum,
               buildTimestamp: $buildTimestamp,
+              buildSequence: $buildSequence,
+              buildId: $buildId,
               uploadTimestamp: $uploadTimestamp
             }' > "$manifest"
           jq --exit-status . "$manifest"

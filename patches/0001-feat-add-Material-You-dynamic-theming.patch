@@ -1,7 +1,7 @@
 From 75baecf9567be5b77c66de98f92e8929f9ea26eb Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
-Subject: [PATCH 1/8] feat: add Material You dynamic theming
+Subject: [PATCH 1/9] feat: add Material You dynamic theming
 
 Adapted from Molly work by Oscar Mira and other Molly contributors.
 

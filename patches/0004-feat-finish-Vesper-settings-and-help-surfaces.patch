@@ -1,7 +1,7 @@
 From 5269aee2e2ffe695482ded13e9266d92fd2e04e6 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
-Subject: [PATCH 4/8] feat: finish Vesper settings and help surfaces
+Subject: [PATCH 4/9] feat: finish Vesper settings and help surfaces
 
 Adapted from Molly work by Oscar Mira and other Molly contributors.
 

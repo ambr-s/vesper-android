@@ -1,7 +1,7 @@
 From d28d0771cc85e9447c874ee1e37d83f851adc4c1 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
-Subject: [PATCH 3/8] feat: optionally preserve remotely deleted messages
+Subject: [PATCH 3/9] feat: optionally preserve remotely deleted messages
 
 Keep a local marker when Vesper honours the user setting instead of a remote deletion request.
 

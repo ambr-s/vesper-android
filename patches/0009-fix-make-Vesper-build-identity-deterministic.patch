@@ -1,0 +1,240 @@
+From a49c44f823317456379742350da5ab45dfb42f8b Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sat, 25 Jul 2026 20:18:55 +0100
+Subject: [PATCH 9/9] fix: make Vesper build identity deterministic
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ app/build.gradle.kts                          | 40 ++++++++++-
+ .../securesms/jobs/ApkUpdateJob.kt            | 68 ++++++++++++++++---
+ .../securesms/jobs/ApkUpdateJobTest.kt        | 39 ++++++++---
+ 3 files changed, 125 insertions(+), 22 deletions(-)
+
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index 1fd7f8e0f1..ff4ab7646e 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -241,6 +241,8 @@ android {
+   }
+ 
+   defaultConfig {
++    val vesperBuildMetadata = getVesperBuildMetadata()
++
+     applicationId = "systems.amber.vesper"
+     if (currentHotfixVersion >= maxHotfixVersions) {
+       throw AssertionError("Hotfix version offset is too large!")
+@@ -260,7 +262,9 @@ android {
+ 
+     manifestPlaceholders["mapsKey"] = "AIzaSyCSx9xea86GwDKGznCAULE9Y5a8b-TfN9U"
+ 
+-    buildConfigField("long", "BUILD_TIMESTAMP", getLastCommitTimestamp() + "L")
++    buildConfigField("long", "BUILD_TIMESTAMP", vesperBuildMetadata.timestampMilliseconds + "L")
++    buildConfigField("long", "VESPER_BUILD_SEQUENCE", vesperBuildMetadata.sequence + "L")
++    buildConfigField("String", "VESPER_BUILD_ID", "\"${vesperBuildMetadata.id}\"")
+     buildConfigField("String", "GIT_HASH", "\"${getGitHash()}\"")
+     buildConfigField("String", "SIGNAL_URL", "\"https://chat.signal.org\"")
+     buildConfigField("String", "STORAGE_URL", "\"https://storage.signal.org\"")
+@@ -880,6 +884,40 @@ fun getLastCommitTimestamp(): String {
+   }.standardOutput.asText.get() + "000"
+ }
+ 
++data class VesperBuildMetadata(
++  val timestampMilliseconds: String,
++  val sequence: String,
++  val id: String
++)
++
++fun getVesperBuildMetadata(): VesperBuildMetadata {
++  val patchsetRoot = rootProject.projectDir.parentFile
++  val isVesperPatchset = patchsetRoot.resolve("upstream.pin").isFile &&
++    patchsetRoot.resolve("patches").isDirectory &&
++    patchsetRoot.resolve(".git").exists()
++
++  if (!isVesperPatchset) {
++    return VesperBuildMetadata(
++      timestampMilliseconds = getLastCommitTimestamp(),
++      sequence = "0",
++      id = getGitHash()
++    )
++  }
++
++  fun patchsetGit(vararg arguments: String): String {
++    return providers.exec {
++      workingDir(patchsetRoot)
++      commandLine("git", *arguments)
++    }.standardOutput.asText.get().trim()
++  }
++
++  return VesperBuildMetadata(
++    timestampMilliseconds = patchsetGit("show", "-s", "--format=%ct", "HEAD") + "000",
++    sequence = patchsetGit("rev-list", "--first-parent", "--count", "HEAD"),
++    id = patchsetGit("rev-parse", "HEAD")
++  )
++}
++
+ fun getGitHash(): String {
+   return providers.exec {
+     commandLine("git", "rev-parse", "HEAD")
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
+index da0a980982..e148c3c35d 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
+@@ -82,8 +82,30 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+       Log.d(TAG, "Got descriptor: $updateDescriptor")
+     }
+ 
+-    if (shouldUpdate(getCurrentAppVersionCode(), BuildConfig.BUILD_TIMESTAMP, updateDescriptor.versionCode, updateDescriptor.buildTimestamp)) {
+-      Log.i(TAG, "A newer build is available. Current: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), available: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
++    val currentVersionCode = getCurrentAppVersionCode()
++    val identityCollision = hasBuildIdentityCollision(
++      currentVersionCode = currentVersionCode,
++      currentBuildSequence = BuildConfig.VESPER_BUILD_SEQUENCE,
++      currentBuildId = BuildConfig.VESPER_BUILD_ID,
++      availableVersionCode = updateDescriptor.versionCode,
++      availableBuildSequence = updateDescriptor.buildSequence,
++      availableBuildId = updateDescriptor.buildId
++    )
++
++    if (identityCollision) {
++      Log.w(TAG, "The available build reuses sequence ${BuildConfig.VESPER_BUILD_SEQUENCE} with a different build ID; refusing to replace the installed build.")
++    }
++
++    if (shouldUpdate(
++        currentVersionCode = currentVersionCode,
++        currentBuildSequence = BuildConfig.VESPER_BUILD_SEQUENCE,
++        currentBuildTimestamp = BuildConfig.BUILD_TIMESTAMP,
++        availableVersionCode = updateDescriptor.versionCode,
++        availableBuildSequence = updateDescriptor.buildSequence,
++        availableBuildTimestamp = updateDescriptor.buildTimestamp
++      )
++    ) {
++      Log.i(TAG, "A newer build is available. Current: (versionCode: $currentVersionCode, buildSequence: ${BuildConfig.VESPER_BUILD_SEQUENCE}, buildId: ${BuildConfig.VESPER_BUILD_ID}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), available: (versionCode: ${updateDescriptor.versionCode}, buildSequence: ${updateDescriptor.buildSequence}, buildId: ${updateDescriptor.buildId}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
+       val digest: ByteArray = Hex.fromStringCondensed(updateDescriptor.digest)
+       val downloadStatus: DownloadStatus = getDownloadStatus(updateDescriptor.url, digest)
+ 
+@@ -97,7 +119,7 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+         handleDownloadStart(updateDescriptor.url, updateDescriptor.versionName, digest, updateDescriptor.uploadTimestamp ?: 0)
+       }
+     } else {
+-      Log.d(TAG, "The installed build is current. Installed: (versionCode: ${getCurrentAppVersionCode()}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), available: (versionCode: ${updateDescriptor.versionCode}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
++      Log.d(TAG, "The installed build is current. Installed: (versionCode: $currentVersionCode, buildSequence: ${BuildConfig.VESPER_BUILD_SEQUENCE}, buildId: ${BuildConfig.VESPER_BUILD_ID}, buildTime: ${BuildConfig.BUILD_TIMESTAMP}), available: (versionCode: ${updateDescriptor.versionCode}, buildSequence: ${updateDescriptor.buildSequence}, buildId: ${updateDescriptor.buildId}, buildTime: ${updateDescriptor.buildTimestamp}, uploadTime: ${updateDescriptor.uploadTimestamp})")
+     }
+ 
+     SignalStore.apkUpdate.lastSuccessfulCheck = System.currentTimeMillis()
+@@ -223,7 +245,13 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+     val uploadTimestamp: Long? = null,
+ 
+     @JsonProperty
+-    val buildTimestamp: Long? = null
++    val buildTimestamp: Long? = null,
++
++    @JsonProperty
++    val buildSequence: Long? = null,
++
++    @JsonProperty
++    val buildId: String? = null
+   )
+ 
+   private class DownloadStatus(val status: Status, val downloadId: Long) {
+@@ -243,14 +271,34 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+ 
+ internal fun shouldUpdate(
+   currentVersionCode: Int,
++  currentBuildSequence: Long,
+   currentBuildTimestamp: Long,
+   availableVersionCode: Int,
++  availableBuildSequence: Long?,
+   availableBuildTimestamp: Long?
+ ): Boolean {
+-  return availableVersionCode > currentVersionCode ||
+-    (
+-      availableVersionCode == currentVersionCode &&
+-        availableBuildTimestamp != null &&
+-        availableBuildTimestamp > currentBuildTimestamp
+-      )
++  if (availableVersionCode != currentVersionCode) {
++    return availableVersionCode > currentVersionCode
++  }
++
++  if (currentBuildSequence > 0 && availableBuildSequence != null && availableBuildSequence > 0) {
++    return availableBuildSequence > currentBuildSequence
++  }
++
++  return availableBuildTimestamp != null && availableBuildTimestamp > currentBuildTimestamp
++}
++
++internal fun hasBuildIdentityCollision(
++  currentVersionCode: Int,
++  currentBuildSequence: Long,
++  currentBuildId: String,
++  availableVersionCode: Int,
++  availableBuildSequence: Long?,
++  availableBuildId: String?
++): Boolean {
++  return availableVersionCode == currentVersionCode &&
++    currentBuildSequence > 0 &&
++    availableBuildSequence == currentBuildSequence &&
++    !availableBuildId.isNullOrEmpty() &&
++    availableBuildId != currentBuildId
+ }
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt b/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
+index 712f5e23f3..0fc54d4fa2 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
+@@ -12,28 +12,45 @@ import org.junit.Test
+ class ApkUpdateJobTest {
+ 
+   @Test
+-  fun `newer version code is an update regardless of build timestamp`() {
+-    assertTrue(shouldUpdate(100, 2_000, 101, 1_000))
++  fun `newer version code is an update regardless of build metadata`() {
++    assertTrue(shouldUpdate(100, 10, 2_000, 101, 1, 1_000))
+   }
+ 
+   @Test
+-  fun `older version code is not an update regardless of build timestamp`() {
+-    assertFalse(shouldUpdate(101, 1_000, 100, 2_000))
++  fun `older version code is not an update regardless of build metadata`() {
++    assertFalse(shouldUpdate(101, 1, 1_000, 100, 10, 2_000))
+   }
+ 
+   @Test
+-  fun `same version code with newer build timestamp is an update`() {
+-    assertTrue(shouldUpdate(100, 1_000, 100, 2_000))
++  fun `same version code with newer build sequence is an update`() {
++    assertTrue(shouldUpdate(100, 10, 2_000, 100, 11, 1_000))
+   }
+ 
+   @Test
+-  fun `same version code with same or older build timestamp is not an update`() {
+-    assertFalse(shouldUpdate(100, 2_000, 100, 2_000))
+-    assertFalse(shouldUpdate(100, 2_000, 100, 1_000))
++  fun `same version code with same or older build sequence is not an update`() {
++    assertFalse(shouldUpdate(100, 10, 1_000, 100, 10, 2_000))
++    assertFalse(shouldUpdate(100, 10, 1_000, 100, 9, 2_000))
+   }
+ 
+   @Test
+-  fun `same version code without build timestamp is backward-compatible`() {
+-    assertFalse(shouldUpdate(100, 1_000, 100, null))
++  fun `legacy timestamp is used when the manifest has no build sequence`() {
++    assertTrue(shouldUpdate(100, 10, 1_000, 100, null, 2_000))
++    assertFalse(shouldUpdate(100, 10, 2_000, 100, null, 2_000))
++    assertFalse(shouldUpdate(100, 10, 2_000, 100, null, null))
++  }
++
++  @Test
++  fun `standalone builds without a sequence use the legacy timestamp`() {
++    assertTrue(shouldUpdate(100, 0, 1_000, 100, 10, 2_000))
++    assertFalse(shouldUpdate(100, 0, 2_000, 100, 10, 1_000))
++  }
++
++  @Test
++  fun `same sequence with a different build ID is a collision`() {
++    assertTrue(hasBuildIdentityCollision(100, 10, "installed", 100, 10, "available"))
++    assertFalse(hasBuildIdentityCollision(100, 10, "installed", 100, 11, "available"))
++    assertFalse(hasBuildIdentityCollision(100, 10, "installed", 101, 10, "available"))
++    assertFalse(hasBuildIdentityCollision(100, 0, "installed", 100, 0, "available"))
++    assertFalse(hasBuildIdentityCollision(100, 10, "installed", 100, 10, null))
+   }
+ }
