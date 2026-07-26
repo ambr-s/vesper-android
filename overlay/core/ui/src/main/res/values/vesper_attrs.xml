@@ -5,6 +5,7 @@
 -->
 <resources>
     <attr name="dynamic_colors" format="boolean" />
+    <attr name="vesper_theme" format="boolean" />
     <attr name="extended_action_button_container_color" format="color" />
     <attr name="extended_action_button_icon_color" format="color" />
     <attr name="filled_tonal_icon_button_container_color" format="color" />

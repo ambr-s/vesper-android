@@ -1,0 +1,188 @@
+From 6d7aa823c573a94b3c0b6cc12df23455b2701111 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Sun, 26 Jul 2026 19:22:12 +0100
+Subject: [PATCH 16/16] feat: add Vesper author verification badge
+
+---
+ .../securesms/components/FromTextView.java    |  2 +-
+ .../contacts/paged/ContactSearchModels.kt     |  2 +-
+ .../conversation/ConversationHeaderView.kt    |  3 +-
+ .../conversation/ConversationTitleView.java   |  2 +-
+ .../securesms/recipients/Recipient.kt         |  8 ++++-
+ .../recipients/VesperVerifiedRecipients.kt    | 20 +++++++++++++
+ .../stories/landing/StoriesLandingItem.kt     |  4 +--
+ .../VesperVerifiedRecipientsTest.kt           | 30 +++++++++++++++++++
+ 8 files changed, 64 insertions(+), 7 deletions(-)
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java b/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
+index 3a39cf4946..5e8b02c4fe 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
+@@ -62,7 +62,7 @@ public class FromTextView extends SimpleEmojiTextView {
+       builder.append(suffix);
+     }
+ 
+-    if (asThread && recipient.getShowVerified()) {
++    if (asThread && recipient.getShowVerifiedBadge()) {
+       Drawable official = ContextUtil.requireDrawable(getContext(), R.drawable.ic_official_20);
+       official.setBounds(0, 0, ViewUtil.dpToPx(20), ViewUtil.dpToPx(20));
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
+index 0003ec9c38..86549322b6 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
+@@ -682,7 +682,7 @@ object ContactSearchModels {
+       }
+ 
+       val recipient = getRecipient(model)
+-      val suffix: CharSequence? = if (recipient.isSystemContact && !recipient.showVerified) {
++      val suffix: CharSequence? = if (recipient.isSystemContact && !recipient.showVerifiedBadge) {
+         SpannableStringBuilder().apply {
+           val drawable = context.requireDrawable(CoreUiR.drawable.symbol_person_circle_24).apply {
+             setTint(ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnSurface))
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
+index 3d7592d297..eb1cd08a4a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
+@@ -112,6 +112,7 @@ class ConversationHeaderView : AbstractComposeView {
+     val isSelf = recipient.isSelf
+     val isReleaseNotes = recipient.isReleaseNotes
+     val isOfficialAccount = recipient.showVerified
++    val showVerifiedBadge = recipient.showVerifiedBadge
+ 
+     val showUnverifiedName = if (recipient.isGroup) {
+       !info.groupInfo.nameVerified
+@@ -132,7 +133,7 @@ class ConversationHeaderView : AbstractComposeView {
+       ConversationHeaderContent(
+         recipientId = recipient.id,
+         displayName = displayName,
+-        showVerified = isOfficialAccount,
++        showVerified = showVerifiedBadge,
+         isSystemContact = recipient.isSystemContact,
+         showChevron = recipient.isIndividual && !isOfficialAccount,
+         isSelf = isSelf,
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationTitleView.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationTitleView.java
+index 455a82e044..2812e6b6d1 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationTitleView.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationTitleView.java
+@@ -136,7 +136,7 @@ public class ConversationTitleView extends ConstraintLayout {
+       endDrawable = DrawableUtil.tint(endDrawable, ContextCompat.getColor(getContext(), R.color.signal_inverse_transparent_80));
+     }
+ 
+-    if (recipient != null && recipient.getShowVerified()) {
++    if (recipient != null && recipient.getShowVerifiedBadge()) {
+       endDrawable = ContextUtil.requireDrawable(getContext(), R.drawable.ic_official_24);
+     }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
+index 21a4233180..7773960c0d 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
+@@ -332,6 +332,12 @@ class Recipient(
+   /** Whether or not to show a special verified badge, indicating this is a special conversation (like release notes or note to self). */
+   val showVerified: Boolean = isReleaseNotes || isSelf
+ 
++  /** Whether this recipient should receive Vesper's verified badge without official-account behavior. */
++  val showVesperVerifiedBadge: Boolean = VesperVerifiedRecipients.contains(aciValue)
++
++  /** Whether to decorate this recipient's name with the existing verified badge artwork. */
++  val showVerifiedBadge: Boolean = showVerified || showVesperVerifiedBadge
++
+   /** The notification channel, if both set and supported by the system. Otherwise null. */
+   val notificationChannel: String? = if (!NotificationChannels.supported()) null else notificationChannelValue
+ 
+@@ -678,7 +684,7 @@ class Recipient(
+     return buildSpannedString {
+       append(name)
+ 
+-      if (showVerified) {
++      if (showVerifiedBadge) {
+         val verifiedBadge = context.requireDrawable(R.drawable.ic_official_28)
+         SpanUtil.appendSpacer(this, 8)
+         SpanUtil.appendCenteredImageSpanWithoutSpace(this, verifiedBadge, 28, 28)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
+new file mode 100644
+index 0000000000..ebaf08f5ee
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
+@@ -0,0 +1,20 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.recipients
++
++import org.signal.core.models.ServiceId.ACI
++
++/**
++ * Recipients whose names receive Vesper's verified badge treatment.
++ *
++ * This is deliberately separate from Signal's official-account state so these
++ * recipients retain normal profile, safety-number, and conversation behavior.
++ */
++internal object VesperVerifiedRecipients {
++  fun contains(aci: ACI?): Boolean {
++    return aci != null && aci in vesperAuthorACIs
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/stories/landing/StoriesLandingItem.kt b/app/src/main/java/org/thoughtcrime/securesms/stories/landing/StoriesLandingItem.kt
+index 58cc30c43a..c38c2dec61 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/stories/landing/StoriesLandingItem.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/stories/landing/StoriesLandingItem.kt
+@@ -234,7 +234,7 @@ object StoriesLandingItem {
+       sender.text = when {
+         model.data.storyRecipient.isMyStory -> context.getText(R.string.StoriesLandingFragment__my_stories)
+         model.data.storyRecipient.isGroup -> getGroupPresentation(model)
+-        model.data.storyRecipient.isReleaseNotes -> getReleaseNotesPresentation(model)
++        model.data.storyRecipient.showVerifiedBadge -> getVerifiedPresentation(model)
+         else -> model.data.storyRecipient.getDisplayName(context)
+       }
+ 
+@@ -297,7 +297,7 @@ object StoriesLandingItem {
+       return model.data.storyRecipient.getDisplayName(context)
+     }
+ 
+-    private fun getReleaseNotesPresentation(model: Model): CharSequence {
++    private fun getVerifiedPresentation(model: Model): CharSequence {
+       val official = context.requireDrawable(R.drawable.ic_official_20)
+ 
+       val name = SpannableStringBuilder(model.data.storyRecipient.getDisplayName(context))
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
+new file mode 100644
+index 0000000000..cabe8990a8
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
+@@ -0,0 +1,30 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.recipients
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++import org.signal.core.models.ServiceId.ACI
++
++class VesperVerifiedRecipientsTest {
++
++  @Test
++  fun `configured author ACIs are Vesper verified`() {
++    assertTrue(vesperAuthorACIs.isNotEmpty())
++    vesperAuthorACIs.forEach { aci ->
++      assertTrue(VesperVerifiedRecipients.contains(aci))
++    }
++  }
++
++  @Test
++  fun `other ACIs and missing ACIs are not Vesper verified`() {
++    val otherAci = ACI.parseOrThrow("00000000-0000-4000-8000-000000000001")
++
++    assertFalse(VesperVerifiedRecipients.contains(otherAci))
++    assertFalse(VesperVerifiedRecipients.contains(null))
++  }
++}

@@ -453,6 +453,11 @@ STYLE_ITEM_PATTERN = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
+ANDROID_DRAWABLE_COLOR_ATTRIBUTE_PATTERN = re.compile(
+    r"\bandroid:drawable\s*=\s*"
+    r"(?P<quote>[\"'])@color/[A-Za-z0-9_]+(?P=quote)"
+)
+
 
 def transform_theme_color_references(checkout: Path) -> int:
     replacements = sorted(
@@ -478,9 +483,24 @@ def transform_theme_color_references(checkout: Path) -> int:
         original = path.read_text(encoding="utf-8")
 
         def replace_color_references(text: str) -> str:
-            for resource, attribute in replacements:
-                text = resource.sub(attribute, text)
-            return text
+            def replace_unprotected(fragment: str) -> str:
+                for resource, attribute in replacements:
+                    fragment = resource.sub(attribute, fragment)
+                return fragment
+
+            # Framework drawable containers inflate android:drawable resource
+            # attributes without a theme on some Android versions. Promoting a
+            # colour reference in that position to ?attr therefore crashes
+            # when the container is inflated. Nested colour properties and
+            # view attributes are theme-aware and remain safe to transform.
+            fragments: list[str] = []
+            cursor = 0
+            for match in ANDROID_DRAWABLE_COLOR_ATTRIBUTE_PATTERN.finditer(text):
+                fragments.append(replace_unprotected(text[cursor : match.start()]))
+                fragments.append(match.group(0))
+                cursor = match.end()
+            fragments.append(replace_unprotected(text[cursor:]))
+            return "".join(fragments)
 
         if is_values_resource_xml(path):
             def replace_style_item(match: re.Match[str]) -> str:

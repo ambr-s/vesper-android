@@ -1,0 +1,208 @@
+From 38f83768092c1e3a07f72659bc8dd80cff3aa6d7 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Sun, 26 Jul 2026 18:50:23 +0100
+Subject: [PATCH 14/16] feat: use profile avatar as main menu trigger
+
+---
+ .../securesms/main/MainToolbar.kt             | 145 +++++++++---------
+ 1 file changed, 72 insertions(+), 73 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
+index 7bf02a291e..5781c4bf26 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
+@@ -376,62 +376,21 @@ private fun PrimaryToolbar(
+   enabled: Boolean = true,
+   onSearchButtonPositioned: (Float) -> Unit
+ ) {
++  val controller = remember { DropdownMenus.MenuController() }
++  val dismiss = remember(controller) { { controller.hide() } }
++
+   TopAppBar(
+     colors = TopAppBarDefaults.topAppBarColors(
+       containerColor = state.toolbarColor ?: MaterialTheme.colorScheme.surface
+     ),
+-    navigationIcon = {
+-      val contentDescription = stringResource(R.string.conversation_list_settings_shortcut)
+-      Box(
+-        contentAlignment = Alignment.Center,
+-        modifier = Modifier
+-          .padding(start = 20.dp, end = 16.dp)
+-          .size(48.dp)
+-      ) {
+-        AvatarImage(
+-          recipient = state.self,
+-          modifier = Modifier
+-            .clip(CircleShape)
+-            .size(28.dp),
+-          contentDescription = contentDescription
+-        )
+-
+-        val interactionSource = remember { MutableInteractionSource() }
+-        Box(
+-          modifier = Modifier
+-            .fillMaxSize()
+-            .clickable(
+-              enabled = enabled,
+-              onClick = callback::onSettingsClick,
+-              interactionSource = interactionSource,
+-              indication = ripple(radius = 14.dp)
+-            )
+-            .semantics {
+-              this.contentDescription = contentDescription
+-            }
+-        )
+-
+-        val badge by rememberRecipientField(state.self) { featuredBadge }
+-
+-        BadgeImageSmall(
+-          badge = badge,
+-          modifier = Modifier
+-            .padding(start = 14.dp, top = 16.dp)
+-            .size(16.dp)
+-        )
+-
+-        HeadsUpIndicator(
+-          state = state,
+-          modifier = Modifier.padding(start = 20.dp, bottom = 20.dp)
+-        )
+-      }
+-    },
+     title = {
+       Image(
+         painter = painterResource(R.drawable.vesper_wordmark),
+         contentDescription = stringResource(R.string.app_name),
+         colorFilter = ColorFilter.tint(LocalContentColor.current),
+-        modifier = Modifier.size(width = 83.dp, height = 28.dp)
++        modifier = Modifier
++          .padding(start = 8.dp)
++          .size(width = 83.dp, height = 28.dp)
+       )
+     },
+     actions = {
+@@ -461,23 +420,24 @@ private fun PrimaryToolbar(
+         )
+       }
+ 
+-      val controller = remember { DropdownMenus.MenuController() }
+-      val dismiss = remember(controller) { { controller.hide() } }
+-
+-      TooltipOverflowButton(
+-        onOverflowClick = { controller.show() },
+-        isTooltipVisible = state.showNotificationProfilesTooltip,
+-        onDismiss = { callback.onNotificationProfileTooltipDismissed() }
+-      )
++      Box(modifier = Modifier.padding(end = 8.dp)) {
++        ProfileMenuButton(
++          state = state,
++          enabled = enabled,
++          onMenuClick = controller::show,
++          isTooltipVisible = state.showNotificationProfilesTooltip,
++          onDismiss = callback::onNotificationProfileTooltipDismissed
++        )
+ 
+-      DropdownMenus.Menu(
+-        controller = controller
+-      ) {
+-        when (state.destination) {
+-          MainNavigationListLocation.ARCHIVE -> Unit
+-          MainNavigationListLocation.CHATS -> ChatDropdownItems(state, callback, dismiss)
+-          MainNavigationListLocation.CALLS -> CallDropdownItems(state.callFilter, callback, dismiss)
+-          MainNavigationListLocation.STORIES -> StoryDropDownItems(callback, dismiss)
++        DropdownMenus.Menu(
++          controller = controller
++        ) {
++          when (state.destination) {
++            MainNavigationListLocation.ARCHIVE -> Unit
++            MainNavigationListLocation.CHATS -> ChatDropdownItems(state, callback, dismiss)
++            MainNavigationListLocation.CALLS -> CallDropdownItems(state.callFilter, callback, dismiss)
++            MainNavigationListLocation.STORIES -> StoryDropDownItems(callback, dismiss)
++          }
+         }
+       }
+     }
+@@ -485,11 +445,15 @@ private fun PrimaryToolbar(
+ }
+ 
+ @Composable
+-private fun TooltipOverflowButton(
+-  onOverflowClick: () -> Unit,
++private fun ProfileMenuButton(
++  state: MainToolbarState,
++  enabled: Boolean,
++  onMenuClick: () -> Unit,
+   onDismiss: () -> Unit,
+   isTooltipVisible: Boolean
+ ) {
++  val contentDescription = stringResource(R.string.MainToolbar__more_options_content_description)
++
+   Tooltips.PlainBelowAnchor(
+     onDismiss = onDismiss,
+     isTooltipVisible = isTooltipVisible,
+@@ -497,12 +461,45 @@ private fun TooltipOverflowButton(
+       Text(text = stringResource(R.string.ConversationListFragment__turn_your_notification_profile_on_or_off_here))
+     },
+     anchorContent = {
+-      IconButtons.IconButton(
+-        onClick = onOverflowClick
++      Box(
++        contentAlignment = Alignment.Center,
++        modifier = Modifier.size(48.dp)
+       ) {
+-        Icon(
+-          imageVector = ImageVector.vectorResource(R.drawable.symbol_more_vertical),
+-          contentDescription = stringResource(R.string.MainToolbar__more_options_content_description)
++        AvatarImage(
++          recipient = state.self,
++          modifier = Modifier
++            .clip(CircleShape)
++            .size(28.dp),
++          contentDescription = contentDescription
++        )
++
++        val interactionSource = remember { MutableInteractionSource() }
++        Box(
++          modifier = Modifier
++            .fillMaxSize()
++            .clickable(
++              enabled = enabled,
++              onClick = onMenuClick,
++              interactionSource = interactionSource,
++              indication = ripple(radius = 14.dp)
++            )
++            .semantics {
++              this.contentDescription = contentDescription
++            }
++        )
++
++        val badge by rememberRecipientField(state.self) { featuredBadge }
++
++        BadgeImageSmall(
++          badge = badge,
++          modifier = Modifier
++            .padding(start = 14.dp, top = 16.dp)
++            .size(16.dp)
++        )
++
++        HeadsUpIndicator(
++          state = state,
++          modifier = Modifier.padding(start = 20.dp, bottom = 20.dp)
+         )
+       }
+     }
+@@ -826,10 +823,12 @@ private fun ArchiveToolbarPreview() {
+ 
+ @DayNightPreviews
+ @Composable
+-private fun TooltipOverflowButtonPreview() {
++private fun ProfileMenuButtonPreview() {
+   Previews.Preview {
+-    TooltipOverflowButton(
+-      onOverflowClick = {},
++    ProfileMenuButton(
++      state = MainToolbarState(self = Recipient(isResolving = false, isSelf = true)),
++      enabled = true,
++      onMenuClick = {},
+       onDismiss = {},
+       isTooltipVisible = true
+     )

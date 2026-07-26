@@ -1,7 +1,7 @@
-From 12591332c6caf31f9044b300d0efe8e0013a7d41 Mon Sep 17 00:00:00 2001
+From 6a4ad882ffd66db2d6d90a9da071fa33c5d3e2be Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:44 +0100
-Subject: [PATCH 8/9] chore: clarify licensing and interface copy
+Subject: [PATCH 08/16] chore: clarify licensing and interface copy
 
 Add source and AGPL notices to Vesper-owned code, preserve Molly provenance, and tighten the user-facing wording in British English.
 

@@ -1,0 +1,74 @@
+From f5cf2df126a628f93ecd4800b0ff4a2269226c66 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Sun, 26 Jul 2026 18:59:34 +0100
+Subject: [PATCH 15/16] fix: use Vesper icon on Android splash screen
+
+---
+ app/src/main/res/drawable/vesper_splash.xml  | 12 ++++++++++++
+ app/src/main/res/values-night-v31/themes.xml |  4 ++--
+ app/src/main/res/values-v31/themes.xml       | 12 ++++++------
+ 3 files changed, 20 insertions(+), 8 deletions(-)
+ create mode 100644 app/src/main/res/drawable/vesper_splash.xml
+
+diff --git a/app/src/main/res/drawable/vesper_splash.xml b/app/src/main/res/drawable/vesper_splash.xml
+new file mode 100644
+index 0000000000..9ee610111d
+--- /dev/null
++++ b/app/src/main/res/drawable/vesper_splash.xml
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- SPDX-License-Identifier: AGPL-3.0-only -->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="128dp"
++    android:height="128dp"
++    android:viewportWidth="1024"
++    android:viewportHeight="1024">
++    <path
++        android:fillColor="#FFFFFF"
++        android:fillType="evenOdd"
++        android:pathData="M830.17,353.29L691.25,571.78L573.39,612.75L463.63,722.18L463.63,615.87L335,573.11L195.29,354.13L473.33,470.94L510.42,524.98L548.45,471.99Z" />
++</vector>
+diff --git a/app/src/main/res/values-night-v31/themes.xml b/app/src/main/res/values-night-v31/themes.xml
+index e8bd1b2026..f36585a60d 100644
+--- a/app/src/main/res/values-night-v31/themes.xml
++++ b/app/src/main/res/values-night-v31/themes.xml
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+     <style name="Theme.Signal.DayNight.NoActionBar" parent="TextSecure.DarkNoActionBar">
+-        <item name="android:windowSplashScreenBackground">?attr/signal_background_primary</item>
+-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
++        <item name="android:windowSplashScreenBackground">@color/core_grey_95</item>
++        <item name="android:windowSplashScreenAnimatedIcon">@drawable/vesper_splash</item>
+     </style>
+ </resources>
+diff --git a/app/src/main/res/values-v31/themes.xml b/app/src/main/res/values-v31/themes.xml
+index 4e62d32fac..ef206dcc42 100644
+--- a/app/src/main/res/values-v31/themes.xml
++++ b/app/src/main/res/values-v31/themes.xml
+@@ -1,19 +1,19 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+     <style name="Theme.Signal.DayNight.NoActionBar" parent="TextSecure.LightNoActionBar">
+-        <item name="android:windowSplashScreenBackground">?attr/colorSurface</item>
+-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
++        <item name="android:windowSplashScreenBackground">@color/core_grey_95</item>
++        <item name="android:windowSplashScreenAnimatedIcon">@drawable/vesper_splash</item>
+     </style>
+ 
+     <!-- Exists for manual override of Splash theme when setting app theme-->
+     <style name="Theme.Signal.DayNight.NoActionBar.LightSplash" parent="Theme.Signal.DayNight.NoActionBar">
+-        <item name="android:windowSplashScreenBackground">@color/signal_light_colorBackground</item>
+-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_light</item>
++        <item name="android:windowSplashScreenBackground">@color/core_grey_95</item>
++        <item name="android:windowSplashScreenAnimatedIcon">@drawable/vesper_splash</item>
+     </style>
+ 
+     <!-- Exists for manual override of Splash theme when setting app theme-->
+     <style name="Theme.Signal.DayNight.NoActionBar.DarkSplash" parent="Theme.Signal.DayNight.NoActionBar">
+-        <item name="android:windowSplashScreenBackground">@color/signal_dark_colorBackground</item>
+-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_dark</item>
++        <item name="android:windowSplashScreenBackground">@color/core_grey_95</item>
++        <item name="android:windowSplashScreenAnimatedIcon">@drawable/vesper_splash</item>
+     </style>
+ </resources>

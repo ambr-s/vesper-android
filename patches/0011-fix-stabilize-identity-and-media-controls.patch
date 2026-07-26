@@ -1,0 +1,136 @@
+From 2fa1190328eaaae1a51bb56573a3c21ccbf41daf Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Sun, 26 Jul 2026 16:33:36 +0100
+Subject: [PATCH 11/16] fix: stabilize identity and media controls
+
+---
+ app/src/main/res/drawable/ic_add_media_22.xml        |  2 +-
+ .../res/drawable/media_gallery_button_background.xml | 12 ++++++++++--
+ .../main/res/layout/v2_media_image_editor_hud.xml    | 10 +++++-----
+ app/src/main/res/layout/v2_media_review_fragment.xml |  8 ++++----
+ 4 files changed, 20 insertions(+), 12 deletions(-)
+
+diff --git a/app/src/main/res/drawable/ic_add_media_22.xml b/app/src/main/res/drawable/ic_add_media_22.xml
+index e0c3da8e40..b5c27af88d 100644
+--- a/app/src/main/res/drawable/ic_add_media_22.xml
++++ b/app/src/main/res/drawable/ic_add_media_22.xml
+@@ -5,5 +5,5 @@
+     android:viewportHeight="22">
+   <path
+       android:pathData="M20.634,1.37C19.5,0.245 17.927,0 15.719,0H6.195C4.073,0 2.5,0.245 1.366,1.383C0.244,2.508 0,4.075 0,6.216V15.711C0,17.926 0.232,19.492 1.354,20.617C2.5,21.755 4.061,22 6.268,22H15.719C17.927,22 19.512,21.755 20.634,20.617C21.768,19.492 22,17.926 22,15.711V6.289C22,4.062 21.768,2.496 20.634,1.37ZM20.488,5.959V16.029C20.488,17.485 20.268,18.757 19.524,19.504C18.781,20.263 17.488,20.483 16.049,20.483H5.939C4.512,20.483 3.22,20.25 2.463,19.504C1.72,18.757 1.512,17.485 1.512,16.029V6.032C1.512,4.527 1.72,3.23 2.463,2.484C3.207,1.725 4.524,1.505 6.024,1.505H16.049C17.488,1.505 18.781,1.737 19.524,2.484C20.268,3.242 20.488,4.515 20.488,5.959ZM5.695,10.988C5.695,11.428 6.037,11.759 6.5,11.759H10.219V15.491C10.219,15.955 10.549,16.286 10.988,16.286C11.463,16.286 11.793,15.968 11.793,15.491V11.759H15.512C15.976,11.759 16.305,11.428 16.305,10.988C16.305,10.511 15.988,10.18 15.512,10.18H11.793V6.448C11.793,5.971 11.463,5.641 10.988,5.641C10.549,5.641 10.219,5.983 10.219,6.448V10.18H6.5C6.024,10.18 5.695,10.511 5.695,10.988Z"
+-      android:fillColor="?attr/filled_tonal_icon_button_icon_color"/>
++      android:fillColor="@color/signal_dark_colorOnSurface"/>
+ </vector>
+diff --git a/app/src/main/res/drawable/media_gallery_button_background.xml b/app/src/main/res/drawable/media_gallery_button_background.xml
+index 69cde0d0b7..84ac84a531 100644
+--- a/app/src/main/res/drawable/media_gallery_button_background.xml
++++ b/app/src/main/res/drawable/media_gallery_button_background.xml
+@@ -2,9 +2,17 @@
+ <selector xmlns:android="http://schemas.android.com/apk/res/android">
+     <item android:state_pressed="true">
+         <layer-list>
+-            <item android:drawable="?attr/filled_tonal_icon_button_container_color" />
++            <item>
++                <shape>
++                    <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++                </shape>
++            </item>
+             <item android:drawable="@color/transparent_white_10" />
+         </layer-list>
+     </item>
+-    <item android:drawable="?attr/filled_tonal_icon_button_container_color" android:state_pressed="false" />
++    <item android:state_pressed="false">
++        <shape>
++            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++        </shape>
++    </item>
+ </selector>
+diff --git a/app/src/main/res/layout/v2_media_image_editor_hud.xml b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+index 295ec4a879..77493bf33f 100644
+--- a/app/src/main/res/layout/v2_media_image_editor_hud.xml
++++ b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+@@ -75,7 +75,7 @@
+             app:layout_constraintStart_toStartOf="parent"
+             app:layout_goneMarginEnd="10dp"
+             app:srcCompat="@drawable/symbol_x_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+@@ -173,7 +173,7 @@
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_goneMarginStart="10dp"
+             app:srcCompat="@drawable/symbol_check_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+@@ -228,7 +228,7 @@
+             app:layout_constraintBottom_toBottomOf="@id/image_editor_hud_draw_color_bar"
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="@id/image_editor_hud_draw_color_bar"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -247,7 +247,7 @@
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="@id/image_editor_hud_draw_color_bar"
+             app:srcCompat="@drawable/symbol_text_square_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -324,7 +324,7 @@
+             app:layout_goneMarginEnd="10dp"
+             app:layout_goneMarginStart="10dp"
+             app:srcCompat="@drawable/symbol_crop_unlock_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+diff --git a/app/src/main/res/layout/v2_media_review_fragment.xml b/app/src/main/res/layout/v2_media_review_fragment.xml
+index ce37b33fa6..d8835d6b6a 100644
+--- a/app/src/main/res/layout/v2_media_review_fragment.xml
++++ b/app/src/main/res/layout/v2_media_review_fragment.xml
+@@ -229,7 +229,7 @@
+             app:layout_constraintStart_toStartOf="parent"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_brush_pen_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -250,7 +250,7 @@
+             app:layout_goneMarginStart="10dp"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_crop_rotate_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -271,7 +271,7 @@
+             app:layout_goneMarginStart="10dp"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_quality_high_slash_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -291,7 +291,7 @@
+             app:layout_goneMarginStart="10dp"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_save_android_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:visibility="visible" />
+ 
+         <com.google.android.material.imageview.ShapeableImageView

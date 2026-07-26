@@ -23,5 +23,12 @@ copyright notice in the source file.
 Molly and its contributors retain their copyright. Molly is an independent
 project and does not endorse Vesper.
 
+The Vesper wordmark uses outlined letterforms derived from Newsreader:
+https://github.com/productiontype/Newsreader
+
+Newsreader is copyright 2020 The Newsreader Project Authors and is licensed
+under the SIL Open Font License, Version 1.1. The wordmark contains converted
+outlines rather than redistributed font software.
+
 Other dependencies and notices come from the pinned Signal source and remain
 under their own licences.

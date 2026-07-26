@@ -6,6 +6,8 @@
 <resources>
     <string name="preferences_appearance__dynamic_colors">Dynamic colours</string>
     <string name="preferences_appearance__use_system_colors_for_the_app_theme">Use your system colours for the app theme</string>
+    <string name="preferences_appearance__vesper_theme">Vesper theme</string>
+    <string name="preferences_appearance__use_vesper_theme">Use Vesper’s purple theme instead of Signal’s original colours</string>
     <string name="preferences__enable_debug_log">Enable debug logging</string>
     <string name="HelpSettingsFragment_disable_and_delete_debug_log">Delete existing logs and stop debug logging?</string>
     <string name="preferences__ignore_remote_delete">Keep deleted messages</string>

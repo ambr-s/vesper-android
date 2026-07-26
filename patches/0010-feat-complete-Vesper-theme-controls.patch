@@ -1,0 +1,1620 @@
+From 5869985701091ea063bfcc07768ed122450429ec Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Sun, 26 Jul 2026 15:32:03 +0100
+Subject: [PATCH 10/16] feat: complete Vesper theme controls
+
+---
+ .../appearance/AppearanceSettingsFragment.kt  |  17 +-
+ .../app/appearance/AppearanceSettingsState.kt |   1 +
+ .../appearance/AppearanceSettingsViewModel.kt |   6 +
+ .../app/privacy/PrivacySettingsFragment.kt    | 102 ----
+ .../app/privacy/PrivacySettingsState.kt       |   1 -
+ .../app/privacy/PrivacySettingsViewModel.kt   |   6 -
+ .../conversation/colors/ChatColorsPalette.kt  |   2 +-
+ .../securesms/keyvalue/SettingsValues.java    |  11 +
+ .../DynamicConversationSettingsTheme.java     |   5 +
+ .../util/DynamicDarkActionBarTheme.java       |   5 +
+ .../util/DynamicDarkToolbarTheme.java         |   5 +
+ .../securesms/util/DynamicIntroTheme.java     |   5 +
+ .../util/DynamicMediaPreviewTheme.java        |   5 +
+ .../util/DynamicNoActionBarInviteTheme.java   |   5 +
+ .../util/DynamicNoActionBarTheme.java         |   5 +
+ .../util/DynamicRegistrationTheme.java        |   5 +
+ .../securesms/util/DynamicTheme.java          |  23 +-
+ .../wallpaper/crop/WallpaperCropActivity.java |   6 +
+ .../camera_send_button_background.xml         |   2 +-
+ .../camera_send_button_background.xml         |   4 +-
+ .../main/res/drawable/compose_background.xml  |   4 +-
+ .../drawable/exo_icon_play_ultramarine.xml    |   2 +-
+ app/src/main/res/drawable/ic_add_media_22.xml |   2 +-
+ .../image_editor_hud_clear_all_background.xml |   4 +-
+ .../res/drawable/image_editor_hud_undo.xml    |   4 +-
+ .../media_gallery_button_background.xml       |   6 +-
+ .../res/drawable/media_selection_pill.xml     |   3 +-
+ ..._media_count_indicator_text_background.xml |   4 +-
+ .../res/layout/v2_conversation_fragment.xml   |   6 +-
+ .../res/layout/v2_media_image_editor_hud.xml  |  18 +-
+ .../res/layout/v2_media_review_fragment.xml   |  22 +-
+ .../layout/v2_media_review_selected_item.xml  |   4 +-
+ app/src/main/res/values-night/dark_themes.xml |  10 +
+ app/src/main/res/values/light_themes.xml      |  10 +
+ .../res/values/signal_original_themes.xml     | 474 ++++++++++++++++++
+ app/src/main/res/values/themes.xml            |   6 +-
+ .../core/ui/compose/theme/SignalTheme.kt      |  90 +++-
+ 37 files changed, 726 insertions(+), 164 deletions(-)
+ create mode 100644 app/src/main/res/values/signal_original_themes.xml
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
+index b8a7dc919c..aad3996dea 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
+@@ -72,6 +72,10 @@ class AppearanceSettingsFragment : ComposeFragment() {
+       viewModel.setTheme(activity, SettingsValues.Theme.deserialize(selection), useDynamicColors)
+     }
+ 
++    override fun onVesperThemeChanged(enabled: Boolean) {
++      viewModel.setVesperTheme(enabled)
++    }
++
+     override fun onChatColorAndWallpaperClick() {
+       findNavController().safeNavigate(R.id.action_appearanceSettings_to_wallpaperActivity)
+     }
+@@ -94,6 +98,7 @@ interface AppearanceSettingsCallbacks {
+   fun onNavigationClick() = Unit
+   fun onLanguageSelected(selection: String) = Unit
+   fun onThemeSelected(selection: String, useDynamicColors: Boolean) = Unit
++  fun onVesperThemeChanged(enabled: Boolean) = Unit
+   fun onChatColorAndWallpaperClick() = Unit
+   fun onAppIconClick() = Unit
+   fun onMessageFontSizeSelected(selection: String) = Unit
+@@ -137,7 +142,16 @@ private fun AppearanceSettingsScreen(
+         )
+       }
+ 
+-      if (DynamicTheme.isDynamicColorsAvailable()) {
++      item {
++        Rows.ToggleRow(
++          text = stringResource(R.string.preferences_appearance__vesper_theme),
++          label = stringResource(R.string.preferences_appearance__use_vesper_theme),
++          checked = state.vesperTheme,
++          onCheckChanged = callbacks::onVesperThemeChanged
++        )
++      }
++
++      if (state.vesperTheme && DynamicTheme.isDynamicColorsAvailable()) {
+         item {
+           Rows.ToggleRow(
+             text = stringResource(R.string.preferences_appearance__dynamic_colors),
+@@ -198,6 +212,7 @@ private fun AppearanceSettingsScreenPreview() {
+     AppearanceSettingsScreen(
+       state = AppearanceSettingsState(
+         theme = SettingsValues.Theme.SYSTEM,
++        vesperTheme = true,
+         dynamicColors = true,
+         messageFontSize = 0,
+         language = "en-US",
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt
+index d65ba284d3..1e5aff2866 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsState.kt
+@@ -4,6 +4,7 @@ import org.thoughtcrime.securesms.keyvalue.SettingsValues
+ 
+ data class AppearanceSettingsState(
+   val theme: SettingsValues.Theme,
++  val vesperTheme: Boolean,
+   val dynamicColors: Boolean,
+   val messageFontSize: Int,
+   val language: String,
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
+index e7fb539d5c..dac3ee2c57 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
+@@ -26,6 +26,11 @@ class AppearanceSettingsViewModel : ViewModel() {
+     SplashScreenUtil.setSplashScreenThemeIfNecessary(activity, theme)
+   }
+ 
++  fun setVesperTheme(enabled: Boolean) {
++    store.update { it.copy(vesperTheme = enabled) }
++    SignalStore.settings.isVesperThemeEnabled = enabled
++  }
++
+   fun setLanguage(language: String) {
+     store.update { it.copy(language = language) }
+     SignalStore.settings.language = language
+@@ -41,6 +46,7 @@ class AppearanceSettingsViewModel : ViewModel() {
+   private fun getState(): AppearanceSettingsState {
+     return AppearanceSettingsState(
+       SignalStore.settings.theme,
++      SignalStore.settings.isVesperThemeEnabled,
+       SignalStore.settings.isDynamicColorsEnabled,
+       SignalStore.settings.messageFontSize,
+       SignalStore.settings.language,
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
+index 0f84457801..f2c088ebe6 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
+@@ -1,31 +1,20 @@
+ package org.thoughtcrime.securesms.components.settings.app.privacy
+ 
+-import android.content.ActivityNotFoundException
+ import android.content.Intent
+-import android.os.Build
+-import android.os.Bundle
+-import android.provider.Settings
+ import android.text.SpannableStringBuilder
+ import android.view.View
+ import android.view.WindowManager
+ import android.widget.TextView
+ import android.widget.Toast
+-import androidx.activity.result.ActivityResultLauncher
+-import androidx.biometric.BiometricManager
+-import androidx.biometric.BiometricPrompt
+-import androidx.biometric.BiometricPrompt.PromptInfo
+ import androidx.lifecycle.ViewModelProvider
+ import androidx.navigation.Navigation
+ import androidx.navigation.fragment.NavHostFragment
+-import androidx.navigation.fragment.navArgs
+ import androidx.preference.PreferenceManager
+ import com.google.android.material.dialog.MaterialAlertDialogBuilder
+ import com.google.android.material.snackbar.Snackbar
+ import org.signal.core.ui.util.ThemeUtil
+ import org.signal.core.util.ServiceUtil
+ import org.signal.core.util.logging.Log
+-import org.thoughtcrime.securesms.BiometricDeviceAuthentication
+-import org.thoughtcrime.securesms.BiometricDeviceLockContract
+ import org.thoughtcrime.securesms.PassphraseChangeActivity
+ import org.thoughtcrime.securesms.R
+ import org.thoughtcrime.securesms.components.TimeDurationPickerDialog
+@@ -56,8 +45,6 @@ private val TAG = Log.tag(PrivacySettingsFragment::class.java)
+ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privacy) {
+ 
+   private lateinit var viewModel: PrivacySettingsViewModel
+-  private lateinit var biometricAuth: BiometricDeviceAuthentication
+-  private lateinit var biometricDeviceLockLauncher: ActivityResultLauncher<String>
+ 
+   private val incognitoSummary: CharSequence by lazy {
+     SpannableStringBuilder(getString(R.string.preferences__this_setting_is_not_a_guarantee))
+@@ -69,35 +56,11 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
+       )
+   }
+ 
+-  override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+-    super.onViewCreated(view, savedInstanceState)
+-    biometricDeviceLockLauncher = registerForActivityResult(BiometricDeviceLockContract()) { result: Int ->
+-      if (result == BiometricDeviceAuthentication.AUTHENTICATED) {
+-        viewModel.togglePaymentLock(false)
+-      }
+-    }
+-    val promptInfo = PromptInfo.Builder()
+-      .setAllowedAuthenticators(BiometricDeviceAuthentication.ALLOWED_AUTHENTICATORS)
+-      .setTitle(requireContext().getString(R.string.BiometricDeviceAuthentication__signal))
+-      .setConfirmationRequired(false)
+-      .build()
+-    biometricAuth = BiometricDeviceAuthentication(
+-      BiometricManager.from(requireActivity()),
+-      BiometricPrompt(requireActivity(), BiometricAuthenticationListener()),
+-      promptInfo
+-    )
+-  }
+-
+   override fun onResume() {
+     super.onResume()
+     viewModel.refreshBlockedCount()
+   }
+ 
+-  override fun onPause() {
+-    super.onPause()
+-    biometricAuth.cancelAuthentication()
+-  }
+-
+   override fun bindAdapter(adapter: MappingAdapter) {
+     adapter.registerFactory(ValueClickPreference::class.java, LayoutFactory(::ValueClickPreferenceViewHolder, R.layout.value_click_preference_item))
+ 
+@@ -105,15 +68,9 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
+     val repository = PrivacySettingsRepository()
+     val factory = PrivacySettingsViewModel.Factory(sharedPreferences, repository)
+     viewModel = ViewModelProvider(this, factory)[PrivacySettingsViewModel::class.java]
+-    val args: PrivacySettingsFragmentArgs by navArgs()
+-    var showPaymentLock = true
+ 
+     viewModel.state.observe(viewLifecycleOwner) { state ->
+       adapter.submitList(getConfiguration(state).toMappingModelList())
+-      if (args.showPaymentLock && showPaymentLock) {
+-        showPaymentLock = false
+-        recyclerView?.scrollToPosition(adapter.itemCount - 1)
+-      }
+     }
+   }
+ 
+@@ -313,25 +270,6 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
+ 
+       dividerPref()
+ 
+-      sectionHeaderPref(R.string.preferences_app_protection__payments)
+-
+-      switchPref(
+-        title = DSLSettingsText.from(R.string.preferences__payment_lock),
+-        summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__payment_lock_require_lock),
+-        isChecked = state.paymentLock && ServiceUtil.getKeyguardManager(requireContext()).isKeyguardSecure,
+-        onClick = {
+-          if (!ServiceUtil.getKeyguardManager(requireContext()).isKeyguardSecure) {
+-            showGoToPhoneSettings()
+-          } else if (state.paymentLock) {
+-            biometricAuth.authenticate(requireContext(), true) { biometricDeviceLockLauncher.launch(getString(R.string.BiometricDeviceAuthentication__signal)) }
+-          } else {
+-            viewModel.togglePaymentLock(true)
+-          }
+-        }
+-      )
+-
+-      dividerPref()
+-
+       clickPref(
+         title = DSLSettingsText.from(R.string.preferences__advanced),
+         summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__signal_message_and_calls),
+@@ -353,29 +291,6 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
+       .show()
+   }
+ 
+-  private fun showGoToPhoneSettings() {
+-    MaterialAlertDialogBuilder(requireContext()).apply {
+-      setTitle(getString(R.string.PrivacySettingsFragment__cant_enable_title))
+-      setMessage(getString(R.string.PrivacySettingsFragment__cant_enable_description))
+-      setPositiveButton(R.string.PaymentsHomeFragment__enable) { _, _ ->
+-        val intent = when {
+-          Build.VERSION.SDK_INT >= 30 -> Intent(Settings.ACTION_BIOMETRIC_ENROLL)
+-          Build.VERSION.SDK_INT >= 28 -> Intent(Settings.ACTION_FINGERPRINT_ENROLL)
+-          else -> Intent(Settings.ACTION_SECURITY_SETTINGS)
+-        }
+-
+-        try {
+-          startActivity(intent)
+-        } catch (e: ActivityNotFoundException) {
+-          Log.w(TAG, "Failed to navigate to system settings.", e)
+-          Toast.makeText(requireContext(), R.string.PrivacySettingsFragment__failed_to_navigate_to_system_settings, Toast.LENGTH_SHORT).show()
+-        }
+-      }
+-      setNegativeButton(R.string.PaymentsHomeFragment__not_now) { _, _ -> }
+-      show()
+-    }
+-  }
+-
+   private fun getScreenLockInactivityTimeoutSummary(enabledScreenLock: Boolean, timeoutSeconds: Long): String {
+     return if (!enabledScreenLock) {
+       getString(R.string.ScreenLockSettingsFragment__off)
+@@ -415,21 +330,4 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
+       valueText.contentDescription = model.contentDescription.resolve(context)
+     }
+   }
+-
+-  inner class BiometricAuthenticationListener : BiometricPrompt.AuthenticationCallback() {
+-    override fun onAuthenticationError(errorCode: Int, errorString: CharSequence) {
+-      Log.w(TAG, "Authentication error: $errorCode")
+-      onAuthenticationFailed()
+-    }
+-
+-    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+-      Log.i(TAG, "onAuthenticationSucceeded")
+-      viewModel.togglePaymentLock(false)
+-    }
+-
+-    override fun onAuthenticationFailed() {
+-      Log.w(TAG, "Unable to authenticate payment lock")
+-      viewModel.refresh()
+-    }
+-  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
+index 5af9ac70d4..3c4e4ed366 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
+@@ -9,7 +9,6 @@ data class PrivacySettingsState(
+   val screenLockActivityTimeout: Long,
+   val screenSecurity: Boolean,
+   val incognitoKeyboard: Boolean,
+-  val paymentLock: Boolean,
+   val isObsoletePasswordEnabled: Boolean,
+   val isObsoletePasswordTimeoutEnabled: Boolean,
+   val obsoletePasswordTimeout: Int,
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
+index 23ac7d4a24..bd9d7b1d5a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
+@@ -52,11 +52,6 @@ class PrivacySettingsViewModel(
+     refresh()
+   }
+ 
+-  fun togglePaymentLock(enable: Boolean) {
+-    SignalStore.payments.paymentLock = enable
+-    refresh()
+-  }
+-
+   fun setObsoletePasswordTimeoutEnabled(enabled: Boolean) {
+     SignalStore.settings.passphraseTimeoutEnabled = enabled
+     refresh()
+@@ -81,7 +76,6 @@ class PrivacySettingsViewModel(
+       screenLockActivityTimeout = SignalStore.settings.screenLockTimeout,
+       screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(AppDependencies.application),
+       incognitoKeyboard = TextSecurePreferences.isIncognitoKeyboardEnabled(AppDependencies.application),
+-      paymentLock = SignalStore.payments.paymentLock,
+       isObsoletePasswordEnabled = !SignalStore.settings.passphraseDisabled,
+       isObsoletePasswordTimeoutEnabled = SignalStore.settings.passphraseTimeoutEnabled,
+       obsoletePasswordTimeout = SignalStore.settings.passphraseTimeout,
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ChatColorsPalette.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ChatColorsPalette.kt
+index b61464abe2..6f62d279c1 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ChatColorsPalette.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ChatColorsPalette.kt
+@@ -11,7 +11,7 @@ object ChatColorsPalette {
+     @JvmField
+     val ULTRAMARINE = ChatColors.forColor(
+       ChatColors.Id.BuiltIn,
+-      0xFF315FF4.toInt()
++      0xFF5335DD.toInt()
+     )
+ 
+     // endregion
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
+index 520439795e..cb1669e847 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
+@@ -42,6 +42,7 @@ public final class SettingsValues extends SignalStoreValues {
+ 
+   public static final  String THEME                                   = "settings.theme";
+   public static final  String DYNAMIC_COLORS_ENABLED                  = "settings.dynamicColors";
++  public static final  String VESPER_THEME_ENABLED                    = "settings.vesperTheme";
+   public static final  String MESSAGE_FONT_SIZE                       = "settings.message.font.size";
+   public static final  String LANGUAGE                                = "settings.language";
+   public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
+@@ -131,6 +132,7 @@ public final class SettingsValues extends SignalStoreValues {
+                          LANGUAGE,
+                          THEME,
+                          DYNAMIC_COLORS_ENABLED,
++                         VESPER_THEME_ENABLED,
+                          MESSAGE_FONT_SIZE,
+                          PREFER_SYSTEM_EMOJI,
+                          ENTER_KEY_SENDS,
+@@ -259,6 +261,15 @@ public final class SettingsValues extends SignalStoreValues {
+     return getBoolean(DYNAMIC_COLORS_ENABLED, true);
+   }
+ 
++  public boolean isVesperThemeEnabled() {
++    return getBoolean(VESPER_THEME_ENABLED, true);
++  }
++
++  public void setVesperThemeEnabled(boolean enabled) {
++    putBoolean(VESPER_THEME_ENABLED, enabled);
++    onConfigurationSettingChanged.postValue(THEME);
++  }
++
+   public int getMessageFontSize() {
+     return getInteger(MESSAGE_FONT_SIZE, TextSecurePreferences.getMessageBodyTextSize(AppDependencies.getApplication()));
+   }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
+index 25a4de392a..78a7dbde46 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
+@@ -14,4 +14,9 @@ public class DynamicConversationSettingsTheme extends DynamicTheme {
+   protected @StyleRes int getDynamicTheme() {
+     return R.style.Theme_Vesper_Dynamic_ConversationSettings;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_ConversationSettings;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkActionBarTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkActionBarTheme.java
+index fbe77ba7da..ec5841b86c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkActionBarTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkActionBarTheme.java
+@@ -9,4 +9,9 @@ public class DynamicDarkActionBarTheme extends DynamicTheme {
+   protected @StyleRes int getTheme() {
+     return R.style.Signal_DayNight_DarkActionBar;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_DarkActionBar;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkToolbarTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkToolbarTheme.java
+index b66255b2fe..d1b724f1da 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkToolbarTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicDarkToolbarTheme.java
+@@ -9,4 +9,9 @@ public class DynamicDarkToolbarTheme extends DynamicTheme {
+   protected @StyleRes int getTheme() {
+     return R.style.Signal_DayNight_DarkNoActionBar;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_DarkNoActionBar;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicIntroTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicIntroTheme.java
+index 889538ead8..eaac532d21 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicIntroTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicIntroTheme.java
+@@ -9,4 +9,9 @@ public class DynamicIntroTheme extends DynamicTheme {
+   protected @StyleRes int getTheme() {
+     return R.style.Signal_DayNight_IntroTheme;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_IntroTheme;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
+index a0ad20b41e..7c5765851c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
+@@ -20,4 +20,9 @@ public class DynamicMediaPreviewTheme extends DynamicTheme {
+   protected @StyleRes int getDynamicTheme() {
+     return R.style.Theme_Vesper_Dynamic_MediaPreview;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_MediaPreview;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarInviteTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarInviteTheme.java
+index c5999d5aad..d20a138101 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarInviteTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarInviteTheme.java
+@@ -9,4 +9,9 @@ public class DynamicNoActionBarInviteTheme extends DynamicTheme {
+   protected @StyleRes int getTheme() {
+     return R.style.Signal_DayNight_Invite;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_Invite;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java
+index 9cbbb139a6..8a584c6259 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicNoActionBarTheme.java
+@@ -14,4 +14,9 @@ public class DynamicNoActionBarTheme extends DynamicTheme {
+   protected @StyleRes int getDynamicTheme() {
+     return R.style.Theme_Vesper_Dynamic_NoActionBar;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_NoActionBar;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java
+index ce691bfcf6..47dbcdaa7d 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicRegistrationTheme.java
+@@ -14,4 +14,9 @@ public class DynamicRegistrationTheme extends DynamicTheme {
+   protected @StyleRes int getDynamicTheme() {
+     return R.style.Theme_Vesper_Dynamic_Registration;
+   }
++
++  @Override
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight_Registration;
++  }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java
+index a49c5956dd..b4cb38cd58 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicTheme.java
+@@ -24,6 +24,7 @@ public class DynamicTheme {
+   private static int globalNightModeConfiguration;
+ 
+   private int onCreateNightModeConfiguration;
++  private int onCreateTheme;
+ 
+   public void onCreate(@NonNull Activity activity) {
+     int previousGlobalConfiguration = globalNightModeConfiguration;
+@@ -31,7 +32,8 @@ public class DynamicTheme {
+     onCreateNightModeConfiguration = ConfigurationUtil.getNightModeConfiguration(activity);
+     globalNightModeConfiguration   = onCreateNightModeConfiguration;
+ 
+-    activity.setTheme(getTheme(activity));
++    onCreateTheme = getTheme(activity);
++    activity.setTheme(onCreateTheme);
+ 
+     if (previousGlobalConfiguration != globalNightModeConfiguration) {
+       Log.d(TAG, "Previous night mode has changed previous: " + previousGlobalConfiguration + " now: " + globalNightModeConfiguration);
+@@ -40,6 +42,16 @@ public class DynamicTheme {
+   }
+ 
+   public void onResume(@NonNull Activity activity) {
++    int currentTheme = getTheme(activity);
++
++    if (onCreateTheme != currentTheme) {
++      Log.d(TAG, "Theme selection changed while activity was paused. Recreating.");
++      onCreateTheme = currentTheme;
++      CachedInflater.from(activity).clear();
++      activity.recreate();
++      return;
++    }
++
+     if (onCreateNightModeConfiguration != ConfigurationUtil.getNightModeConfiguration(activity)) {
+       Log.d(TAG, "Create configuration different from current previous: " + onCreateNightModeConfiguration + " now: " +  ConfigurationUtil.getNightModeConfiguration(activity));
+       CachedInflater.from(activity).clear();
+@@ -54,12 +66,21 @@ public class DynamicTheme {
+     return getTheme();
+   }
+ 
++  protected @StyleRes int getSignalTheme() {
++    return R.style.Signal_Original_DayNight;
++  }
++
+   public final @StyleRes int getTheme(@NonNull Context context) {
++    if (!SignalStore.settings().isVesperThemeEnabled()) {
++      return getSignalTheme();
++    }
++
+     return useDynamicColors(context) ? getDynamicTheme() : getTheme();
+   }
+ 
+   public static boolean useDynamicColors(@NonNull Context context) {
+     return DynamicColors.isDynamicColorAvailable() &&
++           SignalStore.settings().isVesperThemeEnabled() &&
+            SignalStore.settings().isDynamicColorsEnabled();
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java b/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java
+index 4d71cf5cf1..6fd3467768 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java
+@@ -230,8 +230,14 @@ public final class WallpaperCropActivity extends BaseActivity {
+   }
+ 
+   private static final class DynamicWallpaperTheme extends DynamicTheme {
++    @Override
+     protected @StyleRes int getTheme() {
+       return R.style.Signal_DayNight_WallpaperCropper;
+     }
++
++    @Override
++    protected @StyleRes int getSignalTheme() {
++      return R.style.Signal_Original_DayNight_WallpaperCropper;
++    }
+   }
+ }
+diff --git a/app/src/main/res/drawable-v21/camera_send_button_background.xml b/app/src/main/res/drawable-v21/camera_send_button_background.xml
+index df91cfd220..54b6abcff6 100644
+--- a/app/src/main/res/drawable-v21/camera_send_button_background.xml
++++ b/app/src/main/res/drawable-v21/camera_send_button_background.xml
+@@ -11,7 +11,7 @@
+ 
+     <item>
+         <shape android:shape="oval" >
+-            <solid android:color="@color/core_ultramarine"/>
++            <solid android:color="?attr/colorPrimary"/>
+         </shape>
+     </item>
+ </ripple>
+diff --git a/app/src/main/res/drawable/camera_send_button_background.xml b/app/src/main/res/drawable/camera_send_button_background.xml
+index 7bcb1e9d44..d42c4edfbb 100644
+--- a/app/src/main/res/drawable/camera_send_button_background.xml
++++ b/app/src/main/res/drawable/camera_send_button_background.xml
+@@ -1,4 +1,4 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval" >
+-    <solid android:color="@color/core_ultramarine"/>
+-</shape>
+\ No newline at end of file
++    <solid android:color="?attr/colorPrimary"/>
++</shape>
+diff --git a/app/src/main/res/drawable/compose_background.xml b/app/src/main/res/drawable/compose_background.xml
+index 583b389025..64f21f4ded 100644
+--- a/app/src/main/res/drawable/compose_background.xml
++++ b/app/src/main/res/drawable/compose_background.xml
+@@ -4,9 +4,9 @@
+     android:shape="rectangle">
+ 
+     <solid
+-        android:color="?attr/colorSurfaceVariant" />
++        android:color="?attr/conversation_compose_background" />
+ 
+     <corners
+         android:radius="20dp" />
+ 
+-</shape>
+\ No newline at end of file
++</shape>
+diff --git a/app/src/main/res/drawable/exo_icon_play_ultramarine.xml b/app/src/main/res/drawable/exo_icon_play_ultramarine.xml
+index 13001acffc..33218e854d 100644
+--- a/app/src/main/res/drawable/exo_icon_play_ultramarine.xml
++++ b/app/src/main/res/drawable/exo_icon_play_ultramarine.xml
+@@ -19,7 +19,7 @@
+     android:viewportWidth="24.0">
+ 
+     <path
+-        android:fillColor="@color/core_ultramarine"
++        android:fillColor="?attr/colorPrimary"
+         android:pathData="M8,5v14l11,-7z"/>
+ 
+ </vector>
+diff --git a/app/src/main/res/drawable/ic_add_media_22.xml b/app/src/main/res/drawable/ic_add_media_22.xml
+index b5c27af88d..e0c3da8e40 100644
+--- a/app/src/main/res/drawable/ic_add_media_22.xml
++++ b/app/src/main/res/drawable/ic_add_media_22.xml
+@@ -5,5 +5,5 @@
+     android:viewportHeight="22">
+   <path
+       android:pathData="M20.634,1.37C19.5,0.245 17.927,0 15.719,0H6.195C4.073,0 2.5,0.245 1.366,1.383C0.244,2.508 0,4.075 0,6.216V15.711C0,17.926 0.232,19.492 1.354,20.617C2.5,21.755 4.061,22 6.268,22H15.719C17.927,22 19.512,21.755 20.634,20.617C21.768,19.492 22,17.926 22,15.711V6.289C22,4.062 21.768,2.496 20.634,1.37ZM20.488,5.959V16.029C20.488,17.485 20.268,18.757 19.524,19.504C18.781,20.263 17.488,20.483 16.049,20.483H5.939C4.512,20.483 3.22,20.25 2.463,19.504C1.72,18.757 1.512,17.485 1.512,16.029V6.032C1.512,4.527 1.72,3.23 2.463,2.484C3.207,1.725 4.524,1.505 6.024,1.505H16.049C17.488,1.505 18.781,1.737 19.524,2.484C20.268,3.242 20.488,4.515 20.488,5.959ZM5.695,10.988C5.695,11.428 6.037,11.759 6.5,11.759H10.219V15.491C10.219,15.955 10.549,16.286 10.988,16.286C11.463,16.286 11.793,15.968 11.793,15.491V11.759H15.512C15.976,11.759 16.305,11.428 16.305,10.988C16.305,10.511 15.988,10.18 15.512,10.18H11.793V6.448C11.793,5.971 11.463,5.641 10.988,5.641C10.549,5.641 10.219,5.983 10.219,6.448V10.18H6.5C6.024,10.18 5.695,10.511 5.695,10.988Z"
+-      android:fillColor="@color/signal_dark_colorOnSurface"/>
++      android:fillColor="?attr/filled_tonal_icon_button_icon_color"/>
+ </vector>
+diff --git a/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml b/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
+index e0cbc98772..69f61a5b82 100644
+--- a/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
++++ b/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
+@@ -2,8 +2,8 @@
+ <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+     <item>
+         <shape android:shape="rectangle">
+-            <solid android:color="@color/signal_dark_colorSurfaceVariant" />
++            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
+             <corners android:radius="50dp" />
+         </shape>
+     </item>
+-</layer-list>
+\ No newline at end of file
++</layer-list>
+diff --git a/app/src/main/res/drawable/image_editor_hud_undo.xml b/app/src/main/res/drawable/image_editor_hud_undo.xml
+index 7e66dc729d..ef06a0b699 100644
+--- a/app/src/main/res/drawable/image_editor_hud_undo.xml
++++ b/app/src/main/res/drawable/image_editor_hud_undo.xml
+@@ -3,9 +3,9 @@
+     <item>
+         <shape android:shape="oval">
+             <size android:width="@dimen/image_editor_hud_tool_filled_circle_padding" android:height="@dimen/image_editor_hud_tool_filled_circle_padding" />
+-            <solid android:color="@color/signal_dark_colorSurfaceVariant" />
++            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
+             <padding android:bottom="@dimen/image_editor_hud_tool_filled_circle_padding" android:left="@dimen/image_editor_hud_tool_filled_circle_padding" android:right="@dimen/image_editor_hud_tool_filled_circle_padding" android:top="@dimen/image_editor_hud_tool_filled_circle_padding" />
+         </shape>
+     </item>
+     <item android:drawable="@drawable/symbol_undo_24" />
+-</layer-list>
+\ No newline at end of file
++</layer-list>
+diff --git a/app/src/main/res/drawable/media_gallery_button_background.xml b/app/src/main/res/drawable/media_gallery_button_background.xml
+index 51f3b8bc4f..69cde0d0b7 100644
+--- a/app/src/main/res/drawable/media_gallery_button_background.xml
++++ b/app/src/main/res/drawable/media_gallery_button_background.xml
+@@ -2,9 +2,9 @@
+ <selector xmlns:android="http://schemas.android.com/apk/res/android">
+     <item android:state_pressed="true">
+         <layer-list>
+-            <item android:drawable="@color/signal_dark_colorSurfaceVariant" />
++            <item android:drawable="?attr/filled_tonal_icon_button_container_color" />
+             <item android:drawable="@color/transparent_white_10" />
+         </layer-list>
+     </item>
+-    <item android:drawable="@color/signal_dark_colorSurfaceVariant" android:state_pressed="false" />
+-</selector>
+\ No newline at end of file
++    <item android:drawable="?attr/filled_tonal_icon_button_container_color" android:state_pressed="false" />
++</selector>
+diff --git a/app/src/main/res/drawable/media_selection_pill.xml b/app/src/main/res/drawable/media_selection_pill.xml
+index 24e8fc28a1..a5f569b227 100644
+--- a/app/src/main/res/drawable/media_selection_pill.xml
++++ b/app/src/main/res/drawable/media_selection_pill.xml
+@@ -10,8 +10,7 @@
+     <item>
+         <shape>
+             <corners android:radius="1000dp" />
+-            <solid android:color="@color/signal_light_colorPrimary" />
++            <solid android:color="?attr/colorPrimary" />
+         </shape>
+     </item>
+ </layer-list>
+-
+diff --git a/app/src/main/res/drawable/v2_media_count_indicator_text_background.xml b/app/src/main/res/drawable/v2_media_count_indicator_text_background.xml
+index d58facf745..fd13072f77 100644
+--- a/app/src/main/res/drawable/v2_media_count_indicator_text_background.xml
++++ b/app/src/main/res/drawable/v2_media_count_indicator_text_background.xml
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle" >
+-    <solid android:color="@color/core_ultramarine"/>
++    <solid android:color="?attr/colorPrimary"/>
+     <corners android:radius="38dp"/>
+-</shape>
+\ No newline at end of file
++</shape>
+diff --git a/app/src/main/res/layout/v2_conversation_fragment.xml b/app/src/main/res/layout/v2_conversation_fragment.xml
+index d22c785c01..3141d90bff 100644
+--- a/app/src/main/res/layout/v2_conversation_fragment.xml
++++ b/app/src/main/res/layout/v2_conversation_fragment.xml
+@@ -125,13 +125,13 @@
+                 android:fontFamily="sans-serif-medium"
+                 android:text="@string/ConversationActivity_join"
+                 android:textAllCaps="false"
+-                android:textColor="@color/core_white"
++                android:textColor="?attr/colorOnPrimary"
+                 android:visibility="gone"
+-                app:backgroundTint="@color/core_ultramarine"
++                app:backgroundTint="?attr/colorPrimary"
+                 app:cornerRadius="@dimen/material_button_full_round_corner_radius"
+                 app:icon="@drawable/ic_video_solid_18"
+                 app:iconGravity="textStart"
+-                app:iconTint="@color/core_white"
++                app:iconTint="?attr/colorOnPrimary"
+                 tools:visibility="visible" />
+ 
+         </LinearLayout>
+diff --git a/app/src/main/res/layout/v2_media_image_editor_hud.xml b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+index 85b6413df3..295ec4a879 100644
+--- a/app/src/main/res/layout/v2_media_image_editor_hud.xml
++++ b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+@@ -39,7 +39,7 @@
+             android:paddingBottom="7dp"
+             android:text="@string/ImageEditorHud__clear_all"
+             android:textAppearance="@style/Signal.Text.Body"
+-            android:textColor="@color/signal_dark_colorOnSecondaryContainer"
++            android:textColor="?attr/colorOnSurface"
+             android:visibility="gone"
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="parent"
+@@ -66,7 +66,7 @@
+             android:layout_marginBottom="10dp"
+             android:alpha="0"
+             android:background="@drawable/circle_tintable"
+-            android:backgroundTint="@color/signal_dark_colorSurfaceVariant"
++            android:backgroundTint="?attr/filled_tonal_icon_button_container_color"
+             android:contentDescription="@string/ImageEditorHud__cancel"
+             android:padding="6dp"
+             android:translationY="56dp"
+@@ -75,7 +75,7 @@
+             app:layout_constraintStart_toStartOf="parent"
+             app:layout_goneMarginEnd="10dp"
+             app:srcCompat="@drawable/symbol_x_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+@@ -164,7 +164,7 @@
+             android:layout_marginBottom="10dp"
+             android:alpha="0"
+             android:background="@drawable/circle_tintable"
+-            android:backgroundTint="@color/signal_dark_colorSurfaceVariant"
++            android:backgroundTint="?attr/filled_tonal_icon_button_container_color"
+             android:contentDescription="@string/ImageEditorHud__done_editing"
+             android:padding="6dp"
+             android:translationY="56dp"
+@@ -173,7 +173,7 @@
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_goneMarginStart="10dp"
+             app:srcCompat="@drawable/symbol_check_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+@@ -228,7 +228,7 @@
+             app:layout_constraintBottom_toBottomOf="@id/image_editor_hud_draw_color_bar"
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="@id/image_editor_hud_draw_color_bar"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -247,7 +247,7 @@
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="@id/image_editor_hud_draw_color_bar"
+             app:srcCompat="@drawable/symbol_text_square_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -324,7 +324,7 @@
+             app:layout_goneMarginEnd="10dp"
+             app:layout_goneMarginStart="10dp"
+             app:srcCompat="@drawable/symbol_crop_unlock_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+@@ -421,4 +421,4 @@
+         android:visibility="gone"
+         tools:alpha="1"
+         tools:visibility="visible" />
+-</merge>
+\ No newline at end of file
++</merge>
+diff --git a/app/src/main/res/layout/v2_media_review_fragment.xml b/app/src/main/res/layout/v2_media_review_fragment.xml
+index b54d0a1069..ce37b33fa6 100644
+--- a/app/src/main/res/layout/v2_media_review_fragment.xml
++++ b/app/src/main/res/layout/v2_media_review_fragment.xml
+@@ -22,7 +22,7 @@
+             android:layout_width="match_parent"
+             android:layout_height="0dp"
+             android:alpha="0"
+-            android:background="@color/signal_dark_colorSurface"
++            android:background="?attr/colorSurface"
+             android:visibility="gone"
+             app:layout_constraintBottom_toBottomOf="parent"
+             app:layout_constraintTop_toTopOf="@id/timeline_placeholder"
+@@ -53,10 +53,10 @@
+             android:paddingBottom="8dp"
+             android:gravity="center"
+             android:textAppearance="@style/TextAppearance.Signal.Body2"
+-            android:textColor="@color/signal_dark_colorOnSurface"
++            android:textColor="?attr/colorOnSurface"
+             android:visibility="gone"
+             app:drawableStartCompat="@drawable/symbol_arrow_right_24"
+-            app:drawableTint="@color/signal_dark_colorOnSurface"
++            app:drawableTint="?attr/colorOnSurface"
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="parent"
+             tools:alpha="1"
+@@ -187,7 +187,7 @@
+             app:layout_constraintStart_toStartOf="parent"
+             app:thumbColor="@color/signal_light_colorOnPrimary"
+             app:thumbColorEdited="#ff0"
+-            app:thumbHintBackgroundColor="@color/signal_dark_colorSurfaceVariant"
++            app:thumbHintBackgroundColor="?attr/filled_tonal_icon_button_container_color"
+             app:thumbHintTextColor="@color/signal_light_colorOnPrimary"
+             app:thumbHintTextSize="14sp"
+             app:thumbTouchRadius="24dp"
+@@ -229,7 +229,7 @@
+             app:layout_constraintStart_toStartOf="parent"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_brush_pen_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -250,7 +250,7 @@
+             app:layout_goneMarginStart="10dp"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_crop_rotate_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -271,7 +271,7 @@
+             app:layout_goneMarginStart="10dp"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_quality_high_slash_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -291,7 +291,7 @@
+             app:layout_goneMarginStart="10dp"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_save_android_24"
+-            app:tint="@color/signal_dark_colorOnSurface"
++            app:tint="?attr/filled_tonal_icon_button_icon_color"
+             tools:visibility="visible" />
+ 
+         <com.google.android.material.imageview.ShapeableImageView
+@@ -301,7 +301,7 @@
+             android:layout_marginStart="12dp"
+             android:layout_marginEnd="10dp"
+             android:layout_marginBottom="16dp"
+-            android:background="@color/signal_light_colorPrimary"
++            android:background="?attr/colorPrimary"
+             android:contentDescription="@string/MediaReviewFragment__send_media_accessibility_label"
+             android:padding="4dp"
+             android:scaleType="centerInside"
+@@ -313,7 +313,7 @@
+             app:layout_goneMarginStart="10dp"
+             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
+             app:srcCompat="@drawable/symbol_send_fill_24"
+-            app:tint="?attr/colorOnSurface"
++            app:tint="?attr/colorOnPrimary"
+             tools:visibility="visible" />
+ 
+     </androidx.constraintlayout.widget.ConstraintLayout>
+@@ -337,4 +337,4 @@
+             android:indeterminateBehavior="cycle" />
+     </org.thoughtcrime.securesms.util.views.TouchInterceptingFrameLayout>
+ 
+-</FrameLayout>
+\ No newline at end of file
++</FrameLayout>
+diff --git a/app/src/main/res/layout/v2_media_review_selected_item.xml b/app/src/main/res/layout/v2_media_review_selected_item.xml
+index 6b79bc5d01..80790a6f11 100644
+--- a/app/src/main/res/layout/v2_media_review_selected_item.xml
++++ b/app/src/main/res/layout/v2_media_review_selected_item.xml
+@@ -40,9 +40,9 @@
+         android:visibility="gone"
+         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.MediaSelection.Selected"
+         app:srcCompat="@drawable/ic_trash_24"
+-        app:strokeColor="@color/signal_light_colorPrimary"
++        app:strokeColor="?attr/colorPrimary"
+         app:strokeWidth="2dp"
+         app:tint="@color/core_white"
+         tools:visibility="visible" />
+ 
+-</FrameLayout>
+\ No newline at end of file
++</FrameLayout>
+diff --git a/app/src/main/res/values-night/dark_themes.xml b/app/src/main/res/values-night/dark_themes.xml
+index 09ca4376aa..6ab1240c32 100644
+--- a/app/src/main/res/values-night/dark_themes.xml
++++ b/app/src/main/res/values-night/dark_themes.xml
+@@ -21,4 +21,14 @@
+     <style name="Signal.DayNight.BottomSheet.Rounded" parent="Theme.Signal.RoundedBottomSheet" />
+ 
+     <style name="Signal.DayNight.ConversationSettings" parent="TextSecure.DarkNoActionBar.ConversationSettings" />
++
++    <style name="Signal.Original.DayNight" parent="Theme.Signal.Original.Dark" />
++    <style name="Signal.Original.DayNight.NoActionBar" parent="Theme.Signal.Original.Dark.NoActionBar" />
++    <style name="Signal.Original.DayNight.Invite" parent="Theme.Signal.Original.Dark.Invite" />
++    <style name="Signal.Original.DayNight.IntroTheme" parent="Theme.Signal.Original.Dark.Intro" />
++    <style name="Signal.Original.DayNight.DarkActionBar" parent="Theme.Signal.Original.Dark.DarkActionBar" />
++    <style name="Signal.Original.DayNight.DarkNoActionBar" parent="Theme.Signal.Original.Dark.DarkToolbar" />
++    <style name="Signal.Original.DayNight.Registration" parent="Theme.Signal.Original.Dark.Registration" />
++    <style name="Signal.Original.DayNight.ConversationSettings" parent="Theme.Signal.Original.Dark.ConversationSettings" />
++    <style name="Signal.Original.DayNight.WallpaperCropper" parent="Theme.Signal.Original.Dark.WallpaperCropper" />
+ </resources>
+diff --git a/app/src/main/res/values/light_themes.xml b/app/src/main/res/values/light_themes.xml
+index 6eec2eb742..2686335243 100644
+--- a/app/src/main/res/values/light_themes.xml
++++ b/app/src/main/res/values/light_themes.xml
+@@ -20,4 +20,14 @@
+     <style name="Signal.DayNight.BottomSheet.Rounded" parent="Theme.Signal.RoundedBottomSheet.Light" />
+ 
+     <style name="Signal.DayNight.ConversationSettings" parent="TextSecure.LightNoActionBar.ConversationSettings" />
++
++    <style name="Signal.Original.DayNight" parent="Theme.Signal.Original.Light" />
++    <style name="Signal.Original.DayNight.NoActionBar" parent="Theme.Signal.Original.Light.NoActionBar" />
++    <style name="Signal.Original.DayNight.Invite" parent="Theme.Signal.Original.Light.Invite" />
++    <style name="Signal.Original.DayNight.IntroTheme" parent="Theme.Signal.Original.Light.Intro" />
++    <style name="Signal.Original.DayNight.DarkActionBar" parent="Theme.Signal.Original.Light.DarkActionBar" />
++    <style name="Signal.Original.DayNight.DarkNoActionBar" parent="Theme.Signal.Original.Light.DarkToolbar" />
++    <style name="Signal.Original.DayNight.Registration" parent="Theme.Signal.Original.Light.Registration" />
++    <style name="Signal.Original.DayNight.ConversationSettings" parent="Theme.Signal.Original.Light.ConversationSettings" />
++    <style name="Signal.Original.DayNight.WallpaperCropper" parent="Theme.Signal.Original.Light.WallpaperCropper" />
+ </resources>
+diff --git a/app/src/main/res/values/signal_original_themes.xml b/app/src/main/res/values/signal_original_themes.xml
+new file mode 100644
+index 0000000000..8a7e12e1e1
+--- /dev/null
++++ b/app/src/main/res/values/signal_original_themes.xml
+@@ -0,0 +1,474 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++  Copyright 2026 Vesper contributors
++  SPDX-License-Identifier: AGPL-3.0-only
++-->
++<resources xmlns:tools="http://schemas.android.com/tools">
++
++    <!-- Signal's stock palette, kept separate from Vesper's static palette. -->
++    <style name="Theme.Signal.Original.Light" parent="@style/Theme.Material3.Light">
++        <item name="theme_type">light</item>
++        <item name="dynamic_colors">false</item>
++        <item name="vesper_theme">false</item>
++        <item name="android:forceDarkAllowed" tools:targetApi="29">false</item>
++        <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
++        <item name="android:navigationBarColor">@color/stock_surface_light</item>
++        <item name="android:statusBarColor">@color/stock_surface_light</item>
++        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">true</item>
++        <item name="android:windowLightStatusBar">true</item>
++
++        <item name="colorPrimaryInverse">@color/stock_primary_inverse_light</item>
++        <item name="colorPrimary">@color/stock_primary_light</item>
++        <item name="colorPrimaryDark">@color/stock_primary_light</item>
++        <item name="colorOnPrimary">@color/stock_on_primary_light</item>
++        <item name="colorPrimaryContainer">@color/stock_primary_container_light</item>
++        <item name="colorOnPrimaryContainer">@color/stock_on_primary_container_light</item>
++        <item name="colorSecondary">@color/stock_secondary_light</item>
++        <item name="colorOnSecondary">@color/stock_on_secondary_light</item>
++        <item name="colorSecondaryContainer">@color/stock_secondary_container_light</item>
++        <item name="colorOnSecondaryContainer">@color/stock_on_secondary_container_light</item>
++        <item name="colorSurfaceInverse">@color/stock_surface_inverse_light</item>
++        <item name="colorSurfaceVariant">@color/stock_surface_variant_light</item>
++        <item name="colorSurface">@color/stock_surface_light</item>
++        <item name="colorSurfaceDim">@color/stock_surface_dim_light</item>
++        <item name="colorSurfaceContainerHighest">@color/stock_surface_container_highest_light</item>
++        <item name="colorSurfaceContainerHigh">@color/stock_surface_container_high_light</item>
++        <item name="colorSurfaceContainer">@color/stock_surface_container_light</item>
++        <item name="colorSurfaceContainerLow">@color/stock_surface_container_low_light</item>
++        <item name="colorSurfaceBright">@color/stock_surface_bright_light</item>
++        <item name="colorOnSurfaceInverse">@color/stock_surface_container_light</item>
++        <item name="colorOnSurface">@color/stock_on_surface_light</item>
++        <item name="colorOnBackground">@color/stock_on_background_light</item>
++        <item name="colorOnSurfaceVariant">@color/stock_on_surface_variant_light</item>
++        <item name="colorOutline">@color/stock_outline_light</item>
++        <item name="colorOutlineVariant">@color/stock_outline_variant_light</item>
++        <item name="colorError">@color/stock_error_light</item>
++        <item name="colorOnError">@color/white</item>
++        <item name="colorErrorContainer">@color/stock_error_container_light</item>
++        <item name="colorAccent">@color/stock_primary_light</item>
++        <item name="colorControlActivated">@color/stock_primary_light</item>
++        <item name="colorControlHighlight">@color/transparent_black_10</item>
++        <item name="android:textColorHighlight">@color/stock_primary_container_light</item>
++
++        <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
++        <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
++        <item name="permissionsRationaleDialogTheme">@style/Theme.Signal.AlertDialog.Light.Cornered</item>
++        <item name="textAppearanceBodyMedium">@style/Signal.Text.BodyMedium</item>
++        <item name="textAppearanceBodyLarge">@style/Signal.Text.BodyLarge</item>
++        <item name="textAppearanceLabelLarge">@style/Signal.Text.LabelLarge</item>
++        <item name="search_view_style">@style/Signal.SearchView</item>
++        <item name="circularProgressMaterialButtonStyle">@style/Signal.Widget.Button.Large.Tonal</item>
++        <item name="circularProgressIndicatorStyle">@style/Widget.Signal.CircularProgressIndicator.Medium.Indeterminate.Tonal</item>
++        <item name="snackbarStyle">@style/Widget.Signal.Snackbar</item>
++        <item name="snackbarTextViewStyle">@style/Widget.Signal.Snackbar.TextView</item>
++        <item name="snackbarButtonStyle">@style/Widget.Signal.Button.TextButton.Snackbar</item>
++        <item name="bottomSheetDialogTheme">@style/Theme.Signal.Light.BottomSheetDialog</item>
++        <item name="contactCheckboxBackground">@drawable/contact_selection_checkbox</item>
++        <item name="mediaKeyboardBackgroundColor">@color/stock_surface_container_light</item>
++        <item name="mediaKeyboardBottomBarBackgroundColor">@color/stock_surface_dim_light</item>
++        <item name="actionBarStyle">@style/TextSecure.LightActionBar</item>
++        <item name="actionBarTabBarStyle">@style/TextSecure.LightActionBar.TabBar</item>
++        <item name="actionModeBackground">@color/transparent</item>
++        <item name="actionModeCloseDrawable">@drawable/ic_x_tinted</item>
++        <item name="actionModeStyle">@style/TextSecure.ActionModeStyle</item>
++        <item name="android:textColor">@color/text_color_light_theme</item>
++        <item name="android:textColorSecondary">@color/text_color_secondary_light_theme</item>
++        <item name="android:windowBackground">@color/stock_surface_light</item>
++        <item name="android:windowContentOverlay">@null</item>
++        <item name="alertDialogTheme">@style/AppCompatAlertDialogStyleLight</item>
++        <item name="android:alertDialogTheme">@style/AppCompatDialogStyleLight</item>
++        <item name="homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
++        <item name="android:homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
++        <item name="settingsToolbarStyle">@style/TextSecure.LightActionBar.Settings</item>
++        <item name="contact_filter_toolbar_icon_tint">@color/stock_on_surface_light</item>
++        <item name="preferenceTheme">@style/PreferenceThemeOverlay.Fix</item>
++        <item name="chipStyle">@style/Signal.Chip.Action</item>
++        <item name="colorControlNormal">@color/core_grey_90</item>
++        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Signal.MaterialAlertDialog</item>
++        <item name="materialTimePickerTheme">@style/Signal.ThemeOverlay.TimePicker</item>
++        <item name="materialTimePickerStyle">@style/Signal.Widget.TimePicker</item>
++        <item name="materialCalendarStyle">@style/Signal.Widget.Calendar</item>
++        <item name="materialCalendarTheme">@style/Signal.ThemeOverlay.Calendar</item>
++        <item name="materialCardViewOutlinedStyle">@style/Widget.Material3.CardView.Filled</item>
++        <item name="collapsingToolbarLayoutStyle">@style/Signal.Widget.CollapsingToolbar</item>
++
++        <item name="vesper_colorSurface1">@color/stock_surface_container_low_light</item>
++        <item name="vesper_colorSurface2">@color/stock_surface_container_light</item>
++        <item name="vesper_colorSurface3">@color/stock_surface_container_high_light</item>
++        <item name="vesper_colorSurface4">@color/stock_surface_container_highest_light</item>
++        <item name="vesper_colorSurface5">@color/stock_surface_dim_light</item>
++        <item name="conversation_toolbar_color">@color/stock_surface_light</item>
++        <item name="signal_accent_primary">@color/stock_core_ultramarine</item>
++        <item name="signal_background_primary">@color/stock_surface_light</item>
++        <item name="signal_background_secondary">@color/stock_surface_container_low_light</item>
++        <item name="signal_background_dialog">@color/stock_surface_container_light</item>
++        <item name="signal_background_dialog_secondary">@color/stock_surface_container_low_light</item>
++        <item name="signal_text_primary">@color/stock_on_surface_light</item>
++        <item name="signal_text_secondary">@color/stock_on_surface_variant_light</item>
++        <item name="signal_text_toolbar_title">@color/stock_surface_light</item>
++        <item name="signal_icon_tint_primary">@color/stock_on_surface_light</item>
++        <item name="signal_icon_tint_secondary">@color/stock_on_surface_variant_light</item>
++        <item name="signal_icon_tint_action">@color/core_black</item>
++        <item name="signal_icon_tint_tab_selected">@color/stock_on_surface_light</item>
++        <item name="signal_icon_tint_tab_unselected">@color/stock_on_surface_variant_light</item>
++        <item name="signal_button_primary">@color/stock_core_ultramarine</item>
++        <item name="signal_button_primary_ripple">@color/transparent_black_15</item>
++        <item name="signal_button_primary_text">@color/core_white</item>
++        <item name="signal_button_primary_text_disabled">@color/transparent_white_20</item>
++        <item name="signal_button_secondary">@color/core_grey_05</item>
++        <item name="signal_button_secondary_ripple">@color/core_grey_02</item>
++        <item name="signal_button_secondary_text">@color/stock_core_ultramarine</item>
++        <item name="signal_button_secondary_text_disabled">@color/core_grey_25</item>
++        <item name="signal_button_secondary_stroke">@color/core_grey_15</item>
++        <item name="conversation_compose_background">@color/stock_surface_variant_light</item>
++        <item name="contact_filter_edit_background">@color/stock_surface_container_highest_light</item>
++        <item name="reactions_pill_selected_color">@color/stock_surface_container_high_light</item>
++        <item name="qr_card_color">@color/stock_surface_container_low_light</item>
++        <item name="qr_card_text_color">@color/stock_on_surface_variant_light</item>
++        <item name="conversation_item_update_text_color">@color/stock_on_surface_variant_light</item>
++        <item name="conversation_item_quote_text_color">@color/stock_on_surface_light</item>
++        <item name="conversation_item_quote_text_color_sent">@color/stock_on_surface_light</item>
++        <item name="conversation_item_recv_bubble_color_normal">@color/stock_surface_variant_light</item>
++        <item name="conversation_item_incoming_audio_foreground_tint_normal">@color/stock_on_surface_light</item>
++        <item name="conversation_typing_indicator_foreground_tint_normal">@color/stock_on_surface_variant_light</item>
++        <item name="conversation_scroll_to_bottom_foreground_color">@color/stock_on_surface_variant_light</item>
++        <item name="conversation_list_selected_color">@color/stock_surface_container_high_light</item>
++        <item name="reactions_pill_text_color">@color/stock_on_surface_variant_light</item>
++        <item name="reactions_overlay_any_emoji_background">@color/stock_surface_variant_16_no_alpha_light</item>
++        <item name="reactions_overlay_any_emoji_foreground">@color/stock_on_surface_variant_light</item>
++        <item name="megaphone_body_text_color">@color/stock_on_surface_variant_light</item>
++        <item name="tooltip_default_color">@color/stock_secondary_container_light</item>
++        <item name="quote_view_background_incoming_wallpaper">@color/signal_colorTransparentInverse2</item>
++        <item name="quote_view_bar_incoming_wallpaper">@color/signal_colorTransparentInverse2</item>
++        <item name="quote_view_foreground_incoming_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="quote_view_background_outgoing_wallpaper">@color/signal_neutralSurface</item>
++        <item name="quote_view_bar_outgoing_wallpaper">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_outgoing_wallpaper">@color/stock_on_surface_light</item>
++        <item name="quote_view_background_incoming_normal">@color/signal_colorTransparent3</item>
++        <item name="quote_view_bar_incoming_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_incoming_normal">@color/stock_on_surface_light</item>
++        <item name="quote_view_background_outgoing_normal">@color/signal_colorTransparent4</item>
++        <item name="quote_view_bar_outgoing_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_outgoing_normal">@color/stock_on_surface_light</item>
++        <item name="quote_view_label_background_incoming_normal">@color/signal_colorOnSurface_8</item>
++        <item name="quote_view_label_background_incoming_wallpaper">@color/signal_colorOnSurface_8</item>
++        <item name="quote_view_label_background_outgoing_normal">@color/transparent_white_36</item>
++        <item name="quote_view_label_background_outgoing_wallpaper">@color/transparent_white_36</item>
++        <item name="react_with_any_background">@color/stock_surface_container_low_light</item>
++        <item name="react_with_any_search_background">@color/stock_surface_variant_light</item>
++        <item name="react_with_any_search_hint">@color/stock_on_surface_variant_light</item>
++        <item name="react_with_any_customize_background">@color/stock_surface_variant_light</item>
++        <item name="voice_note_player_view_background">@color/stock_surface_container_low_light</item>
++        <item name="message_request_bar_container_background_normal">@color/stock_surface_light</item>
++        <item name="message_request_bar_background_normal">@color/stock_surface_container_light</item>
++        <item name="message_request_bar_denyForeground_normal">@color/stock_error_light</item>
++        <item name="message_request_bar_acceptForeground_normal">@color/stock_on_secondary_container_light</item>
++        <item name="message_request_bar_container_background_wallpaper">@color/wallpaper_bubble_color</item>
++        <item name="message_request_bar_background_wallpaper">@color/signal_colorNeutralVariant</item>
++        <item name="message_request_bar_denyForeground_wallpaper">@color/stock_error_light</item>
++        <item name="message_request_bar_acceptForeground_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="safety_tip_background">@color/core_white</item>
++        <item name="safety_tip_image_background">@color/stock_surface_container_low_light</item>
++        <item name="switchThemeOverlay">@style/ThemeOverlay.Signal.MaterialSwitch</item>
++        <item name="extended_action_button_container_color">@color/stock_secondary_container_light</item>
++        <item name="extended_action_button_icon_color">@color/stock_on_secondary_container_light</item>
++        <item name="filled_tonal_icon_button_container_color">@color/stock_surface_variant_light</item>
++        <item name="filled_tonal_icon_button_icon_color">@color/stock_on_surface_light</item>
++        <item name="context_menu_container_color">@color/stock_surface_container_light</item>
++        <item name="navbar_active_indicator_color">@color/stock_secondary_container_light</item>
++        <item name="navbar_container_color">@color/stock_surface_light</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark" parent="@style/Theme.Material3.Dark">
++        <item name="theme_type">dark</item>
++        <item name="dynamic_colors">false</item>
++        <item name="vesper_theme">false</item>
++        <item name="android:forceDarkAllowed" tools:targetApi="29">false</item>
++        <item name="android:windowOptOutEdgeToEdgeEnforcement" tools:targetApi="35">true</item>
++        <item name="android:navigationBarColor">@color/stock_surface_dark</item>
++        <item name="android:statusBarColor">@color/stock_surface_dark</item>
++        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">false</item>
++        <item name="android:windowLightStatusBar">false</item>
++
++        <item name="colorPrimaryInverse">@color/stock_primary_inverse_dark</item>
++        <item name="colorPrimary">@color/stock_primary_dark</item>
++        <item name="colorPrimaryDark">@color/stock_primary_dark</item>
++        <item name="colorOnPrimary">@color/stock_on_primary_dark</item>
++        <item name="colorPrimaryContainer">@color/stock_primary_container_dark</item>
++        <item name="colorOnPrimaryContainer">@color/stock_on_primary_container_dark</item>
++        <item name="colorSecondary">@color/stock_secondary_dark</item>
++        <item name="colorOnSecondary">@color/stock_on_secondary_dark</item>
++        <item name="colorSecondaryContainer">@color/stock_secondary_container_dark</item>
++        <item name="colorOnSecondaryContainer">@color/stock_on_secondary_container_dark</item>
++        <item name="colorSurfaceInverse">@color/stock_surface_inverse_dark</item>
++        <item name="colorSurfaceVariant">@color/stock_surface_variant_dark</item>
++        <item name="colorSurface">@color/stock_surface_dark</item>
++        <item name="colorSurfaceDim">@color/stock_surface_dim_dark</item>
++        <item name="colorSurfaceContainerHighest">@color/stock_surface_container_highest_dark</item>
++        <item name="colorSurfaceContainerHigh">@color/stock_surface_container_high_dark</item>
++        <item name="colorSurfaceContainer">@color/stock_surface_container_dark</item>
++        <item name="colorSurfaceContainerLow">@color/stock_surface_container_low_dark</item>
++        <item name="colorSurfaceBright">@color/stock_surface_bright_dark</item>
++        <item name="colorOnSurfaceInverse">@color/stock_surface_bright_dark</item>
++        <item name="colorOnSurface">@color/stock_on_surface_dark</item>
++        <item name="colorOnBackground">@color/stock_on_background_dark</item>
++        <item name="colorOnSurfaceVariant">@color/stock_on_surface_variant_dark</item>
++        <item name="colorOutline">@color/stock_outline_dark</item>
++        <item name="colorOutlineVariant">@color/stock_outline_variant_dark</item>
++        <item name="colorError">@color/stock_error_dark</item>
++        <item name="colorOnError">@color/stock_surface_bright_dark</item>
++        <item name="colorErrorContainer">@color/stock_error_container_dark</item>
++        <item name="colorAccent">@color/stock_primary_dark</item>
++        <item name="colorControlActivated">@color/stock_primary_dark</item>
++        <item name="colorControlHighlight">@color/transparent_white_10</item>
++        <item name="android:textColorHighlight">@color/stock_primary_container_dark</item>
++
++        <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
++        <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
++        <item name="permissionsRationaleDialogTheme">@style/Theme.Signal.AlertDialog.Dark.Cornered</item>
++        <item name="textAppearanceBodyMedium">@style/Signal.Text.BodyMedium</item>
++        <item name="textAppearanceBodyLarge">@style/Signal.Text.BodyLarge</item>
++        <item name="textAppearanceLabelLarge">@style/Signal.Text.LabelLarge</item>
++        <item name="search_view_style">@style/Signal.SearchView</item>
++        <item name="circularProgressMaterialButtonStyle">@style/Signal.Widget.Button.Large.Tonal</item>
++        <item name="circularProgressIndicatorStyle">@style/Widget.Signal.CircularProgressIndicator.Medium.Indeterminate.Tonal</item>
++        <item name="snackbarStyle">@style/Widget.Signal.Snackbar</item>
++        <item name="snackbarTextViewStyle">@style/Widget.Signal.Snackbar.TextView</item>
++        <item name="snackbarButtonStyle">@style/Widget.Signal.Button.TextButton.Snackbar</item>
++        <item name="bottomSheetDialogTheme">@style/Theme.Signal.BottomSheetDialog</item>
++        <item name="contactCheckboxBackground">@drawable/contact_selection_checkbox</item>
++        <item name="mediaKeyboardBackgroundColor">@color/stock_surface_container_dark</item>
++        <item name="mediaKeyboardBottomBarBackgroundColor">@color/stock_surface_bright_dark</item>
++        <item name="actionBarStyle">@style/TextSecure.DarkActionBar</item>
++        <item name="actionBarTabBarStyle">@style/TextSecure.DarkActionBar.TabBar</item>
++        <item name="actionBarPopupTheme">@style/ThemeOverlay.AppCompat.Dark</item>
++        <item name="actionModeBackground">@color/transparent</item>
++        <item name="actionModeCloseDrawable">@drawable/ic_x_tinted</item>
++        <item name="actionModeStyle">@style/TextSecure.ActionModeStyle</item>
++        <item name="android:textColor">@color/text_color_dark_theme</item>
++        <item name="android:textColorSecondary">@color/text_color_secondary_dark_theme</item>
++        <item name="android:colorControlHighlight" tools:ignore="NewApi">@color/transparent_white_10</item>
++        <item name="android:windowBackground">@color/stock_surface_dark</item>
++        <item name="android:windowContentOverlay">@null</item>
++        <item name="alertDialogTheme">@style/AppCompatAlertDialogStyleDark</item>
++        <item name="android:alertDialogTheme">@style/AppCompatDialogStyleDark</item>
++        <item name="homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
++        <item name="android:homeAsUpIndicator">@drawable/symbol_arrow_start_24</item>
++        <item name="settingsToolbarStyle">@style/TextSecure.DarkActionBar.Settings</item>
++        <item name="contact_filter_toolbar_icon_tint">@color/core_grey_15</item>
++        <item name="preferenceTheme">@style/PreferenceThemeOverlay.Fix</item>
++        <item name="chipStyle">@style/Signal.Chip.Action</item>
++        <item name="colorControlNormal">@color/core_white</item>
++        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Signal.MaterialAlertDialog</item>
++        <item name="materialTimePickerTheme">@style/Signal.ThemeOverlay.TimePicker</item>
++        <item name="materialTimePickerStyle">@style/Signal.Widget.TimePicker</item>
++        <item name="materialCalendarStyle">@style/Signal.Widget.Calendar</item>
++        <item name="materialCalendarTheme">@style/Signal.ThemeOverlay.Calendar</item>
++        <item name="materialCardViewOutlinedStyle">@style/Widget.Material3.CardView.Filled</item>
++        <item name="collapsingToolbarLayoutStyle">@style/Signal.Widget.CollapsingToolbar</item>
++
++        <item name="vesper_colorSurface1">@color/stock_surface_container_low_dark</item>
++        <item name="vesper_colorSurface2">@color/stock_surface_container_dark</item>
++        <item name="vesper_colorSurface3">@color/stock_surface_container_high_dark</item>
++        <item name="vesper_colorSurface4">@color/stock_surface_container_highest_dark</item>
++        <item name="vesper_colorSurface5">@color/stock_surface_bright_dark</item>
++        <item name="conversation_toolbar_color">@color/stock_surface_dark</item>
++        <item name="signal_accent_primary">@color/stock_core_ultramarine_light</item>
++        <item name="signal_background_primary">@color/stock_surface_dark</item>
++        <item name="signal_background_secondary">@color/stock_surface_container_low_dark</item>
++        <item name="signal_background_dialog">@color/core_grey_75</item>
++        <item name="signal_background_dialog_secondary">@color/core_grey_65</item>
++        <item name="signal_text_primary">@color/stock_on_surface_dark</item>
++        <item name="signal_text_secondary">@color/stock_on_surface_variant_dark</item>
++        <item name="signal_text_toolbar_title">@color/transparent_white_90</item>
++        <item name="signal_icon_tint_primary">@color/core_grey_15</item>
++        <item name="signal_icon_tint_secondary">@color/core_grey_25</item>
++        <item name="signal_icon_tint_action">@color/core_grey_15</item>
++        <item name="signal_icon_tint_tab_selected">@color/stock_on_surface_dark</item>
++        <item name="signal_icon_tint_tab_unselected">@color/stock_on_surface_variant_dark</item>
++        <item name="signal_button_primary">@color/stock_core_ultramarine_light</item>
++        <item name="signal_button_primary_ripple">@color/transparent_black_15</item>
++        <item name="signal_button_primary_text">@color/core_white</item>
++        <item name="signal_button_primary_text_disabled">@color/transparent_white_20</item>
++        <item name="signal_button_secondary">@color/core_grey_75</item>
++        <item name="signal_button_secondary_ripple">@color/core_grey_80</item>
++        <item name="signal_button_secondary_text">@color/stock_core_ultramarine_light</item>
++        <item name="signal_button_secondary_text_disabled">@color/core_grey_45</item>
++        <item name="signal_button_secondary_stroke">@color/core_grey_45</item>
++        <item name="conversation_compose_background">@color/stock_surface_variant_dark</item>
++        <item name="contact_filter_edit_background">@color/stock_surface_container_highest_dark</item>
++        <item name="reactions_pill_selected_color">@color/stock_surface_container_high_dark</item>
++        <item name="qr_card_color">@color/core_white</item>
++        <item name="qr_card_text_color">@color/stock_surface_variant_dark</item>
++        <item name="conversation_item_update_text_color">@color/stock_on_surface_variant_dark</item>
++        <item name="conversation_item_quote_text_color">@color/core_grey_05</item>
++        <item name="conversation_item_quote_text_color_sent">@color/stock_on_surface_dark</item>
++        <item name="conversation_item_recv_bubble_color_normal">@color/stock_surface_variant_dark</item>
++        <item name="conversation_item_incoming_audio_foreground_tint_normal">@color/stock_on_surface_dark</item>
++        <item name="conversation_typing_indicator_foreground_tint_normal">@color/stock_on_surface_variant_dark</item>
++        <item name="conversation_scroll_to_bottom_foreground_color">@color/stock_on_surface_variant_dark</item>
++        <item name="conversation_list_selected_color">@color/stock_surface_container_high_dark</item>
++        <item name="reactions_pill_text_color">@color/stock_on_surface_variant_dark</item>
++        <item name="reactions_overlay_any_emoji_background">@color/stock_surface_variant_16_no_alpha_light</item>
++        <item name="reactions_overlay_any_emoji_foreground">@color/stock_on_surface_variant_dark</item>
++        <item name="megaphone_body_text_color">@color/stock_on_surface_variant_dark</item>
++        <item name="tooltip_default_color">@color/stock_secondary_container_dark</item>
++        <item name="quote_view_background_incoming_wallpaper">@color/signal_colorTransparent2</item>
++        <item name="quote_view_bar_incoming_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="quote_view_foreground_incoming_wallpaper">@color/stock_on_surface_dark</item>
++        <item name="quote_view_background_outgoing_wallpaper">@color/signal_colorTransparent4</item>
++        <item name="quote_view_bar_outgoing_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="quote_view_foreground_outgoing_wallpaper">@color/stock_on_surface_light</item>
++        <item name="quote_view_background_incoming_normal">@color/signal_colorTransparent3</item>
++        <item name="quote_view_bar_incoming_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_incoming_normal">@color/stock_on_surface_dark</item>
++        <item name="quote_view_background_outgoing_normal">@color/signal_colorTransparent4</item>
++        <item name="quote_view_bar_outgoing_normal">@color/signal_colorOnCustom</item>
++        <item name="quote_view_foreground_outgoing_normal">@color/stock_on_surface_light</item>
++        <item name="quote_view_label_background_incoming_normal">@color/transparent_white_20</item>
++        <item name="quote_view_label_background_incoming_wallpaper">@color/transparent_white_20</item>
++        <item name="quote_view_label_background_outgoing_normal">@color/transparent_white_20</item>
++        <item name="quote_view_label_background_outgoing_wallpaper">@color/transparent_white_20</item>
++        <item name="react_with_any_background">@color/stock_surface_container_low_dark</item>
++        <item name="react_with_any_search_background">@color/stock_surface_variant_dark</item>
++        <item name="react_with_any_search_hint">@color/stock_on_surface_variant_dark</item>
++        <item name="react_with_any_customize_background">@color/stock_surface_variant_dark</item>
++        <item name="voice_note_player_view_background">@color/stock_surface_container_low_dark</item>
++        <item name="message_request_bar_container_background_normal">@color/stock_surface_dark</item>
++        <item name="message_request_bar_background_normal">@color/stock_surface_container_dark</item>
++        <item name="message_request_bar_denyForeground_normal">@color/stock_error_dark</item>
++        <item name="message_request_bar_acceptForeground_normal">@color/stock_on_secondary_container_dark</item>
++        <item name="message_request_bar_container_background_wallpaper">@color/wallpaper_bubble_color</item>
++        <item name="message_request_bar_background_wallpaper">@color/signal_light_colorTransparent2</item>
++        <item name="message_request_bar_denyForeground_wallpaper">@color/stock_error_dark</item>
++        <item name="message_request_bar_acceptForeground_wallpaper">@color/signal_colorNeutralInverse</item>
++        <item name="safety_tip_background">@color/stock_secondary_container_dark</item>
++        <item name="safety_tip_image_background">@color/stock_secondary_dark</item>
++        <item name="switchThemeOverlay">@style/ThemeOverlay.Signal.MaterialSwitch</item>
++        <item name="extended_action_button_container_color">@color/stock_secondary_container_dark</item>
++        <item name="extended_action_button_icon_color">@color/stock_on_secondary_container_dark</item>
++        <item name="filled_tonal_icon_button_container_color">@color/stock_surface_variant_dark</item>
++        <item name="filled_tonal_icon_button_icon_color">@color/stock_on_surface_dark</item>
++        <item name="context_menu_container_color">@color/stock_surface_container_dark</item>
++        <item name="navbar_active_indicator_color">@color/stock_secondary_container_dark</item>
++        <item name="navbar_container_color">@color/stock_surface_dark</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Light.NoActionBar" parent="@style/Theme.Signal.Original.Light">
++        <item name="windowActionBar">false</item>
++        <item name="windowNoTitle">true</item>
++        <item name="windowActionModeOverlay">true</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark.NoActionBar" parent="@style/Theme.Signal.Original.Dark">
++        <item name="windowActionBar">false</item>
++        <item name="windowNoTitle">true</item>
++        <item name="windowActionModeOverlay">true</item>
++        <item name="actionBarPopupTheme">@style/ThemeOverlay.AppCompat.Dark</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Light.Registration" parent="@style/Theme.Signal.Original.Light.NoActionBar" />
++    <style name="Theme.Signal.Original.Dark.Registration" parent="@style/Theme.Signal.Original.Dark.NoActionBar" />
++
++    <style name="Theme.Signal.Original.Light.ConversationSettings" parent="@style/Theme.Signal.Original.Light.NoActionBar">
++        <item name="android:windowIsTranslucent">true</item>
++        <item name="android:windowBackground">@color/transparent_black_20</item>
++        <item name="android:windowContentOverlay">@null</item>
++        <item name="android:windowNoTitle">true</item>
++        <item name="android:windowSharedElementEnterTransition">@transition/transparent_window_wipe_transition</item>
++        <item name="android:windowAnimationStyle">@style/Signal.ConversationSettings.WindowAnimation</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark.ConversationSettings" parent="@style/Theme.Signal.Original.Dark.NoActionBar">
++        <item name="android:windowIsTranslucent">true</item>
++        <item name="android:windowBackground">@color/transparent_black_20</item>
++        <item name="android:windowContentOverlay">@null</item>
++        <item name="android:windowNoTitle">true</item>
++        <item name="android:windowSharedElementEnterTransition">@transition/transparent_window_wipe_transition</item>
++        <item name="android:windowAnimationStyle">@style/Signal.ConversationSettings.WindowAnimation</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Light.DarkToolbar" parent="@style/Theme.Signal.Original.Light.NoActionBar">
++        <item name="android:windowLightStatusBar">false</item>
++        <item name="homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="collapseIcon">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:collapseIcon" tools:ignore="NewApi">@drawable/ic_arrow_left_conversation_24</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark.DarkToolbar" parent="@style/Theme.Signal.Original.Dark.NoActionBar">
++        <item name="android:windowLightStatusBar">false</item>
++        <item name="homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="collapseIcon">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:collapseIcon" tools:ignore="NewApi">@drawable/ic_arrow_left_conversation_24</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Light.DarkActionBar" parent="@style/Theme.Signal.Original.Light">
++        <item name="android:actionBarStyle">@style/TextSecure.DarkActionBar.Conversation</item>
++        <item name="actionBarStyle">@style/TextSecure.DarkActionBar.Conversation</item>
++        <item name="android:windowLightStatusBar">false</item>
++        <item name="homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="collapseIcon">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:collapseIcon" tools:ignore="NewApi">@drawable/ic_arrow_left_conversation_24</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark.DarkActionBar" parent="@style/Theme.Signal.Original.Dark">
++        <item name="android:actionBarStyle">@style/TextSecure.DarkActionBar.Conversation</item>
++        <item name="actionBarStyle">@style/TextSecure.DarkActionBar.Conversation</item>
++        <item name="android:windowLightStatusBar">false</item>
++        <item name="homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:homeAsUpIndicator">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="collapseIcon">@drawable/ic_arrow_left_conversation_24</item>
++        <item name="android:collapseIcon" tools:ignore="NewApi">@drawable/ic_arrow_left_conversation_24</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Light.Invite" parent="@style/Theme.Signal.Original.Light.NoActionBar">
++        <item name="contact_filter_toolbar_icon_tint">@color/signal_text_toolbar_subtitle</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark.Invite" parent="@style/Theme.Signal.Original.Dark.NoActionBar">
++        <item name="contact_filter_toolbar_icon_tint">@color/signal_text_toolbar_subtitle</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Light.Intro" parent="@style/Theme.Signal.Original.Light.NoActionBar">
++        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="27">default</item>
++        <item name="colorAccent">@color/stock_core_ultramarine</item>
++        <item name="android:textColorHint">#cc000000</item>
++        <item name="android:textColorSecondary">@color/white</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark.Intro" parent="@style/Theme.Signal.Original.Dark.NoActionBar">
++        <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="27">default</item>
++        <item name="colorAccent">@color/stock_core_ultramarine_light</item>
++        <item name="android:textColorHint">@color/white</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Light.WallpaperCropper" parent="@style/Theme.Signal.Original.Light.NoActionBar">
++        <item name="colorPrimary">@color/wallpaper_preview_background</item>
++        <item name="colorPrimaryDark">@color/wallpaper_preview_background</item>
++        <item name="android:textColorSecondary">@color/white</item>
++        <item name="android:windowTranslucentNavigation">true</item>
++        <item name="android:statusBarColor">@color/wallpaper_preview_background</item>
++        <item name="android:navigationBarColor">@color/wallpaper_preview_background</item>
++        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">false</item>
++    </style>
++
++    <style name="Theme.Signal.Original.Dark.WallpaperCropper" parent="@style/Theme.Signal.Original.Dark.NoActionBar">
++        <item name="colorPrimaryDark">@color/wallpaper_preview_background</item>
++        <item name="android:statusBarColor">@color/wallpaper_preview_background</item>
++        <item name="android:windowLightStatusBar">false</item>
++        <item name="android:navigationBarColor">@color/wallpaper_preview_background</item>
++        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">false</item>
++        <item name="android:windowTranslucentNavigation">true</item>
++    </style>
++
++    <style name="Signal.Original.DayNight.MediaPreview" parent="@style/Theme.Signal.Original.Dark.NoActionBar">
++        <item name="android:windowBackground">@color/stock_surface_dark</item>
++        <item name="android:navigationBarColor">@color/media_preview_bar_background</item>
++        <item name="android:windowContentTransitions">true</item>
++        <item name="colorPrimaryDark">@color/media_preview_bar_background</item>
++        <item name="android:textColorSecondary">@color/white</item>
++    </style>
++</resources>
+diff --git a/app/src/main/res/values/themes.xml b/app/src/main/res/values/themes.xml
+index 71d1826422..bd90df2aba 100644
+--- a/app/src/main/res/values/themes.xml
++++ b/app/src/main/res/values/themes.xml
+@@ -244,9 +244,10 @@
+     <style name="TextSecure.BaseLightTheme" parent="@style/Theme.Vesper.Material3.Light">
+         <item name="theme_type">light</item>
+         <item name="dynamic_colors">false</item>
++        <item name="vesper_theme">true</item>
+         <item name="android:navigationBarColor">@color/vesper_surface_light</item>
+         <item name="android:statusBarColor">@color/vesper_surface_light</item>
+-        <item name="android:windowLightNavigationBar">true</item>
++        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">true</item>
+         <item name="android:windowLightStatusBar">true</item>
+         <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
+         <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
+@@ -416,9 +417,10 @@
+     <style name="TextSecure.BaseDarkTheme" parent="@style/Theme.Vesper.Material3.Dark">
+         <item name="theme_type">dark</item>
+         <item name="dynamic_colors">false</item>
++        <item name="vesper_theme">true</item>
+         <item name="android:navigationBarColor">@color/vesper_surface_dark</item>
+         <item name="android:statusBarColor">@color/vesper_surface_dark</item>
+-        <item name="android:windowLightNavigationBar">false</item>
++        <item name="android:windowLightNavigationBar" tools:ignore="NewApi">false</item>
+         <item name="android:windowLightStatusBar">false</item>
+         <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
+         <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
+diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
+index a8d753616b..86a297f71f 100644
+--- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
++++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
+@@ -218,6 +218,71 @@ private val darkColorScheme = darkColorScheme(
+   outline = Color(0xFF5D5D66)
+ )
+ 
++private val signalLightColorScheme = lightColorScheme(
++  primary = Color(0xFF2C58C3),
++  primaryContainer = Color(0xFFD2DFFB),
++  secondary = Color(0xFF586071),
++  secondaryContainer = Color(0xFFDCE5F9),
++  surface = Color(0xFFFBFCFF),
++  surfaceContainerLow = Color(0xFFF2F5F9),
++  surfaceContainer = Color(0xFFEDF0F6),
++  surfaceContainerHigh = Color(0xFFE8ECF4),
++  surfaceContainerHighest = Color(0xFFE7EBF3),
++  surfaceVariant = Color(0xFFE7EBF3),
++  background = Color(0xFFFBFCFF),
++  error = Color(0xFFBA1B1B),
++  errorContainer = Color(0xFFFFDAD4),
++  onPrimary = Color(0xFFFFFFFF),
++  onPrimaryContainer = Color(0xFF051845),
++  onSecondary = Color(0xFFFFFFFF),
++  onSecondaryContainer = Color(0xFF151D2C),
++  onSurface = Color(0xFF1B1B1D),
++  onSurfaceVariant = Color(0xFF545863),
++  onBackground = Color(0xFF1B1D1D),
++  outline = Color(0xFF808389)
++)
++
++private val signalDarkColorScheme = darkColorScheme(
++  primary = Color(0xFFB6C5FA),
++  primaryContainer = Color(0xFF464B5C),
++  secondary = Color(0xFFC1C6DD),
++  secondaryContainer = Color(0xFF414659),
++  surface = Color(0xFF1B1C1F),
++  surfaceContainerLow = Color(0xFF23242A),
++  surfaceContainer = Color(0xFF272A31),
++  surfaceContainerHigh = Color(0xFF2C2F37),
++  surfaceContainerHighest = Color(0xFF303133),
++  surfaceVariant = Color(0xFF303133),
++  background = Color(0xFF1B1C1F),
++  error = Color(0xFFFFB4A9),
++  errorContainer = Color(0xFF930006),
++  onPrimary = Color(0xFF1E2438),
++  onPrimaryContainer = Color(0xFFDBE1FC),
++  onSecondary = Color(0xFF2A3042),
++  onSecondaryContainer = Color(0xFFDCE1F9),
++  onSurface = Color(0xFFE2E1E5),
++  onSurfaceVariant = Color(0xFFBEBFC5),
++  onBackground = Color(0xFFE2E1E5),
++  outline = Color(0xFF5C5E65)
++)
++
++private val signalLightExtendedColors = lightExtendedColors.copy(
++  colorSurface1 = Color(0xFFF2F5F9),
++  colorSurface2 = Color(0xFFEDF0F6),
++  colorSurface3 = Color(0xFFE8ECF4),
++  colorSurface4 = Color(0xFFE6EAF3),
++  colorSurface5 = Color(0xFFE3E7F1)
++)
++
++private val signalDarkExtendedColors = darkExtendedColors.copy(
++  colorOnCustomVariant = Color(0x18FFFFFF),
++  colorSurface1 = Color(0xFF23242A),
++  colorSurface2 = Color(0xFF272A31),
++  colorSurface3 = Color(0xFF2C2F37),
++  colorSurface4 = Color(0xFF2E3039),
++  colorSurface5 = Color(0xFF31343E)
++)
++
+ @Composable
+ fun SignalTheme(
+   isDarkMode: Boolean = LocalConfiguration.current.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
+@@ -227,7 +292,8 @@ fun SignalTheme(
+ ) {
+   val context = LocalContext.current
+   val maySupportDynamicColor = Build.VERSION.SDK_INT >= 31
+-  val dynamicColors = maySupportDynamicColor && (useDynamicColors ?: isThemeUsingDynamicColors(context))
++  val vesperTheme = isThemeUsingVesperTheme(context)
++  val dynamicColors = vesperTheme && maySupportDynamicColor && (useDynamicColors ?: isThemeUsingDynamicColors(context))
+ 
+   // API 31-33's Compose fallback is more saturated than the platform resource
+   // palette. Use the same resources for XML and Compose.
+@@ -239,10 +305,12 @@ fun SignalTheme(
+         if (isDarkMode) systemAlignedDarkColorScheme() else systemAlignedLightColorScheme()
+       }
+     }
+-    isDarkMode -> darkColorScheme
+-    else -> lightColorScheme
++    vesperTheme && isDarkMode -> darkColorScheme
++    vesperTheme -> lightColorScheme
++    isDarkMode -> signalDarkColorScheme
++    else -> signalLightColorScheme
+   }
+-  val extendedColors = extendedColors(colorScheme, isDarkMode, dynamicColors)
++  val extendedColors = extendedColors(colorScheme, isDarkMode, dynamicColors, vesperTheme)
+   val snackbarColors = snackbarColors(colorScheme)
+ 
+   ProvideIncognitoKeyboard(enabled = incognitoKeyboardEnabled) {
+@@ -338,7 +406,13 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
+     typedValue.data != 0
+ }
+ 
+-private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDynamic: Boolean): ExtendedColors {
++private fun isThemeUsingVesperTheme(context: Context): Boolean {
++  val typedValue = TypedValue()
++  return context.theme.resolveAttribute(R.attr.vesper_theme, typedValue, false) &&
++    typedValue.data != 0
++}
++
++private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDynamic: Boolean, isVesperTheme: Boolean): ExtendedColors {
+   return when {
+     isDynamic -> lightExtendedColors.copy(
+       colorSurface1 = colorScheme.surfaceContainerLow,
+@@ -347,8 +421,10 @@ private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDyna
+       colorSurface4 = colorScheme.surfaceContainerHighest,
+       colorSurface5 = if (isDarkMode) colorScheme.surfaceBright else colorScheme.surfaceDim
+     )
+-    isDarkMode -> darkExtendedColors
+-    else -> lightExtendedColors
++    isVesperTheme && isDarkMode -> darkExtendedColors
++    isVesperTheme -> lightExtendedColors
++    isDarkMode -> signalDarkExtendedColors
++    else -> signalLightExtendedColors
+   }
+ }
+ 

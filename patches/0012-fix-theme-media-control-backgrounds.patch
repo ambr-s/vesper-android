@@ -1,0 +1,111 @@
+From 1bc61aaab9a049138ff4319ed9233f0733900576 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Sun, 26 Jul 2026 17:14:13 +0100
+Subject: [PATCH 12/16] fix: theme media control backgrounds
+
+---
+ .../media_gallery_button_background.xml            | 14 +++++++++++---
+ .../image_editor_hud_clear_all_background.xml      |  2 +-
+ .../main/res/drawable/image_editor_hud_undo.xml    |  2 +-
+ .../drawable/media_gallery_button_background.xml   |  4 ++--
+ .../main/res/layout/v2_media_image_editor_hud.xml  |  4 ++--
+ 5 files changed, 17 insertions(+), 9 deletions(-)
+
+diff --git a/app/src/main/res/drawable-v21/media_gallery_button_background.xml b/app/src/main/res/drawable-v21/media_gallery_button_background.xml
+index 472e952f18..491863e6ea 100644
+--- a/app/src/main/res/drawable-v21/media_gallery_button_background.xml
++++ b/app/src/main/res/drawable-v21/media_gallery_button_background.xml
+@@ -2,11 +2,19 @@
+ <selector xmlns:android="http://schemas.android.com/apk/res/android">
+     <item android:state_pressed="true">
+         <layer-list>
+-            <item android:drawable="@color/signal_dark_colorSurfaceVariant" />
++            <item>
++                <shape>
++                    <solid android:color="?attr/colorSecondaryContainer" />
++                </shape>
++            </item>
+             <item>
+                 <ripple android:color="@color/transparent_white_10" />
+             </item>
+         </layer-list>
+     </item>
+-    <item android:drawable="@color/signal_dark_colorSurfaceVariant" android:state_pressed="false" />
+-</selector>
+\ No newline at end of file
++    <item android:state_pressed="false">
++        <shape>
++            <solid android:color="?attr/colorSecondaryContainer" />
++        </shape>
++    </item>
++</selector>
+diff --git a/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml b/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
+index 69f61a5b82..3d9a70fc79 100644
+--- a/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
++++ b/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
+@@ -2,7 +2,7 @@
+ <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+     <item>
+         <shape android:shape="rectangle">
+-            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++            <solid android:color="?attr/colorSecondaryContainer" />
+             <corners android:radius="50dp" />
+         </shape>
+     </item>
+diff --git a/app/src/main/res/drawable/image_editor_hud_undo.xml b/app/src/main/res/drawable/image_editor_hud_undo.xml
+index ef06a0b699..ba4b3e82c4 100644
+--- a/app/src/main/res/drawable/image_editor_hud_undo.xml
++++ b/app/src/main/res/drawable/image_editor_hud_undo.xml
+@@ -3,7 +3,7 @@
+     <item>
+         <shape android:shape="oval">
+             <size android:width="@dimen/image_editor_hud_tool_filled_circle_padding" android:height="@dimen/image_editor_hud_tool_filled_circle_padding" />
+-            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++            <solid android:color="?attr/colorSecondaryContainer" />
+             <padding android:bottom="@dimen/image_editor_hud_tool_filled_circle_padding" android:left="@dimen/image_editor_hud_tool_filled_circle_padding" android:right="@dimen/image_editor_hud_tool_filled_circle_padding" android:top="@dimen/image_editor_hud_tool_filled_circle_padding" />
+         </shape>
+     </item>
+diff --git a/app/src/main/res/drawable/media_gallery_button_background.xml b/app/src/main/res/drawable/media_gallery_button_background.xml
+index 84ac84a531..2793f63d3b 100644
+--- a/app/src/main/res/drawable/media_gallery_button_background.xml
++++ b/app/src/main/res/drawable/media_gallery_button_background.xml
+@@ -4,7 +4,7 @@
+         <layer-list>
+             <item>
+                 <shape>
+-                    <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++                    <solid android:color="?attr/colorSecondaryContainer" />
+                 </shape>
+             </item>
+             <item android:drawable="@color/transparent_white_10" />
+@@ -12,7 +12,7 @@
+     </item>
+     <item android:state_pressed="false">
+         <shape>
+-            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++            <solid android:color="?attr/colorSecondaryContainer" />
+         </shape>
+     </item>
+ </selector>
+diff --git a/app/src/main/res/layout/v2_media_image_editor_hud.xml b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+index 77493bf33f..ec747668ba 100644
+--- a/app/src/main/res/layout/v2_media_image_editor_hud.xml
++++ b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+@@ -66,7 +66,7 @@
+             android:layout_marginBottom="10dp"
+             android:alpha="0"
+             android:background="@drawable/circle_tintable"
+-            android:backgroundTint="?attr/filled_tonal_icon_button_container_color"
++            android:backgroundTint="?attr/colorSecondaryContainer"
+             android:contentDescription="@string/ImageEditorHud__cancel"
+             android:padding="6dp"
+             android:translationY="56dp"
+@@ -164,7 +164,7 @@
+             android:layout_marginBottom="10dp"
+             android:alpha="0"
+             android:background="@drawable/circle_tintable"
+-            android:backgroundTint="?attr/filled_tonal_icon_button_container_color"
++            android:backgroundTint="?attr/colorSecondaryContainer"
+             android:contentDescription="@string/ImageEditorHud__done_editing"
+             android:padding="6dp"
+             android:translationY="56dp"

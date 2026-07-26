@@ -20,6 +20,76 @@ def _make_source(
     return path
 
 
+def _make_resource(tmp_path: Path, directory: str, name: str, body: str) -> Path:
+    path = tmp_path / "app" / "src" / "main" / "res" / directory / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_rewrites_theme_aware_drawable_properties(tmp_path):
+    resource = _make_resource(
+        tmp_path,
+        "drawable",
+        "background.xml",
+        '<shape xmlns:android="http://schemas.android.com/apk/res/android">\n'
+        '    <solid android:color="@color/signal_background_secondary" />\n'
+        "</shape>\n",
+    )
+
+    changed = transform.transform_theme_color_references(tmp_path)
+
+    assert changed == 1
+    assert (
+        'android:color="?attr/signal_background_secondary"'
+        in resource.read_text(encoding="utf-8")
+    )
+
+
+def test_preserves_android_drawable_color_references(tmp_path):
+    resource = _make_resource(
+        tmp_path,
+        "drawable",
+        "selector.xml",
+        '<selector xmlns:android="http://schemas.android.com/apk/res/android">\n'
+        "    <item\n"
+        '        android:drawable = "@color/signal_background_secondary" />\n'
+        "    <item>\n"
+        '        <shape><solid android:color="@color/signal_background_primary" />'
+        "</shape>\n"
+        "    </item>\n"
+        "</selector>\n",
+    )
+
+    changed = transform.transform_theme_color_references(tmp_path)
+    result = resource.read_text(encoding="utf-8")
+
+    assert changed == 1
+    assert (
+        'android:drawable = "@color/signal_background_secondary"' in result
+    )
+    assert 'android:color="?attr/signal_background_primary"' in result
+
+
+def test_preserves_single_quoted_android_drawable_color_references(tmp_path):
+    resource = _make_resource(
+        tmp_path,
+        "drawable-v21",
+        "ripple.xml",
+        "<ripple xmlns:android='http://schemas.android.com/apk/res/android'>\n"
+        "    <item android:drawable='@color/signal_background_primary' />\n"
+        "</ripple>\n",
+    )
+
+    changed = transform.transform_theme_color_references(tmp_path)
+
+    assert changed == 0
+    assert (
+        "android:drawable='@color/signal_background_primary'"
+        in resource.read_text(encoding="utf-8")
+    )
+
+
 def test_rewrites_contextcompat_to_material_theme_attribute(tmp_path):
     source = _make_source(
         tmp_path,
