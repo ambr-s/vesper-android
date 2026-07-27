@@ -1,7 +1,7 @@
-From 2fa1190328eaaae1a51bb56573a3c21ccbf41daf Mon Sep 17 00:00:00 2001
+From 2b2dd8c03d02ac4289561e833ce58930b3811164 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 16:33:36 +0100
-Subject: [PATCH 11/16] fix: stabilize identity and media controls
+Subject: [PATCH 11/17] fix: stabilize identity and media controls
 
 ---
  app/src/main/res/drawable/ic_add_media_22.xml        |  2 +-

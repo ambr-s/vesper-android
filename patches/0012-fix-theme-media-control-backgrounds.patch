@@ -1,7 +1,7 @@
-From 1bc61aaab9a049138ff4319ed9233f0733900576 Mon Sep 17 00:00:00 2001
+From c54dbb27b417d55c150fe84eca48d776fca0ba63 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 17:14:13 +0100
-Subject: [PATCH 12/16] fix: theme media control backgrounds
+Subject: [PATCH 12/17] fix: theme media control backgrounds
 
 ---
  .../media_gallery_button_background.xml            | 14 +++++++++++---

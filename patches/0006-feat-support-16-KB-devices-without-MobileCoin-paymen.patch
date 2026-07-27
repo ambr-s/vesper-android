@@ -1,7 +1,7 @@
-From 525fd2e1975fff792715a0fc511f3f851cc572c0 Mon Sep 17 00:00:00 2001
+From 6f0c371e83100cc1df4b9b0f4be06cc8420acc4e Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:43 +0100
-Subject: [PATCH 06/16] feat: support 16 KB devices without MobileCoin payments
+Subject: [PATCH 06/17] feat: support 16 KB devices without MobileCoin payments
 
 Signed-off-by: amber <amber@flourish.ch>
 ---
