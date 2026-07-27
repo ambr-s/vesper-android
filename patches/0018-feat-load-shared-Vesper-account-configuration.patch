@@ -1,0 +1,661 @@
+From 4b2a6273eaee4ccfa39a9209bc384c5caae42eea Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Mon, 27 Jul 2026 16:24:37 +0100
+Subject: [PATCH 18/18] feat: load shared Vesper account configuration
+
+Cache the validated per-account config response, refresh it outside the startup path, apply remote flag overrides, and source developer identity from hashed ACIs without a bundled fallback. Show the verified Vesper Developer identity on contact info sheets.
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../securesms/ApplicationContext.java         |   3 +
+ .../securesms/keyvalue/SignalStore.kt         |   8 +
+ .../securesms/keyvalue/VesperConfigValues.kt  |  27 ++
+ .../recipients/VesperVerifiedRecipients.kt    |   9 +-
+ .../recipients/ui/about/AboutSheet.kt         |  20 +-
+ .../securesms/util/RemoteConfig.kt            |  11 +-
+ .../securesms/util/VesperConfig.kt            | 237 ++++++++++++++++++
+ .../VesperVerifiedRecipientsTest.kt           |  28 ++-
+ .../securesms/util/VesperConfigTest.kt        | 107 ++++++++
+ 9 files changed, 440 insertions(+), 10 deletions(-)
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
+index 14d0df9ab6..ce78e9c932 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
+@@ -132,6 +132,7 @@ import org.thoughtcrime.securesms.util.SqlCipherLogTarget;
+ import org.thoughtcrime.securesms.util.SupportEmailUtil;
+ import org.thoughtcrime.securesms.util.TextSecurePreferences;
+ import org.thoughtcrime.securesms.util.VersionTracker;
++import org.thoughtcrime.securesms.util.VesperConfig;
+ import org.thoughtcrime.securesms.util.dynamiclanguage.DynamicLanguageContextWrapper;
+ import org.whispersystems.signalservice.api.websocket.SignalWebSocket;
+ 
+@@ -206,6 +207,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+                 }
+               })
+               .addBlocking("blob-provider", this::initializeBlobProvider)
++              .addBlocking("vesper-config", VesperConfig::init)
+               .addBlocking("remote-config", RemoteConfig::init)
+               .addBlocking("ring-rtc", this::initializeRingRtc)
+               .addBlocking("glide", () -> SignalGlideModule.setRegisterGlideComponents(new SignalGlideComponents()))
+@@ -226,6 +228,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+               .addNonBlocking(StorageSyncHelper::scheduleRoutineSync)
+               .addNonBlocking(this::beginJobLoop)
+               .addNonBlocking(EmojiSource::refresh)
++              .addNonBlocking(() -> VesperConfig.refreshIfNecessary(RemoteConfig.internalUser()))
+               .addNonBlocking(() -> AppDependencies.getGiphyMp4Cache().onAppStart(this))
+               .addNonBlocking(AppDependencies::getBillingApi)
+               .addNonBlocking(this::ensureProfileUploaded)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
+index f638c859a4..e23b655766 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
+@@ -15,6 +15,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
+   val registrationValues = RegistrationValues(store)
+   val pinValues = PinValues(store)
+   val remoteConfigValues = RemoteConfigValues(store)
++  val vesperConfigValues = VesperConfigValues(store)
+   val storageServiceValues = StorageServiceValues(store)
+   val uiHintValues = UiHintValues(store)
+   val tooltipValues = TooltipValues(store)
+@@ -64,6 +65,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
+       registration.onFirstEverAppLaunch()
+       pin.onFirstEverAppLaunch()
+       remoteConfig.onFirstEverAppLaunch()
++      vesperConfig.onFirstEverAppLaunch()
+       storageService.onFirstEverAppLaunch()
+       uiHints.onFirstEverAppLaunch()
+       tooltips.onFirstEverAppLaunch()
+@@ -98,6 +100,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
+           registration.keysToIncludeInBackup +
+           pin.keysToIncludeInBackup +
+           remoteConfig.keysToIncludeInBackup +
++          vesperConfig.keysToIncludeInBackup +
+           storageService.keysToIncludeInBackup +
+           uiHints.keysToIncludeInBackup +
+           tooltips.keysToIncludeInBackup +
+@@ -174,6 +177,11 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
+     val remoteConfig: RemoteConfigValues
+       get() = instance!!.remoteConfigValues
+ 
++    @JvmStatic
++    @get:JvmName("vesperConfig")
++    val vesperConfig: VesperConfigValues
++      get() = instance!!.vesperConfigValues
++
+     @JvmStatic
+     @get:JvmName("storageService")
+     val storageService: StorageServiceValues
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
+new file mode 100644
+index 0000000000..a1a8581f66
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
+@@ -0,0 +1,27 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.keyvalue
++
++class VesperConfigValues(store: KeyValueStore) : SignalStoreValues(store) {
++  companion object {
++    private const val CACHED_CONFIG = "vesper_config.cached"
++    private const val ETAG = "vesper_config.etag"
++    private const val LAST_FETCH_TIME = "vesper_config.last_fetch_time"
++  }
++
++  public override fun onFirstEverAppLaunch() = Unit
++  public override fun getKeysToIncludeInBackup(): List<String> = emptyList()
++
++  var cachedConfig: String?
++    get() = getString(CACHED_CONFIG, null)
++    set(value) = putString(CACHED_CONFIG, value)
++
++  var eTag: String
++    get() = getString(ETAG, "")
++    set(value) = putString(ETAG, value)
++
++  var lastFetchTime: Long by longValue(LAST_FETCH_TIME, 0)
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
+index ebaf08f5ee..d7d6e08ed1 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
+@@ -6,6 +6,8 @@
+ package org.thoughtcrime.securesms.recipients
+ 
+ import org.signal.core.models.ServiceId.ACI
++import org.thoughtcrime.securesms.util.VesperConfig
++import java.util.concurrent.ConcurrentHashMap
+ 
+ /**
+  * Recipients whose names receive Vesper's verified badge treatment.
+@@ -14,7 +16,12 @@ import org.signal.core.models.ServiceId.ACI
+  * recipients retain normal profile, safety-number, and conversation behavior.
+  */
+ internal object VesperVerifiedRecipients {
++  private val hashCache = ConcurrentHashMap<ACI, String>()
++
+   fun contains(aci: ACI?): Boolean {
+-    return aci != null && aci in vesperAuthorACIs
++    return aci != null &&
++      VesperConfig.isDeveloperAciHash(
++        hashCache.getOrPut(aci) { hashVesperAci(aci) }
++      )
+   }
+ }
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
+index bd2017f6ec..b36b063c06 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
+@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.toArgb
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.res.pluralStringResource
+@@ -123,7 +124,8 @@ class AboutSheet : ComposeBottomSheetDialogFragment() {
+         groupsInCommon = state.groupsInCommonCount,
+         note = recipient.note ?: "",
+         memberLabel = state.memberLabel,
+-        canEditMemberLabel = state.canEditMemberLabel
++        canEditMemberLabel = state.canEditMemberLabel,
++        vesperDeveloper = recipient.showVesperVerifiedBadge
+       ),
+       onClickSignalConnections = this::openSignalConnectionsSheet,
+       onAvatarClicked = this::openProfilePhotoViewer,
+@@ -181,7 +183,8 @@ private data class AboutModel(
+   val groupsInCommon: Int,
+   val note: String,
+   val memberLabel: MemberLabel? = null,
+-  val canEditMemberLabel: Boolean = false
++  val canEditMemberLabel: Boolean = false,
++  val vesperDeveloper: Boolean = false
+ )
+ 
+ @Composable
+@@ -238,6 +241,15 @@ private fun Content(
+       modifier = Modifier.fillMaxWidth()
+     )
+ 
++    if (model.vesperDeveloper) {
++      AboutRow(
++        startIcon = ImageVector.vectorResource(R.drawable.ic_official_28),
++        startIconTint = Color.Unspecified,
++        text = stringResource(R.string.vesper_developer),
++        modifier = Modifier.fillMaxWidth()
++      )
++    }
++
+     if (!model.isSelf && !model.profileSharing && !model.systemContact) {
+       AboutRow(
+         startIcon = ImageVector.vectorResource(id = R.drawable.symbol_person_question_24),
+@@ -416,6 +428,7 @@ private fun AboutRow(
+   text: String,
+   modifier: Modifier = Modifier,
+   endIcon: ImageVector? = null,
++  startIconTint: Color? = null,
+   onClick: (() -> Unit)? = null
+ ) {
+   AboutRow(
+@@ -431,6 +444,7 @@ private fun AboutRow(
+     },
+     modifier = modifier,
+     endIcon = endIcon,
++    startIconTint = startIconTint,
+     onClick = onClick
+   )
+ }
+@@ -441,6 +455,7 @@ private fun AboutRow(
+   text: @Composable RowScope.() -> Unit,
+   modifier: Modifier = Modifier,
+   endIcon: ImageVector? = null,
++  startIconTint: Color? = null,
+   onClick: (() -> Unit)? = null
+ ) {
+   val padHorizontal = if (onClick != null) 19.dp else 32.dp
+@@ -465,6 +480,7 @@ private fun AboutRow(
+     Icon(
+       imageVector = startIcon,
+       contentDescription = null,
++      tint = startIconTint ?: LocalContentColor.current,
+       modifier = Modifier
+         .padding(end = 16.dp)
+         .size(20.dp)
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
+index 54a4ed2540..68624a7d24 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
+@@ -73,7 +73,7 @@ object RemoteConfig {
+           }
+         }
+       }
+-      return computeLibsignalConfigs(REMOTE_VALUES)
++      return computeLibsignalConfigs(VesperConfig.applyOverrides(REMOTE_VALUES))
+     }
+ 
+   @GuardedBy("initLock")
+@@ -449,7 +449,14 @@ object RemoteConfig {
+         }
+       }
+ 
+-      return transformer(REMOTE_VALUES[key])
++      val value = VesperConfig.valueWithOverride(key, REMOTE_VALUES[key])
++      return transformer(
++        if (value is Number) {
++          value.toString()
++        } else {
++          value
++        }
++      )
+     }
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
+new file mode 100644
+index 0000000000..b992683286
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
+@@ -0,0 +1,237 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.util
++
++import androidx.annotation.VisibleForTesting
++import androidx.annotation.WorkerThread
++import kotlinx.serialization.json.Json
++import kotlinx.serialization.json.JsonNull
++import kotlinx.serialization.json.JsonPrimitive
++import kotlinx.serialization.json.booleanOrNull
++import kotlinx.serialization.json.doubleOrNull
++import kotlinx.serialization.json.int
++import kotlinx.serialization.json.jsonArray
++import kotlinx.serialization.json.jsonObject
++import kotlinx.serialization.json.jsonPrimitive
++import kotlinx.serialization.json.longOrNull
++import okhttp3.Request
++import org.signal.core.models.ServiceId.ACI
++import org.signal.core.util.logging.Log
++import org.thoughtcrime.securesms.dependencies.AppDependencies
++import org.thoughtcrime.securesms.keyvalue.SignalStore
++import org.thoughtcrime.securesms.recipients.hashVesperAci
++import java.io.IOException
++import kotlin.time.Duration.Companion.days
++
++object VesperConfig {
++  private val TAG = Log.tag(VesperConfig::class.java)
++
++  private const val CONFIG_ORIGIN = "https://vsp.asy.st"
++  private const val SCHEMA_VERSION = 1
++  private val REFRESH_INTERVAL = 1.days
++  private val ACI_HASH_PATTERN = Regex("^[0-9a-f]{64}$")
++  private val FLAG_NAME_PATTERN = Regex("^[A-Za-z][A-Za-z0-9._-]{0,127}$")
++
++  data class Response(
++    val schemaVersion: Int,
++    val developerAciHashes: Set<String>,
++    val flagOverrides: Map<String, Any?>
++  )
++
++  sealed interface FlagOverrideResult {
++    data object Missing : FlagOverrideResult
++    data class Present(val value: Any?) : FlagOverrideResult
++  }
++
++  private val emptyResponse = Response(
++    schemaVersion = SCHEMA_VERSION,
++    developerAciHashes = emptySet(),
++    flagOverrides = emptyMap()
++  )
++
++  @Volatile
++  private var response: Response = emptyResponse
++
++  @JvmStatic
++  fun init() {
++    val cached = SignalStore.vesperConfig.cachedConfig
++    response = if (cached == null) {
++      emptyResponse
++    } else {
++      try {
++        parse(cached)
++      } catch (e: IllegalArgumentException) {
++        Log.w(TAG, "Ignoring invalid cached Vesper config.", e)
++        emptyResponse
++      }
++    }
++  }
++
++  @JvmStatic
++  @WorkerThread
++  fun refreshIfNecessary(isInternalUser: Boolean) {
++    val aci = SignalStore.account.aci ?: return
++    val now = System.currentTimeMillis()
++    if (!shouldRefresh(isInternalUser, SignalStore.vesperConfig.lastFetchTime, now)) {
++      return
++    }
++
++    try {
++      refreshSync(aci, now)
++    } catch (e: IOException) {
++      Log.w(TAG, "Unable to refresh Vesper config.", e)
++    } catch (e: IllegalArgumentException) {
++      Log.w(TAG, "Ignoring invalid Vesper config response.", e)
++    }
++  }
++
++  @WorkerThread
++  @Throws(IOException::class, IllegalArgumentException::class)
++  private fun refreshSync(aci: ACI, now: Long) {
++    val request = Request.Builder()
++      .url("$CONFIG_ORIGIN/config/${hashVesperAci(aci)}")
++      .apply {
++        SignalStore.vesperConfig.eTag
++          .takeIf(String::isNotEmpty)
++          ?.let { header("If-None-Match", it) }
++      }
++      .build()
++
++    AppDependencies.okHttpClient.newCall(request).execute().use { networkResponse ->
++      if (networkResponse.code == 304) {
++        SignalStore.vesperConfig.lastFetchTime = now
++        return
++      }
++      if (!networkResponse.isSuccessful) {
++        throw IOException("Vesper config request failed with ${networkResponse.code}")
++      }
++
++      val body = networkResponse.body.string()
++      val parsed = parse(body)
++      val eTag = networkResponse.header("ETag")
++        ?: throw IOException("Vesper config response is missing an ETag")
++
++      SignalStore.vesperConfig.cachedConfig = body
++      SignalStore.vesperConfig.eTag = eTag
++      SignalStore.vesperConfig.lastFetchTime = now
++      response = parsed
++    }
++  }
++
++  fun isDeveloperAciHash(hash: String): Boolean {
++    return hash in response.developerAciHashes
++  }
++
++  fun flagOverride(name: String): FlagOverrideResult {
++    val overrides = response.flagOverrides
++    return if (name in overrides) {
++      FlagOverrideResult.Present(overrides[name])
++    } else {
++      FlagOverrideResult.Missing
++    }
++  }
++
++  fun valueWithOverride(name: String, fallback: Any?): Any? {
++    return when (val override = flagOverride(name)) {
++      FlagOverrideResult.Missing -> fallback
++      is FlagOverrideResult.Present -> override.value
++    }
++  }
++
++  fun applyOverrides(values: Map<String, Any>): Map<String, Any> {
++    val result = values.toMutableMap()
++    for ((name, value) in response.flagOverrides) {
++      if (value == null) {
++        result.remove(name)
++      } else {
++        result[name] = value.toRemoteConfigValue()
++      }
++    }
++    return result
++  }
++
++  private fun Any.toRemoteConfigValue(): Any {
++    return if (this is Number) toString() else this
++  }
++
++  @VisibleForTesting
++  internal fun shouldRefresh(
++    isInternalUser: Boolean,
++    lastFetchTime: Long,
++    now: Long
++  ): Boolean {
++    if (isInternalUser || lastFetchTime <= 0) {
++      return true
++    }
++    val elapsed = now - lastFetchTime
++    return elapsed < 0 || elapsed >= REFRESH_INTERVAL.inWholeMilliseconds
++  }
++
++  @VisibleForTesting
++  internal fun parse(raw: String): Response {
++    val root = Json.parseToJsonElement(raw).jsonObject
++    require(root.getValue("schemaVersion").jsonPrimitive.int == SCHEMA_VERSION) {
++      "Unsupported Vesper config schema"
++    }
++
++    val developerHashesJson = root.getValue("developerAciHashes").jsonArray
++    val developerHashes = buildSet {
++      for (element in developerHashesJson) {
++        val hash = element.jsonPrimitive.content
++        require(ACI_HASH_PATTERN.matches(hash)) {
++          "Invalid Vesper developer ACI hash"
++        }
++        add(hash)
++      }
++    }
++
++    val overridesJson = root.getValue("flagOverrides").jsonArray
++    val overrides = linkedMapOf<String, Any?>()
++    for (element in overridesJson) {
++      val item = element.jsonObject
++      val name = item.getValue("name").jsonPrimitive.content
++      require(FLAG_NAME_PATTERN.matches(name)) {
++        "Invalid Vesper config flag name"
++      }
++      require(name !in overrides) {
++        "Duplicate Vesper config flag override"
++      }
++
++      val rawValue = item.getValue("value")
++      val value = when (rawValue) {
++        JsonNull -> null
++        is JsonPrimitive -> when {
++          rawValue.isString -> rawValue.content
++          rawValue.booleanOrNull != null -> rawValue.booleanOrNull
++          rawValue.longOrNull != null -> {
++            val number = rawValue.longOrNull!!
++            if (number in Int.MIN_VALUE..Int.MAX_VALUE) number.toInt() else number
++          }
++          rawValue.doubleOrNull != null -> rawValue.doubleOrNull
++          else -> throw IllegalArgumentException("Invalid Vesper config flag value")
++        }
++        else -> throw IllegalArgumentException("Invalid Vesper config flag value")
++      }
++      overrides[name] = value
++    }
++
++    return Response(
++      schemaVersion = SCHEMA_VERSION,
++      developerAciHashes = developerHashes,
++      flagOverrides = overrides
++    )
++  }
++
++  @VisibleForTesting
++  internal fun activateForTest(next: Response) {
++    response = next
++  }
++
++  @VisibleForTesting
++  internal fun resetForTest() {
++    response = emptyResponse
++  }
++}
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
+index cabe8990a8..00c8acd6c3 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
+@@ -7,17 +7,35 @@ package org.thoughtcrime.securesms.recipients
+ 
+ import org.junit.Assert.assertFalse
+ import org.junit.Assert.assertTrue
++import org.junit.Before
+ import org.junit.Test
+ import org.signal.core.models.ServiceId.ACI
++import org.thoughtcrime.securesms.util.VesperConfig
+ 
+ class VesperVerifiedRecipientsTest {
++  private val developerAci = ACI.parseOrThrow("00000000-0000-4000-8000-000000000001")
++
++  @Before
++  fun setUp() {
++    VesperConfig.resetForTest()
++  }
++
++  @Test
++  fun `developer hashes from cached config are Vesper verified`() {
++    VesperConfig.activateForTest(
++      VesperConfig.Response(
++        schemaVersion = 1,
++        developerAciHashes = setOf(hashVesperAci(developerAci)),
++        flagOverrides = emptyMap()
++      )
++    )
++
++    assertTrue(VesperVerifiedRecipients.contains(developerAci))
++  }
+ 
+   @Test
+-  fun `configured author ACIs are Vesper verified`() {
+-    assertTrue(vesperAuthorACIs.isNotEmpty())
+-    vesperAuthorACIs.forEach { aci ->
+-      assertTrue(VesperVerifiedRecipients.contains(aci))
+-    }
++  fun `there is no bundled developer fallback`() {
++    assertFalse(VesperVerifiedRecipients.contains(developerAci))
+   }
+ 
+   @Test
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
+new file mode 100644
+index 0000000000..e5ca6ea4dd
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
+@@ -0,0 +1,107 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.util
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertThrows
++import org.junit.Assert.assertTrue
++import org.junit.Before
++import org.junit.Test
++import org.signal.core.models.ServiceId.ACI
++import org.thoughtcrime.securesms.recipients.hashVesperAci
++import kotlin.time.Duration.Companion.days
++
++class VesperConfigTest {
++  private val aci = ACI.parseOrThrow("00000000-0000-4000-8000-000000000001")
++  private val aciHash = "11e594f481958c10e3015d0bf0447a22f068a8a647f475df15ce2c7ab4b8f3f1"
++
++  @Before
++  fun setUp() {
++    VesperConfig.resetForTest()
++  }
++
++  @Test
++  fun `hashes the canonical lowercase ACI`() {
++    assertEquals(aciHash, hashVesperAci(aci))
++  }
++
++  @Test
++  fun `parses developer hashes and typed flag overrides`() {
++    val parsed = VesperConfig.parse(
++      """
++      {
++        "schemaVersion": 1,
++        "developerAciHashes": ["$aciHash"],
++        "flagOverrides": [
++          {"name": "android.internalUser", "value": true},
++          {"name": "global.pinnedChatLimit", "value": 8},
++          {"name": "vesper.example", "value": null}
++        ]
++      }
++      """.trimIndent()
++    )
++
++    assertEquals(setOf(aciHash), parsed.developerAciHashes)
++    assertEquals(true, parsed.flagOverrides["android.internalUser"])
++    assertEquals(8, parsed.flagOverrides["global.pinnedChatLimit"])
++    assertTrue(parsed.flagOverrides.containsKey("vesper.example"))
++    assertEquals(null, parsed.flagOverrides["vesper.example"])
++  }
++
++  @Test
++  fun `rejects malformed developer hashes`() {
++    assertThrows(IllegalArgumentException::class.java) {
++      VesperConfig.parse(
++        """
++        {
++          "schemaVersion": 1,
++          "developerAciHashes": ["not-a-hash"],
++          "flagOverrides": []
++        }
++        """.trimIndent()
++      )
++    }
++  }
++
++  @Test
++  fun `refreshes every internal startup and otherwise after one day`() {
++    val now = 2.days.inWholeMilliseconds
++
++    assertTrue(VesperConfig.shouldRefresh(true, now, now))
++    assertFalse(VesperConfig.shouldRefresh(false, now - 1.days.inWholeMilliseconds + 1, now))
++    assertTrue(VesperConfig.shouldRefresh(false, now - 1.days.inWholeMilliseconds, now))
++  }
++
++  @Test
++  fun `applies cached overrides without mutating the base config`() {
++    val base = mapOf(
++      "android.internalUser" to false,
++      "global.pinnedChatLimit" to "4",
++      "vesper.remove" to true
++    )
++    VesperConfig.activateForTest(
++      VesperConfig.Response(
++        schemaVersion = 1,
++        developerAciHashes = emptySet(),
++        flagOverrides = mapOf(
++          "android.internalUser" to true,
++          "global.pinnedChatLimit" to 8,
++          "vesper.remove" to null
++        )
++      )
++    )
++
++    assertEquals(
++      mapOf(
++        "android.internalUser" to true,
++        "global.pinnedChatLimit" to "8"
++      ),
++      VesperConfig.applyOverrides(base)
++    )
++    assertEquals("4", base["global.pinnedChatLimit"])
++  }
++}

@@ -1,7 +1,7 @@
-From be342b02c7c5106c2e52da4b785b9468a9b969a1 Mon Sep 17 00:00:00 2001
+From c9a54eea8dec1b33e46613b6281d26665b6f5e0f Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 20:18:55 +0100
-Subject: [PATCH 09/17] fix: make Vesper build identity deterministic
+Subject: [PATCH 09/18] fix: make Vesper build identity deterministic
 
 Signed-off-by: amber <amber@flourish.ch>
 ---

@@ -159,7 +159,13 @@ def load_config(path: Path) -> dict[str, str]:
             raise ValueError(f"{path}:{number}: empty value for {key}")
         config[key] = value
 
-    required = {"APP_TITLE", "APP_FILE_NAME", "PACKAGE_ID", "UPDATE_MANIFEST_URL"}
+    required = {
+        "APP_TITLE",
+        "APP_FILE_NAME",
+        "PACKAGE_ID",
+        "SERVICE_ORIGIN",
+        "UPDATE_MANIFEST_URL",
+    }
     missing = sorted(required - config.keys())
     if missing:
         raise ValueError(f"{path}: missing keys: {', '.join(missing)}")
@@ -209,6 +215,49 @@ def transform_gradle(checkout: Path, config: dict[str, str]) -> None:
         text = replace_exactly_once(
             text, updater_old, updater_new, "website updater URL transform"
         )
+
+    captcha_origin = config["SERVICE_ORIGIN"]
+    captcha_replacements = (
+        (
+            '"\\"https://signalcaptchas.org/registration/generate.html\\""',
+            f'"\\"{captcha_origin}/captcha/registration/generate.html'
+            '?scheme=signalcaptcha\\""',
+        ),
+        (
+            '"\\"https://signalcaptchas.org/challenge/generate.html\\""',
+            f'"\\"{captcha_origin}/captcha/challenge/generate.html'
+            '?scheme=signalcaptcha\\""',
+        ),
+        (
+            '"\\"https://signalcaptchas.org/staging/registration/generate.html\\""',
+            f'"\\"{captcha_origin}/captcha/registration/generate.html'
+            '?scheme=signalcaptcha\\""',
+        ),
+        (
+            '"\\"https://signalcaptchas.org/staging/challenge/generate.html\\""',
+            f'"\\"{captcha_origin}/captcha/challenge/generate.html'
+            '?scheme=signalcaptcha\\""',
+        ),
+    )
+    for old, new in captcha_replacements:
+        if old in text:
+            text = replace_exactly_once(
+                text,
+                old,
+                new,
+                "Vesper captcha URL transform",
+            )
+    if "https://signalcaptchas.org/" in text:
+        raise RuntimeError("Vesper captcha URL transform left an upstream URL")
+    for route in ("registration", "challenge"):
+        expected = (
+            f"{captcha_origin}/captcha/{route}/generate.html"
+            "?scheme=signalcaptcha"
+        )
+        if text.count(expected) != 2:
+            raise RuntimeError(
+                f"Vesper captcha URL transform: expected two {route} URLs"
+            )
 
     app_gradle.write_text(text, encoding="utf-8")
 

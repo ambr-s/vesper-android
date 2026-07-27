@@ -16,4 +16,5 @@
     <string name="preferences__ignore_remote_delete_confirmation_message">This can preserve evidence of abuse. Respect other people\'s privacy, and don\'t be a douchebag with it.</string>
     <string name="preferences__ignore_remote_delete_confirmation_enable">Keep messages</string>
     <string name="preferences__preserved_remote_delete_badge">Deletion requested</string>
+    <string name="vesper_developer">Vesper Developer</string>
 </resources>

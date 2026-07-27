@@ -6,13 +6,15 @@
 package org.thoughtcrime.securesms.recipients
 
 import org.signal.core.models.ServiceId.ACI
+import java.security.MessageDigest
+import java.util.Locale
 
 /**
- * Account identifiers that receive Vesper's author badge.
- *
- * This owned overlay is the source of truth so the identities remain separate
- * from upstream-facing feature patches.
+ * Computes the stable identifier used by Vesper's config service.
  */
-internal val vesperAuthorACIs: Set<ACI> = setOf(
-  ACI.parseOrThrow("1520bdf1-0a44-469d-bf9d-46b66b178041")
-)
+internal fun hashVesperAci(aci: ACI): String {
+  return MessageDigest
+    .getInstance("SHA-256")
+    .digest(aci.toString().lowercase(Locale.ROOT).toByteArray(Charsets.UTF_8))
+    .joinToString(separator = "") { byte -> "%02x".format(byte.toInt() and 0xff) }
+}

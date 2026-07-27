@@ -7,6 +7,12 @@ applies them to the Signal release recorded in `upstream.pin`.
 Vesper is not affiliated with or endorsed by Signal Messenger. Its Android package
 name is `systems.amber.vesper`.
 
+Vesper loads per-account configuration and captcha handoff pages from
+`https://vsp.asy.st`; it does not depend on `signalcaptchas.org`. The manifest
+accepts Signal's `sgnl://signal.me/...` contact fallback. Verified ownership of
+the `https://signal.me` domain remains controlled by Signal's hosted Android App
+Links association.
+
 ## Build
 
 You need JDK 21 and the Android SDK declared by the pinned Signal release.

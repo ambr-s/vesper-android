@@ -1,7 +1,7 @@
-From 41142a53581a12bc039c934d31abfbf2291d8f79 Mon Sep 17 00:00:00 2001
+From dcf8b5ed9b4de101d009f7d7f6099b6ba6ac1466 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
-Subject: [PATCH 02/17] feat: allow disabling debug logs
+Subject: [PATCH 02/18] feat: allow disabling debug logs
 
 Adapted from Molly work by Oscar Mira and other Molly contributors.
 

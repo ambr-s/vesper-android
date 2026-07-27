@@ -1,7 +1,7 @@
-From 4488c2ec7b5c96b82316cb9a01585fe9b8f5f40e Mon Sep 17 00:00:00 2001
+From d1cdcbb82e380c13e76ace283ba593e3a9b3cfef Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 19:22:12 +0100
-Subject: [PATCH 16/17] feat: add Vesper author verification badge
+Subject: [PATCH 16/18] feat: add Vesper author verification badge
 
 ---
  .../securesms/components/FromTextView.java    |  2 +-

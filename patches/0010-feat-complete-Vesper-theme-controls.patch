@@ -1,7 +1,7 @@
-From c8a96423ddcd36e02027201d0ec914e60fd77dc8 Mon Sep 17 00:00:00 2001
+From 496ac29372a0f16963322ce7f9d49493352f1c1c Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 15:32:03 +0100
-Subject: [PATCH 10/17] feat: complete Vesper theme controls
+Subject: [PATCH 10/18] feat: complete Vesper theme controls
 
 ---
  .../appearance/AppearanceSettingsFragment.kt  |  17 +-
