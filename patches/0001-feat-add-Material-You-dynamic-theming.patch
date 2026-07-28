@@ -1,4 +1,4 @@
-From b6b563c18087faafce5e9122d57bbc33ed1125d7 Mon Sep 17 00:00:00 2001
+From 7f89d76ce95d0113d93148fd9c1ecd1a8546adc6 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
 Subject: [PATCH 01/18] feat: add Material You dynamic theming

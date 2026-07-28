@@ -1,4 +1,4 @@
-From db5416c9373d618d2bc1c9ed3a674e4dd88e7882 Mon Sep 17 00:00:00 2001
+From beffa336908f842bba2c58cb940f479e3cbcf5f0 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 18:50:23 +0100
 Subject: [PATCH 14/18] feat: use profile avatar as main menu trigger

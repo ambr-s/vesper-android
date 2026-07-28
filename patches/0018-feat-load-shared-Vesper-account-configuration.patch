@@ -1,4 +1,4 @@
-From 4b2a6273eaee4ccfa39a9209bc384c5caae42eea Mon Sep 17 00:00:00 2001
+From 7316c11d87e679107e5e3f4ef64bf3b4c9a1c128 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Mon, 27 Jul 2026 16:24:37 +0100
 Subject: [PATCH 18/18] feat: load shared Vesper account configuration

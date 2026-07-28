@@ -1,4 +1,4 @@
-From e81430a218086e667743670d59b29633247d91c2 Mon Sep 17 00:00:00 2001
+From 8a10b691f6ff9885e48ebc3db1365fd9e84f5a75 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
 Subject: [PATCH 03/18] feat: optionally preserve remotely deleted messages

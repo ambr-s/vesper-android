@@ -1,4 +1,4 @@
-From 32c58439ded377080b019a3d95e54e4bfd924bda Mon Sep 17 00:00:00 2001
+From 2f717ecf4dbff30e7dc10aa72b0ac051d971b7fe Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:44 +0100
 Subject: [PATCH 07/18] fix: refine Vesper conversation appearance
