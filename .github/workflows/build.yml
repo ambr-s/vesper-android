@@ -87,8 +87,22 @@ jobs:
           compile_sdk="$(sed -n 's/^compileSdk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
           build_tools="$(sed -n 's/^buildTools = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
           ndk="$(sed -n 's/^ndk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
-          echo "y" | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --install \
-            "platforms;$compile_sdk" \
+          sdkmanager="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          # Google sometimes publishes a stable API as android-N and sometimes
+          # as android-N.0. Resolve the declared API level against the repository
+          # rather than assuming a directory/package spelling.
+          mapfile -t platform_packages < <(
+            "$sdkmanager" --list | sed -n "s/^[[:space:]]*\(platforms;android-${compile_sdk}\(\.0\)\?\)[[:space:]].*/\1/p" | sort -u
+          )
+          if [[ "${#platform_packages[@]}" -ne 1 ]]; then
+            printf 'Could not resolve exactly one Android platform package for compileSdk %s. Found: %s\n' \
+              "$compile_sdk" "${platform_packages[*]:-(none)}" >&2
+            exit 1
+          fi
+
+          echo "y" | "$sdkmanager" --install \
+            "${platform_packages[0]}" \
             "build-tools;$build_tools" \
             "ndk;$ndk"
 
