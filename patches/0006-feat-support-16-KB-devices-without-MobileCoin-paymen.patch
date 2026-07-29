@@ -1,7 +1,7 @@
-From c4a5b4bc4243d295716c86212959c32e2d54b985 Mon Sep 17 00:00:00 2001
+From d3547d7f0bd08b26dfca1a9e313f49c9d5e738b1 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:43 +0100
-Subject: [PATCH 06/18] feat: support 16 KB devices without MobileCoin payments
+Subject: [PATCH 06/19] feat: support 16 KB devices without MobileCoin payments
 
 Signed-off-by: amber <amber@flourish.ch>
 ---
@@ -21,10 +21,10 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/main/res/values/vesper_features.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index ee8f4a0ac9..07086e4d6b 100644
+index e4bce0fcfb..4fbe746683 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
-@@ -212,7 +212,8 @@ android {
+@@ -216,7 +216,8 @@ android {
      jniLibs {
        excludes += setOf(
          "**/*.dylib",
@@ -34,7 +34,7 @@ index ee8f4a0ac9..07086e4d6b 100644
        )
      }
      resources {
-@@ -308,6 +309,7 @@ android {
+@@ -312,6 +313,7 @@ android {
      buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_6cmGZopuTsV8novGgJJW9JpC00vLIgtQ1D\"")
      buildConfigField("boolean", "TRACING_ENABLED", "false")
      buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
@@ -42,7 +42,7 @@ index ee8f4a0ac9..07086e4d6b 100644
  
      ndk {
        abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-@@ -565,12 +567,6 @@ androidComponents {
+@@ -570,12 +572,6 @@ androidComponents {
        variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
      }
  
@@ -56,7 +56,7 @@ index ee8f4a0ac9..07086e4d6b 100644
      if (variant.name.contains("nightly", ignoreCase = true)) {
        var tag = getNightlyTagForCurrentCommit()
 diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
-index 8cb7dfdd23..14b528eea8 100644
+index 001e891af5..1e5cb4a6f6 100644
 --- a/app/src/main/AndroidManifest.xml
 +++ b/app/src/main/AndroidManifest.xml
 @@ -792,6 +792,7 @@
@@ -68,10 +68,10 @@ index 8cb7dfdd23..14b528eea8 100644
              android:theme="@style/TextSecure.LightRegistrationTheme" />
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
-index e1d80e9955..1fba659074 100644
+index 1c4ce2306e..e557442b2b 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
-@@ -697,7 +697,7 @@ public final class ConversationUpdateItem extends FrameLayout
+@@ -698,7 +698,7 @@ public final class ConversationUpdateItem extends FrameLayout
        });
  
        actionButton.setText(R.string.ConversationActivity__invite_to_signal);
@@ -80,7 +80,7 @@ index e1d80e9955..1fba659074 100644
        actionButton.setText(R.string.ConversationUpdateItem_activate_payments);
        actionButton.setVisibility(VISIBLE);
        actionButton.setOnClickListener(v -> {
-@@ -707,7 +707,7 @@ public final class ConversationUpdateItem extends FrameLayout
+@@ -708,7 +708,7 @@ public final class ConversationUpdateItem extends FrameLayout
            passthroughClickListener.onClick(v);
          }
        });
@@ -90,10 +90,10 @@ index e1d80e9955..1fba659074 100644
        actionButton.setVisibility(VISIBLE);
        actionButton.setOnClickListener(v -> {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index a1c71e36f3..d2599628c1 100644
+index 26a7f5f109..944aac8669 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -137,6 +137,7 @@ import org.signal.core.util.setActionItemTint
+@@ -136,6 +136,7 @@ import org.signal.core.util.setActionItemTint
  import org.signal.donations.InAppPaymentType
  import org.signal.ringrtc.CallLinkRootKey
  import org.thoughtcrime.securesms.BlockUnblockDialog
@@ -101,7 +101,7 @@ index a1c71e36f3..d2599628c1 100644
  import org.thoughtcrime.securesms.MainActivity
  import org.thoughtcrime.securesms.MuteDialog
  import org.thoughtcrime.securesms.R
-@@ -3104,6 +3105,15 @@ class ConversationFragment :
+@@ -3119,6 +3120,15 @@ class ConversationFragment :
    }
  
    private fun handleViewPaymentDetails(conversationMessage: ConversationMessage) {
@@ -190,7 +190,7 @@ index 0742995fc2..f4706ec031 100644
        return
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index 12b61a8947..e7f4c90634 100644
+index 3d9a1ed9cf..79a8d36f06 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 @@ -15,6 +15,7 @@ import org.signal.core.util.orNull
@@ -201,7 +201,7 @@ index 12b61a8947..e7f4c90634 100644
  import org.thoughtcrime.securesms.attachments.Attachment
  import org.thoughtcrime.securesms.attachments.LocalStickerAttachment
  import org.thoughtcrime.securesms.attachments.PointerAttachment
-@@ -663,6 +664,11 @@ object DataMessageProcessor {
+@@ -664,6 +665,11 @@ object DataMessageProcessor {
    ): InsertResult? {
      log(envelope.clientTimestamp!!, "Payment message.")
  
@@ -214,7 +214,7 @@ index 12b61a8947..e7f4c90634 100644
        warn(envelope.clientTimestamp!!, "Ignoring payment message without notification")
        return null
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
-index 870f96888b..b553da1860 100644
+index e6ceea570b..2847ad848f 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
 @@ -25,6 +25,7 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord
@@ -225,7 +225,7 @@ index 870f96888b..b553da1860 100644
  import org.thoughtcrime.securesms.attachments.Attachment
  import org.thoughtcrime.securesms.attachments.DatabaseAttachment
  import org.thoughtcrime.securesms.attachments.TombstoneAttachment
-@@ -1244,6 +1245,11 @@ object SyncMessageProcessor {
+@@ -1245,6 +1246,11 @@ object SyncMessageProcessor {
    private fun handleSynchronizeOutgoingPayment(outgoingPayment: SyncMessage.OutgoingPayment, envelopeTimestamp: Long) {
      log(envelopeTimestamp, "Synchronize outgoing payment.")
  
@@ -361,7 +361,7 @@ index b3be92f2b0..78924e1b83 100644
    }
  }
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
-index e96a24ca82..97275aba14 100644
+index 1b25eb1742..8b589602b6 100644
 --- a/gradle/libs.versions.toml
 +++ b/gradle/libs.versions.toml
 @@ -185,7 +185,7 @@ rxjava3-rxjava = "io.reactivex.rxjava3:rxjava:3.1.12"
@@ -374,10 +374,10 @@ index e96a24ca82..97275aba14 100644
  leolin-shortcutbadger = "me.leolin:ShortcutBadger:1.1.22"
  glide-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 diff --git a/gradle/verification-metadata.xml b/gradle/verification-metadata.xml
-index dbbc46b7b4..68370b080e 100644
+index e56dac4c39..93e992e8b7 100644
 --- a/gradle/verification-metadata.xml
 +++ b/gradle/verification-metadata.xml
-@@ -6585,6 +6585,14 @@ https://docs.gradle.org/current/userguide/dependency_verification.html
+@@ -6691,6 +6691,14 @@ https://docs.gradle.org/current/userguide/dependency_verification.html
              <sha256 value="551ae4e301c571760d1791e647db6ed1dcb10d34dcae7aa12b67f220f2ce98d1" origin="Generated by Gradle"/>
           </artifact>
        </component>

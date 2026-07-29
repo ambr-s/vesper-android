@@ -1,7 +1,7 @@
-From db44f26034443f584e6b4c3a00e03cfd3ccd3700 Mon Sep 17 00:00:00 2001
+From 778407976d032669fb31c75117cf8c54e089383d Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 20:18:55 +0100
-Subject: [PATCH 09/18] fix: make Vesper build identity deterministic
+Subject: [PATCH 09/19] fix: make Vesper build identity deterministic
 
 Signed-off-by: amber <amber@flourish.ch>
 ---
@@ -11,10 +11,10 @@ Signed-off-by: amber <amber@flourish.ch>
  3 files changed, 125 insertions(+), 22 deletions(-)
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 07086e4d6b..56785e93b1 100644
+index 4fbe746683..352f575656 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
-@@ -241,6 +241,8 @@ android {
+@@ -245,6 +245,8 @@ android {
    }
  
    defaultConfig {
@@ -23,7 +23,7 @@ index 07086e4d6b..56785e93b1 100644
      applicationId = "systems.amber.vesper"
      if (currentHotfixVersion >= maxHotfixVersions) {
        throw AssertionError("Hotfix version offset is too large!")
-@@ -260,7 +262,9 @@ android {
+@@ -264,7 +266,9 @@ android {
  
      manifestPlaceholders["mapsKey"] = "AIzaSyCSx9xea86GwDKGznCAULE9Y5a8b-TfN9U"
  
@@ -34,7 +34,7 @@ index 07086e4d6b..56785e93b1 100644
      buildConfigField("String", "GIT_HASH", "\"${getGitHash()}\"")
      buildConfigField("String", "SIGNAL_URL", "\"https://chat.signal.org\"")
      buildConfigField("String", "STORAGE_URL", "\"https://storage.signal.org\"")
-@@ -880,6 +884,40 @@ fun getLastCommitTimestamp(): String {
+@@ -886,6 +890,40 @@ fun getLastCommitTimestamp(): String {
    }.standardOutput.asText.get() + "000"
  }
  

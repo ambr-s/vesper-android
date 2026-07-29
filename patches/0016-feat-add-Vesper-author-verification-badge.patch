@@ -1,7 +1,7 @@
-From 81723babe3c30201cf507f60feec2e1389a7e4f0 Mon Sep 17 00:00:00 2001
+From 78ee3b6d3e7e847be86266905f89d20473c3cf5a Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 19:22:12 +0100
-Subject: [PATCH 16/18] feat: add Vesper author verification badge
+Subject: [PATCH 16/19] feat: add Vesper author verification badge
 
 ---
  .../securesms/components/FromTextView.java    |  2 +-
@@ -43,7 +43,7 @@ index 0003ec9c38..86549322b6 100644
            val drawable = context.requireDrawable(CoreUiR.drawable.symbol_person_circle_24).apply {
              setTint(ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnSurface))
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
-index 3d7592d297..eb1cd08a4a 100644
+index a09b62ef1c..36a02fc7fa 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
 @@ -112,6 +112,7 @@ class ConversationHeaderView : AbstractComposeView {
@@ -77,10 +77,10 @@ index 455a82e044..2812e6b6d1 100644
      }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index 21a4233180..7773960c0d 100644
+index 37d6cefdd2..4eceaaaac3 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-@@ -332,6 +332,12 @@ class Recipient(
+@@ -333,6 +333,12 @@ class Recipient(
    /** Whether or not to show a special verified badge, indicating this is a special conversation (like release notes or note to self). */
    val showVerified: Boolean = isReleaseNotes || isSelf
  
@@ -93,7 +93,7 @@ index 21a4233180..7773960c0d 100644
    /** The notification channel, if both set and supported by the system. Otherwise null. */
    val notificationChannel: String? = if (!NotificationChannels.supported()) null else notificationChannelValue
  
-@@ -678,7 +684,7 @@ class Recipient(
+@@ -679,7 +685,7 @@ class Recipient(
      return buildSpannedString {
        append(name)
  

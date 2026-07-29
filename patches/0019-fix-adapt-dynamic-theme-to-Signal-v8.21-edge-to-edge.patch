@@ -1,0 +1,40 @@
+From 869aca985ddce8878bf99237892fd6cfaf1cd590 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Wed, 29 Jul 2026 09:40:16 +0000
+Subject: [PATCH 19/19] fix: adapt dynamic theme to Signal v8.21 edge-to-edge
+ APIs
+
+---
+ .../java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt  | 2 ++
+ .../thoughtcrime/securesms/util/Material3OnScrollHelper.kt  | 6 ++++--
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
+index 6fe9ad0dde..fb0ec1d846 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
+@@ -1,5 +1,7 @@
+ package org.thoughtcrime.securesms.keyvalue
+ 
++import org.thoughtcrime.securesms.util.RemoteConfig
++
+ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(store) {
+   companion object {
+     const val INDIVIDUAL_CHAT_PLAINTEXT_EXPORT: String = "labs.individual_chat_plaintext_export"
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt b/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
+index b634764cd4..4346f5f72e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
+@@ -23,8 +23,10 @@ import com.google.android.material.R as MaterialR
+ open class Material3OnScrollHelper(
+   private val activity: FragmentActivity,
+   private val setChatFolderColor: (Int) -> Unit = {},
+-  private val setStatusBarColor: (Int) -> Unit = { WindowUtil.setStatusBarColor(activity.window, it) },
+-  private val getStatusBarColor: () -> Int = { WindowUtil.getStatusBarColor(activity.window) },
++  // Signal v8.21 manages edge-to-edge status bars itself. Preserve the dynamic
++  // toolbar/chat-folder transitions without fighting that window policy.
++  private val setStatusBarColor: (Int) -> Unit = {},
++  private val getStatusBarColor: () -> Int = { 0 },
+   private val onSetToolbarColor: (Int) -> Unit = {},
+   private val views: List<View> = emptyList(),
+   private val viewStubs: List<Stub<out View>> = emptyList(),

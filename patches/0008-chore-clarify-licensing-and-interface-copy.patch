@@ -1,7 +1,7 @@
-From 9b6f1d6f05d2e6662524cbf9893ce83fe1ff209f Mon Sep 17 00:00:00 2001
+From 382165ff87e59ee7ccc5d983b55df42ff8d51091 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:44 +0100
-Subject: [PATCH 08/18] chore: clarify licensing and interface copy
+Subject: [PATCH 08/19] chore: clarify licensing and interface copy
 
 Add source and AGPL notices to Vesper-owned code, preserve Molly provenance, and tighten the user-facing wording in British English.
 
@@ -84,7 +84,7 @@ index 99a298f2a2..3cdff548d6 100644
  
  import android.app.Application
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
-index 91fa7b8619..eea6cff3d3 100644
+index 1cb91bef76..81c2bb989f 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 @@ -81,7 +81,7 @@ private fun LabsSettingsContent(
@@ -119,10 +119,10 @@ index 93da6ff198..da0a980982 100644
  
      SignalStore.apkUpdate.lastSuccessfulCheck = System.currentTimeMillis()
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index e7f4c90634..065a967c77 100644
+index 79a8d36f06..d41b162f1c 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-@@ -589,7 +589,7 @@ object DataMessageProcessor {
+@@ -590,7 +590,7 @@ object DataMessageProcessor {
      return if (targetMessage != null && MessageConstraintsUtil.isValidRemoteDeleteReceive(targetMessage, senderRecipientId, envelope.serverTimestamp!!)) {
        val isSelfDelete = senderRecipientId == Recipient.self().id
        if (!isSelfDelete && SignalStore.settings.isIgnoreRemoteDeleteEnabled) {

@@ -1,7 +1,7 @@
-From 89b502966612c9e0c14de87da3d418109b2e7062 Mon Sep 17 00:00:00 2001
+From 7dd58bf70e6ef17094df050a1a83d3d85b0ba871 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 18:59:34 +0100
-Subject: [PATCH 15/18] fix: use Vesper icon on Android splash screen
+Subject: [PATCH 15/19] fix: use Vesper icon on Android splash screen
 
 ---
  app/src/main/res/drawable/vesper_splash.xml  | 12 ++++++++++++

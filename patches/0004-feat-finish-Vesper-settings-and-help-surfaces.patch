@@ -1,7 +1,7 @@
-From 4edfa04d3af27922d76c89e27d5b0ccdcf0a3cb7 Mon Sep 17 00:00:00 2001
+From 79de4f82a20343c8140607421620aad84056900c Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
-Subject: [PATCH 04/18] feat: finish Vesper settings and help surfaces
+Subject: [PATCH 04/19] feat: finish Vesper settings and help surfaces
 
 Adapted from Molly work by Oscar Mira and other Molly contributors.
 
@@ -9,16 +9,15 @@ Signed-off-by: amber <amber@flourish.ch>
 ---
  .../securesms/ApplicationContext.java         |   6 +
  .../securesms/apkupdate/ApkUpdateInstaller.kt |  14 ++-
- .../settings/DSLSettingsActivity.kt           |  14 ++-
+ .../settings/DSLSettingsActivity.kt           |  13 ++-
  .../settings/app/AppSettingsFragment.kt       |  26 ++---
  .../settings/app/AppSettingsState.kt          |   4 +-
  .../settings/app/AppSettingsViewModel.kt      |   4 +-
  .../settings/app/help/HelpSettingsFragment.kt | 107 ++++++++++++++++--
  .../app/help/HelpSettingsViewModel.kt         |  53 +++++++++
  .../settings/app/labs/LabsSettingsFragment.kt |   2 +-
- .../StatusBarColorNestedScrollConnection.kt   |  19 +++-
  .../securesms/jobs/ApkUpdateJob.kt            |  39 ++++---
- .../securesms/keyvalue/LabsValues.kt          |  20 ++--
+ .../securesms/keyvalue/LabsValues.kt          |  14 +--
  .../securesms/keyvalue/MiscellaneousValues.kt |  26 +++++
  .../securesms/util/RemoteConfig.kt            |  14 +++
  .../res/drawable/reaction_pill_background.xml |   2 +-
@@ -26,15 +25,15 @@ Signed-off-by: amber <amber@flourish.ch>
  .../main/res/layout/dsl_settings_toolbar.xml  |   2 +-
  app/src/main/res/values/strings.xml           |   5 +
  .../securesms/jobs/ApkUpdateJobTest.kt        |  34 ++++++
- 19 files changed, 324 insertions(+), 69 deletions(-)
+ 18 files changed, 309 insertions(+), 58 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index d153524694..14d0df9ab6 100644
+index 24682ff17b..4232bec13c 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-@@ -67,6 +67,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
+@@ -68,6 +68,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
  import org.thoughtcrime.securesms.glide.SignalGlideComponents;
  import org.thoughtcrime.securesms.jobmanager.impl.SealedSenderConstraint;
  import org.thoughtcrime.securesms.jobs.AccountConsistencyWorkerJob;
@@ -42,7 +41,7 @@ index d153524694..14d0df9ab6 100644
  import org.thoughtcrime.securesms.jobs.BackupRefreshJob;
  import org.thoughtcrime.securesms.jobs.BackupSubscriptionCheckJob;
  import org.thoughtcrime.securesms.jobs.BuildExpirationConfirmationJob;
-@@ -279,6 +280,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -280,6 +281,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
        BackupRefreshJob.enqueueIfNecessary();
        InAppPaymentAuthCheckJob.enqueueIfNeeded();
        RemoteConfig.refreshIfNecessary();
@@ -53,7 +52,7 @@ index d153524694..14d0df9ab6 100644
        RetrieveProfileJob.enqueueRoutineFetchIfNecessary();
        executePendingContactSync();
        KeyCachingService.onAppForegrounded(this);
-@@ -363,6 +368,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -364,6 +369,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
    @VisibleForTesting
    protected void initializeLogging() {
      Log.initialize(RemoteConfig::internalUser, AndroidLogger.INSTANCE, PersistentLogger.getInstance(this));
@@ -100,10 +99,10 @@ index af21018d7d..090d3d5ce2 100644
    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt
-index 59b7743999..ef3e175802 100644
+index b37ef04415..4c80f78b88 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/DSLSettingsActivity.kt
-@@ -21,7 +21,19 @@ open class DSLSettingsActivity : PassphraseRequiredActivity() {
+@@ -26,8 +26,19 @@ open class DSLSettingsActivity : PassphraseRequiredActivity() {
    protected lateinit var navController: NavController
      private set
  
@@ -116,14 +115,14 @@ index 59b7743999..ef3e175802 100644
 +  }
 +
    override fun onCreate(savedInstanceState: Bundle?, ready: Boolean) {
+     enableSettingsEdgeToEdge()
 +    check(themeAppliedBeforeInflation) {
 +      "The dynamic settings theme must be applied before inflating views."
 +    }
-+
+ 
      setContentView(R.layout.dsl_settings_activity)
  
-     if (savedInstanceState == null) {
-@@ -42,8 +54,6 @@ open class DSLSettingsActivity : PassphraseRequiredActivity() {
+@@ -49,8 +60,6 @@ open class DSLSettingsActivity : PassphraseRequiredActivity() {
        navController = fragment.navController
      }
  
@@ -133,10 +132,10 @@ index 59b7743999..ef3e175802 100644
    }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
-index 7699a7c2b7..5b1b938397 100644
+index 4cffd35d8f..44f81d1728 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
-@@ -522,21 +522,21 @@ private fun AppSettingsContent(
+@@ -519,21 +519,21 @@ private fun AppSettingsContent(
            )
          }
  
@@ -450,7 +449,7 @@ index 0000000000..99a298f2a2
 +  }
 +}
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
-index 64c29a3cac..91fa7b8619 100644
+index 03ed443ad9..1cb91bef76 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 @@ -81,7 +81,7 @@ private fun LabsSettingsContent(
@@ -462,42 +461,6 @@ index 64c29a3cac..91fa7b8619 100644
              style = MaterialTheme.typography.bodyMedium,
              color = MaterialTheme.colorScheme.onSurfaceVariant,
              modifier = Modifier.padding(start = 12.dp)
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt b/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt
-index 61018f672c..9f8de0a0d5 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt
-+++ b/app/src/main/java/org/thoughtcrime/securesms/compose/StatusBarColorNestedScrollConnection.kt
-@@ -5,6 +5,7 @@ import android.app.Activity
- import androidx.activity.compose.LocalActivity
- import androidx.appcompat.app.AppCompatActivity
- import androidx.compose.runtime.Composable
-+import androidx.compose.runtime.LaunchedEffect
- import androidx.compose.runtime.remember
- import androidx.compose.ui.Modifier
- import androidx.compose.ui.geometry.Offset
-@@ -97,11 +98,17 @@ class StatusBarColorNestedScrollConnection(
- fun rememberStatusBarColorNestedScrollModifier(): Modifier {
-   val activity = LocalActivity.current as? AppCompatActivity
- 
--  return remember {
--    if (activity != null) {
--      Modifier.nestedScroll(StatusBarColorNestedScrollConnection(activity))
--    } else {
--      Modifier
--    }
-+  if (activity == null) {
-+    return Modifier
-+  }
-+
-+  val connection = remember(activity) {
-+    StatusBarColorNestedScrollConnection(activity)
-   }
-+
-+  LaunchedEffect(connection) {
-+    connection.setColorImmediate()
-+  }
-+
-+  return Modifier.nestedScroll(connection)
- }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
 index 4153c40fbc..93da6ff198 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
@@ -592,7 +555,7 @@ index 4153c40fbc..93da6ff198 100644
 +      )
 +}
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-index 8ff1d4ab01..45aee6857a 100644
+index a05db3074c..6fe9ad0dde 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
 @@ -1,7 +1,5 @@
@@ -603,35 +566,30 @@ index 8ff1d4ab01..45aee6857a 100644
  class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(store) {
    companion object {
      const val INDIVIDUAL_CHAT_PLAINTEXT_EXPORT: String = "labs.individual_chat_plaintext_export"
-@@ -17,21 +15,17 @@ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(
+@@ -18,17 +16,17 @@ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(
  
    public override fun getKeysToIncludeInBackup(): List<String> = emptyList()
  
 -  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true).falseForExternalUsers()
--
--  var storyArchive by booleanValue(STORY_ARCHIVE, true).falseForExternalUsers()
 +  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true)
  
--  var incognito by booleanValue(INCOGNITO, true).falseForExternalUsers()
+-  var storyArchive by booleanValue(STORY_ARCHIVE, true).falseForExternalUsers()
 +  var storyArchive by booleanValue(STORY_ARCHIVE, true)
  
--  var betterSearch by booleanValue(BETTER_SEARCH, true).falseForExternalUsers()
+-  var incognito by booleanValue(INCOGNITO, true).falseForExternalUsers()
 +  var incognito by booleanValue(INCOGNITO, true)
  
--  var starredMessages by booleanValue(STARRED_MESSAGES, true).falseForExternalUsers()
+-  var betterSearch by booleanValue(BETTER_SEARCH, true).falseForExternalUsers()
 +  var betterSearch by booleanValue(BETTER_SEARCH, true)
  
--  var stickerReplies by booleanValue(STICKER_REPLIES, false).falseForExternalUsers()
+-  var starredMessages by booleanValue(STARRED_MESSAGES, true).falseForExternalUsers()
 +  var starredMessages by booleanValue(STARRED_MESSAGES, true)
  
--  var muteBreakthroughNotifications by booleanValue(MUTE_BREAKTHROUGH_NOTIFICATIONS, true).falseForExternalUsers()
+-  var stickerReplies by booleanValue(STICKER_REPLIES, false).falseForExternalUsers()
 +  var stickerReplies by booleanValue(STICKER_REPLIES, false)
  
--  private fun SignalStoreValueDelegate<Boolean>.falseForExternalUsers(): SignalStoreValueDelegate<Boolean> {
--    return this.map { actualValue -> RemoteConfig.internalUser && actualValue }
--  }
-+  var muteBreakthroughNotifications by booleanValue(MUTE_BREAKTHROUGH_NOTIFICATIONS, true)
- }
+   var muteBreakthroughNotifications by booleanValue(MUTE_BREAKTHROUGH_NOTIFICATIONS, true).falseForExternalUsers()
+ 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
 index c9afb24813..320cdf09b2 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
@@ -675,10 +633,10 @@ index c9afb24813..320cdf09b2 100644
 +    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 105420e1c6..54a4ed2540 100644
+index 5cc7ad3527..52795e3f97 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-@@ -90,9 +90,14 @@ object RemoteConfig {
+@@ -91,9 +91,14 @@ object RemoteConfig {
    @Volatile
    var internalUserDisabled: Boolean = false
  
@@ -693,7 +651,7 @@ index 105420e1c6..54a4ed2540 100644
        val current = parseStoredConfig(SignalStore.remoteConfig.currentConfig)
        val pending = parseStoredConfig(SignalStore.remoteConfig.pendingConfig)
        val changes = computeChanges(current, pending)
-@@ -107,6 +112,13 @@ object RemoteConfig {
+@@ -108,6 +113,13 @@ object RemoteConfig {
      }
    }
  
@@ -707,7 +665,7 @@ index 105420e1c6..54a4ed2540 100644
    @JvmStatic
    fun refreshIfNecessary() {
      val timeSinceLastFetch = System.currentTimeMillis() - SignalStore.remoteConfig.lastFetchTime
-@@ -622,8 +634,10 @@ object RemoteConfig {
+@@ -651,8 +663,10 @@ object RemoteConfig {
      key = "android.internalUser",
      hotSwappable = true
    ) { value ->
@@ -754,10 +712,10 @@ index 8cf26a497e..4435845403 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
-index 96a27ffd91..78e4ed0fcb 100644
+index a594bba741..79babbb7dd 100644
 --- a/app/src/main/res/values/strings.xml
 +++ b/app/src/main/res/values/strings.xml
-@@ -4397,6 +4397,8 @@
+@@ -4423,6 +4423,8 @@
  
      <!-- Internal only preferences -->
      <string name="preferences__internal_preferences" translatable="false">Internal Preferences</string>
@@ -766,7 +724,7 @@ index 96a27ffd91..78e4ed0fcb 100644
      <string name="preferences__internal_details" translatable="false">Internal Details</string>
      <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
  
-@@ -6043,6 +6045,9 @@
+@@ -6069,6 +6071,9 @@
      <string name="HelpFragment__licenced_under_the_agplv3">Licensed under the GNU AGPLv3</string>
      <!-- Non-English translations should use "Signal is a nonprofit." instead, dropping the 501c3 reference. -->
      <string name="HelpSettingsFragment__signal_is_a_501c3">Signal is a 501c3 nonprofit</string>
