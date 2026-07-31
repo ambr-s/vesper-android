@@ -1,4 +1,4 @@
-From 382165ff87e59ee7ccc5d983b55df42ff8d51091 Mon Sep 17 00:00:00 2001
+From 34edca73a99d22d099f8eca1b71bcda8e84925c7 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:44 +0100
 Subject: [PATCH 08/19] chore: clarify licensing and interface copy
@@ -210,7 +210,7 @@ index 24bd3c580e..712f5e23f3 100644
  
  import org.junit.Assert.assertFalse
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index ace52d7bb6..a8d753616b 100644
+index 81bd06a888..0a01038c5b 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 @@ -229,9 +229,8 @@ fun SignalTheme(

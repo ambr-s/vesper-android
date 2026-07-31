@@ -1,4 +1,4 @@
-From 5af314020579e099f9ffc6baea9e1ccd3359725d Mon Sep 17 00:00:00 2001
+From ae1cf0789f2fce2dc7f601d084e7a898b52f6f0c Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 26 Jul 2026 15:32:03 +0100
 Subject: [PATCH 10/19] feat: complete Vesper theme controls
@@ -1489,7 +1489,7 @@ index bbe42c1f7c..4b698938a3 100644
          <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
          <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index a8d753616b..86a297f71f 100644
+index 0a01038c5b..209e620303 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 @@ -218,6 +218,71 @@ private val darkColorScheme = darkColorScheme(
@@ -1590,7 +1590,7 @@ index a8d753616b..86a297f71f 100644
    val snackbarColors = snackbarColors(colorScheme)
  
    ProvideIncognitoKeyboard(enabled = incognitoKeyboardEnabled) {
-@@ -338,7 +406,13 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
+@@ -351,7 +419,13 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
      typedValue.data != 0
  }
  
@@ -1605,7 +1605,7 @@ index a8d753616b..86a297f71f 100644
    return when {
      isDynamic -> lightExtendedColors.copy(
        colorSurface1 = colorScheme.surfaceContainerLow,
-@@ -347,8 +421,10 @@ private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDyna
+@@ -360,8 +434,10 @@ private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDyna
        colorSurface4 = colorScheme.surfaceContainerHighest,
        colorSurface5 = if (isDarkMode) colorScheme.surfaceBright else colorScheme.surfaceDim
      )

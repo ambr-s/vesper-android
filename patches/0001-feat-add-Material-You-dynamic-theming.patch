@@ -1,4 +1,4 @@
-From 6c6e43045198e4006ff370128ea642a486a6d657 Mon Sep 17 00:00:00 2001
+From 56ce5cdf3aed4e692ef9bde733be3bb5e541433c Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
 Subject: [PATCH 01/19] feat: add Material You dynamic theming
@@ -604,10 +604,10 @@ index b8d0f12674..e7fb539d5c 100644
        SignalStore.settings.language,
        SignalStore.settings.useCompactNavigationBar
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
-index a325d7486c..a8fcf7c964 100644
+index 7103fae876..1658d31eab 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
-@@ -114,8 +114,8 @@ class DonateToSignalFragment :
+@@ -116,8 +116,8 @@ class DonateToSignalFragment :
  
    override fun getMaterial3OnScrollHelper(toolbar: Toolbar?): Material3OnScrollHelper {
      return object : Material3OnScrollHelper(activity = requireActivity(), views = listOf(toolbar!!), lifecycleOwner = viewLifecycleOwner) {
@@ -619,10 +619,10 @@ index a325d7486c..a8fcf7c964 100644
    }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt
-index 21f24b4fe4..794dadb095 100644
+index fa183f37b7..ca08d7f7a0 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/manage/ManageDonationsFragment.kt
-@@ -137,8 +137,8 @@ class ManageDonationsFragment :
+@@ -139,8 +139,8 @@ class ManageDonationsFragment :
  
    override fun getMaterial3OnScrollHelper(toolbar: Toolbar?): Material3OnScrollHelper {
      return object : Material3OnScrollHelper(activity = requireActivity(), views = listOf(toolbar!!), lifecycleOwner = viewLifecycleOwner) {
@@ -2934,7 +2934,7 @@ index 254cfffa57..cea9e80f5c 100644
          content = imageContent
        )
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index 2bb4bc7f6d..ace52d7bb6 100644
+index 722cc64f3b..81bd06a888 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 @@ -1,21 +1,31 @@
@@ -3098,7 +3098,7 @@ index 2bb4bc7f6d..ace52d7bb6 100644
          typography = typography,
          content = content
        )
-@@ -214,6 +257,123 @@ fun SignalTheme(
+@@ -227,6 +270,123 @@ fun ForceLightColors(content: @Composable () -> Unit) {
    }
  }
  

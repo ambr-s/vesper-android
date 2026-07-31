@@ -1,4 +1,4 @@
-From 79de4f82a20343c8140607421620aad84056900c Mon Sep 17 00:00:00 2001
+From 4002db36639a0d6f70ed5d54649eceae420a9ac6 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
 Subject: [PATCH 04/19] feat: finish Vesper settings and help surfaces
@@ -30,7 +30,7 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index 24682ff17b..4232bec13c 100644
+index e3cb310c99..9f659b8001 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 @@ -68,6 +68,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
@@ -41,7 +41,7 @@ index 24682ff17b..4232bec13c 100644
  import org.thoughtcrime.securesms.jobs.BackupRefreshJob;
  import org.thoughtcrime.securesms.jobs.BackupSubscriptionCheckJob;
  import org.thoughtcrime.securesms.jobs.BuildExpirationConfirmationJob;
-@@ -280,6 +281,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -279,6 +280,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
        BackupRefreshJob.enqueueIfNecessary();
        InAppPaymentAuthCheckJob.enqueueIfNeeded();
        RemoteConfig.refreshIfNecessary();
@@ -52,7 +52,7 @@ index 24682ff17b..4232bec13c 100644
        RetrieveProfileJob.enqueueRoutineFetchIfNecessary();
        executePendingContactSync();
        KeyCachingService.onAppForegrounded(this);
-@@ -364,6 +369,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -363,6 +368,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
    @VisibleForTesting
    protected void initializeLogging() {
      Log.initialize(RemoteConfig::internalUser, AndroidLogger.INSTANCE, PersistentLogger.getInstance(this));
@@ -712,7 +712,7 @@ index 8cf26a497e..4435845403 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
-index a594bba741..79babbb7dd 100644
+index 52ecd2e8ae..24d523b6c0 100644
 --- a/app/src/main/res/values/strings.xml
 +++ b/app/src/main/res/values/strings.xml
 @@ -4423,6 +4423,8 @@

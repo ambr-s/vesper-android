@@ -1,4 +1,4 @@
-From 73debed3b3dc8d5aa87d2b6d2bcd1c2540ddfe58 Mon Sep 17 00:00:00 2001
+From 2dcd9c889a920f31055649d3427fb1eed3a720bf Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Mon, 27 Jul 2026 16:24:37 +0100
 Subject: [PATCH 18/19] feat: load shared Vesper account configuration
@@ -22,18 +22,18 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index 4232bec13c..99db8c4574 100644
+index 9f659b8001..9248b0dcff 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-@@ -133,6 +133,7 @@ import org.thoughtcrime.securesms.util.SqlCipherLogTarget;
- import org.thoughtcrime.securesms.util.SupportEmailUtil;
+@@ -132,6 +132,7 @@ import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
+ import org.thoughtcrime.securesms.util.SqlCipherLogTarget;
  import org.thoughtcrime.securesms.util.TextSecurePreferences;
  import org.thoughtcrime.securesms.util.VersionTracker;
 +import org.thoughtcrime.securesms.util.VesperConfig;
  import org.thoughtcrime.securesms.util.dynamiclanguage.DynamicLanguageContextWrapper;
  import org.whispersystems.signalservice.api.websocket.SignalWebSocket;
  
-@@ -207,6 +208,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -206,6 +207,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
                  }
                })
                .addBlocking("blob-provider", this::initializeBlobProvider)
@@ -41,7 +41,7 @@ index 4232bec13c..99db8c4574 100644
                .addBlocking("remote-config", RemoteConfig::init)
                .addBlocking("ring-rtc", this::initializeRingRtc)
                .addBlocking("glide", () -> SignalGlideModule.setRegisterGlideComponents(new SignalGlideComponents()))
-@@ -227,6 +229,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -226,6 +228,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
                .addNonBlocking(StorageSyncHelper::scheduleRoutineSync)
                .addNonBlocking(this::beginJobLoop)
                .addNonBlocking(EmojiSource::refresh)

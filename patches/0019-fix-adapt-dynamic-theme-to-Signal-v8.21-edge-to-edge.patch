@@ -1,4 +1,4 @@
-From 869aca985ddce8878bf99237892fd6cfaf1cd590 Mon Sep 17 00:00:00 2001
+From a40e6e1419b7741cffbd82fa48fe865b2e3a7bc6 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Wed, 29 Jul 2026 09:40:16 +0000
 Subject: [PATCH 19/19] fix: adapt dynamic theme to Signal v8.21 edge-to-edge

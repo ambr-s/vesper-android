@@ -1,4 +1,4 @@
-From 9061c86efc2d33440f4ff1ec9f802de994a1b1f4 Mon Sep 17 00:00:00 2001
+From a460c546a125ef7b7e47a773168982a6ceace3b5 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:43 +0100
 Subject: [PATCH 05/19] feat: add installable debug build variant
@@ -15,7 +15,7 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/debug/res/values/strings.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index c2f8bf1821..e4bce0fcfb 100644
+index cc4543626b..2cb2ce7bd2 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -87,8 +87,10 @@ val selectableVariants = listOf(

@@ -1,4 +1,4 @@
-From d3547d7f0bd08b26dfca1a9e313f49c9d5e738b1 Mon Sep 17 00:00:00 2001
+From d7805428d74befa5c4c575e76934bedbb6c289f9 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:43 +0100
 Subject: [PATCH 06/19] feat: support 16 KB devices without MobileCoin payments
@@ -21,7 +21,7 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/main/res/values/vesper_features.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index e4bce0fcfb..4fbe746683 100644
+index 2cb2ce7bd2..90a3ac5867 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -216,7 +216,8 @@ android {

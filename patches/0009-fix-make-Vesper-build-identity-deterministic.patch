@@ -1,4 +1,4 @@
-From 778407976d032669fb31c75117cf8c54e089383d Mon Sep 17 00:00:00 2001
+From a03f2d32c5535b3715c5b98622a935ef54b593be Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 20:18:55 +0100
 Subject: [PATCH 09/19] fix: make Vesper build identity deterministic
@@ -11,7 +11,7 @@ Signed-off-by: amber <amber@flourish.ch>
  3 files changed, 125 insertions(+), 22 deletions(-)
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 4fbe746683..352f575656 100644
+index 90a3ac5867..a9b1e92f56 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -245,6 +245,8 @@ android {
