@@ -1,11 +1,8 @@
-From de7bf44787bca8cfbc2fbcafa5d8388a5fa25218 Mon Sep 17 00:00:00 2001
-From: amber <amber@flourish.ch>
-Date: Sat, 25 Jul 2026 18:30:42 +0100
+From abb797b3f1d036ddbb7565a14337347503b0c13f Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:44:38 +0000
 Subject: [PATCH 03/19] feat: optionally preserve remotely deleted messages
 
-Keep a local marker when Vesper honours the user setting instead of a remote deletion request.
-
-Signed-off-by: amber <amber@flourish.ch>
 ---
  .../v2/exporters/ChatItemArchiveExporter.kt   |  2 +
  .../app/privacy/PrivacySettingsFragment.kt    | 24 ++++++++++++
@@ -119,10 +116,10 @@ index 924569866d..23ac7d4a24 100644
        screenLockActivityTimeout = SignalStore.settings.screenLockTimeout,
        screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(AppDependencies.application),
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index c56c6d54b1..3d9a1ed9cf 100644
+index ce416014d4..c05768c9c3 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-@@ -587,9 +587,16 @@ object DataMessageProcessor {
+@@ -586,9 +586,16 @@ object DataMessageProcessor {
      val targetMessage: MessageRecord? = SignalDatabase.messages.getMessageFor(targetSentTimestamp, senderRecipientId)
  
      return if (targetMessage != null && MessageConstraintsUtil.isValidRemoteDeleteReceive(targetMessage, senderRecipientId, envelope.serverTimestamp!!)) {

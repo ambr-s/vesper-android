@@ -1,6 +1,6 @@
-From ae1cf0789f2fce2dc7f601d084e7a898b52f6f0c Mon Sep 17 00:00:00 2001
+From 8fd49e560348a46c164c802badd65f835532fe18 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
-Date: Sun, 26 Jul 2026 15:32:03 +0100
+Date: Thu, 6 Aug 2026 07:45:11 +0000
 Subject: [PATCH 10/19] feat: complete Vesper theme controls
 
 ---
@@ -563,10 +563,10 @@ index a49c5956dd..b4cb38cd58 100644
    }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java b/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java
-index 4d71cf5cf1..6fd3467768 100644
+index 13d64fe03e..4d4e9b99d6 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/wallpaper/crop/WallpaperCropActivity.java
-@@ -230,8 +230,14 @@ public final class WallpaperCropActivity extends BaseActivity {
+@@ -239,8 +239,14 @@ public final class WallpaperCropActivity extends BaseActivity {
    }
  
    private static final class DynamicWallpaperTheme extends DynamicTheme {
@@ -830,7 +830,7 @@ index 85b6413df3..295ec4a879 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/layout/v2_media_review_fragment.xml b/app/src/main/res/layout/v2_media_review_fragment.xml
-index b54d0a1069..ce37b33fa6 100644
+index 16765572d5..bcb7a53aa9 100644
 --- a/app/src/main/res/layout/v2_media_review_fragment.xml
 +++ b/app/src/main/res/layout/v2_media_review_fragment.xml
 @@ -22,7 +22,7 @@

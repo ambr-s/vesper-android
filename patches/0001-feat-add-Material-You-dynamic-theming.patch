@@ -1,4 +1,4 @@
-From 56ce5cdf3aed4e692ef9bde733be3bb5e541433c Mon Sep 17 00:00:00 2001
+From bf6063bcf553111020b9b7c16951a58326bdc7d9 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
 Subject: [PATCH 01/19] feat: add Material You dynamic theming
@@ -42,7 +42,6 @@ Signed-off-by: amber <amber@flourish.ch>
  .../securesms/keyvalue/SettingsValues.java    |  21 ++
  .../logsubmit/SubmitDebugLogActivity.java     |  16 +-
  .../securesms/main/MainNavigation.kt          |  15 +-
- .../mediapreview/MediaPreviewV2Activity.kt    |  14 +-
  .../mediasend/AvatarSelectionActivity.java    |  10 +
  .../mediasend/v2/MediaSelectionActivity.kt    |  11 +
  .../v2/stories/ChooseStoryTypeBottomSheet.kt  |   8 +-
@@ -73,7 +72,6 @@ Signed-off-by: amber <amber@flourish.ch>
  .../contact_selection_invite_action_item.xml  |   4 +-
  .../contact_selection_new_group_item.xml      |   4 +-
  .../contact_selection_refresh_action_item.xml |   4 +-
- .../res/layout/fragment_media_preview_v2.xml  |   9 +-
  app/src/main/res/values-night-v31/themes.xml  |   2 +-
  app/src/main/res/values/colors.xml            |   2 +-
  app/src/main/res/values/signal_styles.xml     |  32 +-
@@ -82,7 +80,7 @@ Signed-off-by: amber <amber@flourish.ch>
  .../core/ui/compose/theme/SignalTheme.kt      | 208 +++++++++--
  .../org/signal/core/ui/fonts/SignalSymbols.kt |   9 +-
  .../org/signal/core/ui/util/ThemeUtil.java    |  27 +-
- 75 files changed, 1022 insertions(+), 334 deletions(-)
+ 73 files changed, 1005 insertions(+), 328 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java b/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java
@@ -127,7 +125,7 @@ index 4982c2605f..22721e75df 100644
  
      WindowUtil.clearLightStatusBar(getWindow());
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
-index ecd29b27ce..eee14454c0 100644
+index c253939dc6..604258e906 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
 @@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
@@ -150,7 +148,7 @@ index ecd29b27ce..eee14454c0 100644
  import org.signal.core.util.AppForegroundObserver
  import org.signal.core.util.Util
  import org.signal.core.util.concurrent.LifecycleDisposable
-@@ -579,7 +578,7 @@ class MainActivity :
+@@ -569,7 +568,7 @@ class MainActivity :
                Column(
                  modifier = Modifier
                    .clip(contentLayoutData.navigationBarShape)
@@ -159,7 +157,7 @@ index ecd29b27ce..eee14454c0 100644
                ) {
                  MainNavigationBar(
                    state = mainNavigationState,
-@@ -800,9 +799,8 @@ class MainActivity :
+@@ -790,9 +789,8 @@ class MainActivity :
            SignalTheme.colors.colorSurface1
          }
  
@@ -170,7 +168,7 @@ index ecd29b27ce..eee14454c0 100644
          LaunchedEffect(isDarkTheme, navBarColor) {
            if (Build.VERSION.SDK_INT >= 26) {
              enableEdgeToEdge(
-@@ -815,6 +813,10 @@ class MainActivity :
+@@ -805,6 +803,10 @@ class MainActivity :
            } else {
              enableEdgeToEdge()
            }
@@ -301,7 +299,7 @@ index bb51b3f77b..3a39cf4946 100644
    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
-index 4f43024887..76f48888d3 100644
+index 55551dd188..0b57735526 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
 @@ -1,7 +1,5 @@
@@ -317,9 +315,9 @@ index 4f43024887..76f48888d3 100644
  import com.google.android.material.dialog.MaterialAlertDialogBuilder;
  
 +import org.signal.core.ui.util.ThemeUtil;
+ import org.signal.core.models.database.StickerRecord;
  import org.signal.core.ui.view.Stub;
  import org.signal.core.util.ThreadUtil;
- import org.signal.core.util.concurrent.ListenableFuture;
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/menu/ActionItem.kt b/app/src/main/java/org/thoughtcrime/securesms/components/menu/ActionItem.kt
 index c64b263888..57ac1a1c7b 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/menu/ActionItem.kt
@@ -604,10 +602,10 @@ index b8d0f12674..e7fb539d5c 100644
        SignalStore.settings.language,
        SignalStore.settings.useCompactNavigationBar
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
-index 7103fae876..1658d31eab 100644
+index 8e840e8eea..c2d21f258d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/donate/DonateToSignalFragment.kt
-@@ -116,8 +116,8 @@ class DonateToSignalFragment :
+@@ -118,8 +118,8 @@ class DonateToSignalFragment :
  
    override fun getMaterial3OnScrollHelper(toolbar: Toolbar?): Material3OnScrollHelper {
      return object : Material3OnScrollHelper(activity = requireActivity(), views = listOf(toolbar!!), lifecycleOwner = viewLifecycleOwner) {
@@ -733,13 +731,13 @@ index 129558d369..0003ec9c38 100644
          }
        )
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
-index ec1c036127..6e814471dc 100644
+index 9666790521..869679f441 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
 @@ -129,6 +129,7 @@ import org.thoughtcrime.securesms.linkpreview.LinkPreview;
  import org.thoughtcrime.securesms.mediapreview.MediaIntentFactory;
  import org.thoughtcrime.securesms.mediapreview.MediaPreviewCache;
- import org.thoughtcrime.securesms.mediapreview.MediaPreviewV2Fragment;
+ import org.thoughtcrime.securesms.mediapreview.MediaPreviewFragment;
 +import org.thoughtcrime.securesms.messages.PreservedRemoteDelete;
  import org.thoughtcrime.securesms.mms.ImageSlide;
  import org.thoughtcrime.securesms.mms.PartAuthority;
@@ -868,10 +866,10 @@ index 5b58874ee0..10a6aab945 100644
        )
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index 927ca573cf..26a7f5f109 100644
+index ec468e9a76..958b443fd8 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -397,6 +397,7 @@ import java.util.Optional
+@@ -398,6 +398,7 @@ import java.util.Optional
  import java.util.concurrent.ExecutionException
  import kotlin.time.Duration.Companion.days
  import kotlin.time.Duration.Companion.milliseconds
@@ -879,7 +877,7 @@ index 927ca573cf..26a7f5f109 100644
  import org.signal.core.ui.R as CoreUiR
  
  /**
-@@ -1826,9 +1827,9 @@ class ConversationFragment :
+@@ -1825,9 +1826,9 @@ class ConversationFragment :
      if (!resources.isSplitPane() || isFullScreenPane) {
        binding.toolbar.setNavigationIcon(CoreUiR.drawable.symbol_arrow_start_24)
        binding.toolbar.navigationIcon?.setTint(
@@ -891,7 +889,7 @@ index 927ca573cf..26a7f5f109 100644
          )
        )
        binding.toolbar.setNavigationContentDescription(R.string.ConversationFragment__content_description_back_button)
-@@ -1912,12 +1913,12 @@ class ConversationFragment :
+@@ -1911,12 +1912,12 @@ class ConversationFragment :
  
      val wallpaperEnabled = chatWallpaper != null || recipient.isReleaseNotes
  
@@ -906,7 +904,7 @@ index 927ca573cf..26a7f5f109 100644
        }
      )
  
-@@ -1943,9 +1944,9 @@ class ConversationFragment :
+@@ -1942,9 +1943,9 @@ class ConversationFragment :
      )
  
      binding.scrollDateHeader.setTextColor(
@@ -918,7 +916,7 @@ index 927ca573cf..26a7f5f109 100644
        )
      )
  
-@@ -1985,10 +1986,10 @@ class ConversationFragment :
+@@ -1984,10 +1985,10 @@ class ConversationFragment :
      val navColor = if (hasWallpaper) {
        R.color.conversation_navigation_wallpaper
      } else {
@@ -931,7 +929,7 @@ index 927ca573cf..26a7f5f109 100644
    }
  
    private fun presentChatColors(chatColors: ChatColors) {
-@@ -4313,12 +4314,12 @@ class ConversationFragment :
+@@ -4310,12 +4311,12 @@ class ConversationFragment :
          }
        }
  
@@ -1244,7 +1242,7 @@ index 125cc28a32..53537b8db2 100644
      putBoolean(PASSPHRASE_DISABLED, disabled);
    }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java b/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java
-index eeb37eeb25..11b85f3281 100644
+index 6d9f12eea0..21b64822c2 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/logsubmit/SubmitDebugLogActivity.java
 @@ -261,7 +261,7 @@ public class SubmitDebugLogActivity extends BaseActivity {
@@ -1340,47 +1338,8 @@ index 84034df524..a05ccc0fad 100644
            modifier = Modifier.padding(bottom = if (MainNavigationListLocation.entries.lastIndex == idx) 0.dp else 16.dp),
            icon = {
              NavigationDestinationIcon(
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt b/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt
-index 7b06572f00..55c2f59ad3 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt
-+++ b/app/src/main/java/org/thoughtcrime/securesms/mediapreview/MediaPreviewV2Activity.kt
-@@ -20,6 +20,8 @@ import org.thoughtcrime.securesms.R
- import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaController
- import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaControllerOwner
- import org.thoughtcrime.securesms.util.WindowUtil
-+import org.thoughtcrime.securesms.util.DynamicMediaPreviewTheme
-+import org.thoughtcrime.securesms.util.DynamicTheme
- 
- class MediaPreviewV2Activity : PassphraseRequiredActivity(), VoiceNoteMediaControllerOwner {
- 
-@@ -32,6 +34,17 @@ class MediaPreviewV2Activity : PassphraseRequiredActivity(), VoiceNoteMediaContr
-   }
- 
-   private lateinit var transitionImageView: ImageView
-+  private val theme: DynamicTheme = DynamicMediaPreviewTheme()
-+
-+  override fun onPreCreate() {
-+    super.onPreCreate()
-+    theme.onCreate(this)
-+  }
-+
-+  override fun onResume() {
-+    super.onResume()
-+    theme.onResume(this)
-+  }
- 
-   override fun attachBaseContext(newBase: Context) {
-     delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
-@@ -84,7 +97,6 @@ class MediaPreviewV2Activity : PassphraseRequiredActivity(), VoiceNoteMediaContr
-     }
- 
-     super.onCreate(savedInstanceState, ready)
--    setTheme(R.style.TextSecure_MediaPreview)
-     setContentView(R.layout.activity_mediapreview_v2)
- 
-     transitionImageView = findViewById(R.id.transition_image_view)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java b/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java
-index 1916fb10d5..dad9049135 100644
+index 01de1886ad..002b52b900 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/AvatarSelectionActivity.java
 @@ -26,6 +26,8 @@ import org.thoughtcrime.securesms.mms.PushMediaConstraints;
@@ -1391,7 +1350,7 @@ index 1916fb10d5..dad9049135 100644
 +import org.thoughtcrime.securesms.util.DynamicTheme;
  import org.thoughtcrime.securesms.util.MediaUtil;
  
- import java.io.FileDescriptor;
+ import org.signal.core.util.SeekableFileDescriptor;
 @@ -42,6 +44,13 @@ public class AvatarSelectionActivity extends AppCompatActivity implements Camera
    public static final String EXTRA_MEDIA = "avatar.media";
  
@@ -1415,11 +1374,11 @@ index 1916fb10d5..dad9049135 100644
      super.onCreate(savedInstanceState);
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
-index fb42156640..0fe899d4f6 100644
+index fe79b981d1..121560522a 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
-@@ -53,6 +53,8 @@ import org.thoughtcrime.securesms.mediasend.v2.text.TextStoryPostCreationViewMod
- import org.thoughtcrime.securesms.mediasend.v2.text.send.TextStoryPostSendRepository
+@@ -51,6 +51,8 @@ import org.thoughtcrime.securesms.mediasend.v2.review.MediaReviewFragment
+ import org.thoughtcrime.securesms.mediasend.v2.text.TextStoryPostCreationFragment
  import org.thoughtcrime.securesms.recipients.RecipientId
  import org.thoughtcrime.securesms.stories.Stories
 +import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
@@ -1427,7 +1386,7 @@ index fb42156640..0fe899d4f6 100644
  import org.thoughtcrime.securesms.util.navigation.safeNavigate
  
  class MediaSelectionActivity :
-@@ -91,6 +93,12 @@ class MediaSelectionActivity :
+@@ -93,6 +95,12 @@ class MediaSelectionActivity :
      get() = intent.getCharSequenceExtra(MESSAGE)
  
    private val debouncer = Debouncer(200)
@@ -1440,7 +1399,7 @@ index fb42156640..0fe899d4f6 100644
  
    override fun attachBaseContext(newBase: Context) {
      delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
-@@ -98,6 +106,9 @@ class MediaSelectionActivity :
+@@ -100,6 +108,9 @@ class MediaSelectionActivity :
    }
  
    override fun onPreCreate() {
@@ -1598,7 +1557,7 @@ index c26ddbf4ba..855d5e12a7 100644
      itemView.setOnClickListener(v -> callbacks.onPaymentItem(model));
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java b/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java
-index fa4947e025..245e86ca53 100644
+index b709e562b8..2794bb4fd2 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/preferences/EditProxyFragment.java
 @@ -20,14 +20,15 @@ import androidx.navigation.Navigation;
@@ -1629,7 +1588,7 @@ index fa4947e025..245e86ca53 100644
          case CONNECTED:
            proxyStatus.setText(R.string.preferences_connected_to_proxy);
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
-index a23b09bc2a..3e8f5e0e0a 100644
+index ae10256f2b..0119ae26f3 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
 @@ -190,8 +190,8 @@ public class UsernameEditFragment extends LoggingFragment {
@@ -1755,7 +1714,7 @@ index c4d56a9faa..38a41459e9 100644
    private final Handler  handler                = new Handler(Looper.getMainLooper());
    private final Runnable durationUpdateRunnable = () -> {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java b/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java
-index 3fd167207e..e1b221efb4 100644
+index 28f099e86e..93e1b5f172 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/scribbles/ImageEditorStickerSelectActivity.java
 @@ -26,11 +26,20 @@ import org.thoughtcrime.securesms.scribbles.stickers.FeatureSticker;
@@ -1788,10 +1747,10 @@ index 3fd167207e..e1b221efb4 100644
      super.onCreate(savedInstanceState);
      setContentView(R.layout.scribble_select_new_sticker_activity);
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt
-index ba36814aec..f3553b0a71 100644
+index ed76d94e02..2afe86ab00 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/stories/viewer/StoryViewerActivity.kt
-@@ -26,6 +26,8 @@ import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaControllerOwner
+@@ -30,6 +30,8 @@ import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaControllerOwner
  import org.thoughtcrime.securesms.stories.StoryViewerArgs
  import org.thoughtcrime.securesms.stories.viewer.page.StoryViewStateCache
  import org.thoughtcrime.securesms.stories.viewer.page.StoryViewStateViewModel
@@ -1800,7 +1759,7 @@ index ba36814aec..f3553b0a71 100644
  import org.thoughtcrime.securesms.util.ViewUtil
  import kotlin.math.max
  import kotlin.math.min
-@@ -34,6 +36,12 @@ class StoryViewerActivity : PassphraseRequiredActivity(), VoiceNoteMediaControll
+@@ -38,6 +40,12 @@ class StoryViewerActivity : PassphraseRequiredActivity(), VoiceNoteMediaControll
  
    private val viewModel: StoryVolumeViewModel by viewModels()
    private val storyViewStateViewModel: StoryViewStateViewModel by viewModels()
@@ -1813,7 +1772,7 @@ index ba36814aec..f3553b0a71 100644
  
    val ringerModeReceiver = RingerModeReceiver()
  
-@@ -103,6 +111,7 @@ class StoryViewerActivity : PassphraseRequiredActivity(), VoiceNoteMediaControll
+@@ -99,6 +107,7 @@ class StoryViewerActivity : PassphraseRequiredActivity(), VoiceNoteMediaControll
  
    override fun onResume() {
      super.onResume()
@@ -2307,45 +2266,6 @@ index 545b98372c..25837ed798 100644
  
      <TextView
          android:id="@+id/title"
-diff --git a/app/src/main/res/layout/fragment_media_preview_v2.xml b/app/src/main/res/layout/fragment_media_preview_v2.xml
-index 622371e0fd..7bf37474d6 100644
---- a/app/src/main/res/layout/fragment_media_preview_v2.xml
-+++ b/app/src/main/res/layout/fragment_media_preview_v2.xml
-@@ -3,8 +3,7 @@
-     xmlns:app="http://schemas.android.com/apk/res-auto"
-     xmlns:tools="http://schemas.android.com/tools"
-     android:layout_width="match_parent"
--    android:layout_height="match_parent"
--    android:background="@color/signal_dark_colorSurface">
-+    android:layout_height="match_parent">
- 
-     <androidx.viewpager2.widget.ViewPager2
-         android:id="@+id/media_pager"
-@@ -21,7 +20,7 @@
-         android:layout_gravity="bottom"
-         android:alpha="0"
-         android:animateLayoutChanges="false"
--        android:background="@color/signal_dark_colorSurface_87"
-+        android:background="@color/media_preview_bar_background"
-         android:gravity="bottom"
-         android:orientation="vertical"
-         android:visibility="invisible"
-@@ -54,7 +53,7 @@
-         android:id="@+id/toolbar_layout"
-         android:layout_width="match_parent"
-         android:layout_height="wrap_content"
--        android:background="@color/signal_dark_colorSurface_87"
-+        android:background="@color/media_preview_bar_background"
-         app:elevation="0dp">
- 
-         <View
-@@ -74,4 +73,4 @@
- 
-     </com.google.android.material.appbar.AppBarLayout>
- 
--</androidx.coordinatorlayout.widget.CoordinatorLayout>
-\ No newline at end of file
-+</androidx.coordinatorlayout.widget.CoordinatorLayout>
 diff --git a/app/src/main/res/values-night-v31/themes.xml b/app/src/main/res/values-night-v31/themes.xml
 index da485359b5..e8bd1b2026 100644
 --- a/app/src/main/res/values-night-v31/themes.xml

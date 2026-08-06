@@ -1,9 +1,8 @@
-From d7805428d74befa5c4c575e76934bedbb6c289f9 Mon Sep 17 00:00:00 2001
-From: amber <amber@flourish.ch>
-Date: Sat, 25 Jul 2026 18:30:43 +0100
+From 05ecf74f554bbcebe1f55b4372bdec6b7d9d8169 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:10 +0000
 Subject: [PATCH 06/19] feat: support 16 KB devices without MobileCoin payments
 
-Signed-off-by: amber <amber@flourish.ch>
 ---
  app/build.gradle.kts                          | 10 +-
  app/src/main/AndroidManifest.xml              |  1 +
@@ -21,7 +20,7 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/main/res/values/vesper_features.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 2cb2ce7bd2..90a3ac5867 100644
+index 7b88b0573e..a25e03d994 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -216,7 +216,8 @@ android {
@@ -56,7 +55,7 @@ index 2cb2ce7bd2..90a3ac5867 100644
      if (variant.name.contains("nightly", ignoreCase = true)) {
        var tag = getNightlyTagForCurrentCommit()
 diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
-index 001e891af5..1e5cb4a6f6 100644
+index e06e19e6d1..4e9976b7ed 100644
 --- a/app/src/main/AndroidManifest.xml
 +++ b/app/src/main/AndroidManifest.xml
 @@ -792,6 +792,7 @@
@@ -90,10 +89,10 @@ index 1c4ce2306e..e557442b2b 100644
        actionButton.setVisibility(VISIBLE);
        actionButton.setOnClickListener(v -> {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index 26a7f5f109..944aac8669 100644
+index 958b443fd8..179a85adf2 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -136,6 +136,7 @@ import org.signal.core.util.setActionItemTint
+@@ -137,6 +137,7 @@ import org.signal.core.util.setActionItemTint
  import org.signal.donations.InAppPaymentType
  import org.signal.ringrtc.CallLinkRootKey
  import org.thoughtcrime.securesms.BlockUnblockDialog
@@ -101,7 +100,7 @@ index 26a7f5f109..944aac8669 100644
  import org.thoughtcrime.securesms.MainActivity
  import org.thoughtcrime.securesms.MuteDialog
  import org.thoughtcrime.securesms.R
-@@ -3119,6 +3120,15 @@ class ConversationFragment :
+@@ -3116,6 +3117,15 @@ class ConversationFragment :
    }
  
    private fun handleViewPaymentDetails(conversationMessage: ConversationMessage) {
@@ -190,10 +189,10 @@ index 0742995fc2..f4706ec031 100644
        return
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index 3d9a1ed9cf..79a8d36f06 100644
+index c05768c9c3..783b3c49ee 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-@@ -15,6 +15,7 @@ import org.signal.core.util.orNull
+@@ -16,6 +16,7 @@ import org.signal.core.util.orNull
  import org.signal.core.util.toOptional
  import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation
  import org.signal.network.util.Preconditions
@@ -201,7 +200,7 @@ index 3d9a1ed9cf..79a8d36f06 100644
  import org.thoughtcrime.securesms.attachments.Attachment
  import org.thoughtcrime.securesms.attachments.LocalStickerAttachment
  import org.thoughtcrime.securesms.attachments.PointerAttachment
-@@ -664,6 +665,11 @@ object DataMessageProcessor {
+@@ -663,6 +664,11 @@ object DataMessageProcessor {
    ): InsertResult? {
      log(envelope.clientTimestamp!!, "Payment message.")
  
@@ -214,7 +213,7 @@ index 3d9a1ed9cf..79a8d36f06 100644
        warn(envelope.clientTimestamp!!, "Ignoring payment message without notification")
        return null
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
-index e6ceea570b..2847ad848f 100644
+index 99c9aec03d..17821a919d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
 @@ -25,6 +25,7 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord
@@ -225,7 +224,7 @@ index e6ceea570b..2847ad848f 100644
  import org.thoughtcrime.securesms.attachments.Attachment
  import org.thoughtcrime.securesms.attachments.DatabaseAttachment
  import org.thoughtcrime.securesms.attachments.TombstoneAttachment
-@@ -1245,6 +1246,11 @@ object SyncMessageProcessor {
+@@ -1247,6 +1248,11 @@ object SyncMessageProcessor {
    private fun handleSynchronizeOutgoingPayment(outgoingPayment: SyncMessage.OutgoingPayment, envelopeTimestamp: Long) {
      log(envelopeTimestamp, "Synchronize outgoing payment.")
  
@@ -361,7 +360,7 @@ index b3be92f2b0..78924e1b83 100644
    }
  }
 diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
-index 1b25eb1742..8b589602b6 100644
+index 96e1e97932..b1b46061c4 100644
 --- a/gradle/libs.versions.toml
 +++ b/gradle/libs.versions.toml
 @@ -185,7 +185,7 @@ rxjava3-rxjava = "io.reactivex.rxjava3:rxjava:3.1.12"
@@ -374,10 +373,10 @@ index 1b25eb1742..8b589602b6 100644
  leolin-shortcutbadger = "me.leolin:ShortcutBadger:1.1.22"
  glide-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 diff --git a/gradle/verification-metadata.xml b/gradle/verification-metadata.xml
-index e56dac4c39..93e992e8b7 100644
+index 76bf3c40e1..232d0b1dfc 100644
 --- a/gradle/verification-metadata.xml
 +++ b/gradle/verification-metadata.xml
-@@ -6691,6 +6691,14 @@ https://docs.gradle.org/current/userguide/dependency_verification.html
+@@ -6704,6 +6704,14 @@ https://docs.gradle.org/current/userguide/dependency_verification.html
              <sha256 value="551ae4e301c571760d1791e647db6ed1dcb10d34dcae7aa12b67f220f2ce98d1" origin="Generated by Gradle"/>
           </artifact>
        </component>

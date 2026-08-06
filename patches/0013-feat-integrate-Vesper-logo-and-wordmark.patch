@@ -1,6 +1,6 @@
-From 21cf54a30ced0e9750a2073437899824d73622c5 Mon Sep 17 00:00:00 2001
+From 59555bccb76c7ee3f82bc9d576a45ed24e6a7339 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
-Date: Sun, 26 Jul 2026 17:50:27 +0100
+Date: Thu, 6 Aug 2026 07:45:11 +0000
 Subject: [PATCH 13/19] feat: integrate Vesper logo and wordmark
 
 ---

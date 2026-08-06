@@ -1,4 +1,4 @@
-From 4002db36639a0d6f70ed5d54649eceae420a9ac6 Mon Sep 17 00:00:00 2001
+From 9381905d4a2755fb7f295940ac9219fd772219a7 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
 Subject: [PATCH 04/19] feat: finish Vesper settings and help surfaces
@@ -30,10 +30,10 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index e3cb310c99..9f659b8001 100644
+index 6a303e1dab..b60e266493 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-@@ -68,6 +68,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
+@@ -69,6 +69,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
  import org.thoughtcrime.securesms.glide.SignalGlideComponents;
  import org.thoughtcrime.securesms.jobmanager.impl.SealedSenderConstraint;
  import org.thoughtcrime.securesms.jobs.AccountConsistencyWorkerJob;
@@ -41,7 +41,7 @@ index e3cb310c99..9f659b8001 100644
  import org.thoughtcrime.securesms.jobs.BackupRefreshJob;
  import org.thoughtcrime.securesms.jobs.BackupSubscriptionCheckJob;
  import org.thoughtcrime.securesms.jobs.BuildExpirationConfirmationJob;
-@@ -279,6 +280,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -282,6 +283,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
        BackupRefreshJob.enqueueIfNecessary();
        InAppPaymentAuthCheckJob.enqueueIfNeeded();
        RemoteConfig.refreshIfNecessary();
@@ -52,7 +52,7 @@ index e3cb310c99..9f659b8001 100644
        RetrieveProfileJob.enqueueRoutineFetchIfNecessary();
        executePendingContactSync();
        KeyCachingService.onAppForegrounded(this);
-@@ -363,6 +368,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -366,6 +371,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
    @VisibleForTesting
    protected void initializeLogging() {
      Log.initialize(RemoteConfig::internalUser, AndroidLogger.INSTANCE, PersistentLogger.getInstance(this));
@@ -591,7 +591,7 @@ index a05db3074c..6fe9ad0dde 100644
    var muteBreakthroughNotifications by booleanValue(MUTE_BREAKTHROUGH_NOTIFICATIONS, true).falseForExternalUsers()
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
-index c9afb24813..320cdf09b2 100644
+index fa6a52f214..e5eefc491e 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
 @@ -55,6 +55,8 @@ class MiscellaneousValues internal constructor(store: KeyValueStore) : SignalSto
@@ -600,14 +600,13 @@ index c9afb24813..320cdf09b2 100644
      private const val LAST_MISSING_PLAY_SERVICES_FCM_VERIFICATION_TIME = "misc.last_missing_play_services_fcm_verification_time"
 +    private const val VESPER_INTERNAL_USER_OVERRIDE_SET = "misc.vesper_internal_user_override_set"
 +    private const val VESPER_INTERNAL_USER_OVERRIDE = "misc.vesper_internal_user_override"
+     private const val LAST_PROCESSED_SHARE_DATA_TIMESTAMP = "misc.last_processed_share_data_timestamp"
    }
  
-   public override fun onFirstEverAppLaunch() {
-@@ -360,4 +362,28 @@ class MiscellaneousValues internal constructor(store: KeyValueStore) : SignalSto
-    * The last time we tried to get an FCM token for a user reporting missing Play Services.
+@@ -362,6 +364,30 @@ class MiscellaneousValues internal constructor(store: KeyValueStore) : SignalSto
     */
    var lastMissingPlayServicesFcmVerificationTime: Long by longValue(LAST_MISSING_PLAY_SERVICES_FCM_VERIFICATION_TIME, 0)
-+
+ 
 +  var vesperInternalUserOverride: Boolean?
 +    get() {
 +      return if (getBoolean(VESPER_INTERNAL_USER_OVERRIDE_SET, false)) {
@@ -631,9 +630,12 @@ index c9afb24813..320cdf09b2 100644
 +          .apply()
 +      }
 +    }
- }
++
+   /**
+    * High-water mark of the most recently consumed share payload, as set by
+    * [org.thoughtcrime.securesms.conversation.ConversationArgs.shareDataTimestamp]. Any share whose timestamp is at or
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 5cc7ad3527..52795e3f97 100644
+index 3fda97f4d6..dc9a356e1b 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -91,9 +91,14 @@ object RemoteConfig {
@@ -712,7 +714,7 @@ index 8cf26a497e..4435845403 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
-index 52ecd2e8ae..24d523b6c0 100644
+index b697834f8c..b65dd784a4 100644
 --- a/app/src/main/res/values/strings.xml
 +++ b/app/src/main/res/values/strings.xml
 @@ -4423,6 +4423,8 @@
@@ -724,7 +726,7 @@ index 52ecd2e8ae..24d523b6c0 100644
      <string name="preferences__internal_details" translatable="false">Internal Details</string>
      <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
  
-@@ -6069,6 +6071,9 @@
+@@ -6057,6 +6059,9 @@
      <string name="HelpFragment__licenced_under_the_agplv3">Licensed under the GNU AGPLv3</string>
      <!-- Non-English translations should use "Signal is a nonprofit." instead, dropping the 501c3 reference. -->
      <string name="HelpSettingsFragment__signal_is_a_501c3">Signal is a 501c3 nonprofit</string>

@@ -1,11 +1,8 @@
-From 34edca73a99d22d099f8eca1b71bcda8e84925c7 Mon Sep 17 00:00:00 2001
-From: amber <amber@flourish.ch>
-Date: Sat, 25 Jul 2026 18:30:44 +0100
+From 5e4825c7bb97396268ea3816c8e91d1ed55c9551 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:11 +0000
 Subject: [PATCH 08/19] chore: clarify licensing and interface copy
 
-Add source and AGPL notices to Vesper-owned code, preserve Molly provenance, and tighten the user-facing wording in British English.
-
-Signed-off-by: amber <amber@flourish.ch>
 ---
  .../debug/res/drawable/ic_launcher_background.xml    |  6 +++++-
  app/src/debug/res/values/strings.xml                 |  7 +++++--
@@ -119,10 +116,10 @@ index 93da6ff198..da0a980982 100644
  
      SignalStore.apkUpdate.lastSuccessfulCheck = System.currentTimeMillis()
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index 79a8d36f06..d41b162f1c 100644
+index 783b3c49ee..397fe57ad2 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-@@ -590,7 +590,7 @@ object DataMessageProcessor {
+@@ -589,7 +589,7 @@ object DataMessageProcessor {
      return if (targetMessage != null && MessageConstraintsUtil.isValidRemoteDeleteReceive(targetMessage, senderRecipientId, envelope.serverTimestamp!!)) {
        val isSelfDelete = senderRecipientId == Recipient.self().id
        if (!isSelfDelete && SignalStore.settings.isIgnoreRemoteDeleteEnabled) {

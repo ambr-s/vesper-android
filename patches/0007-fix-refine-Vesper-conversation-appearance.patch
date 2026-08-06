@@ -1,9 +1,8 @@
-From 31a9ba2a0d390d9d72e94182e943caac4d6677c4 Mon Sep 17 00:00:00 2001
-From: amber <amber@flourish.ch>
-Date: Sat, 25 Jul 2026 18:30:44 +0100
+From fa4c8d5e343f86342c3c36e146131534a0540bc1 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:10 +0000
 Subject: [PATCH 07/19] fix: refine Vesper conversation appearance
 
-Signed-off-by: amber <amber@flourish.ch>
 ---
  .../settings/app/help/HelpSettingsFragment.kt | 30 +---------------
  .../V2ConversationItemTextOnlyViewHolder.kt   |  5 +--

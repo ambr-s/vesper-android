@@ -1,11 +1,8 @@
-From c3e2e26aa39b9f9bd38381455fe13cdabf4067e3 Mon Sep 17 00:00:00 2001
-From: amber <amber@flourish.ch>
-Date: Sat, 25 Jul 2026 18:30:41 +0100
+From 37c09eabde116d348ceba22c6826bb040b17ca88 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:44:38 +0000
 Subject: [PATCH 02/19] feat: allow disabling debug logs
 
-Adapted from Molly work by Oscar Mira and other Molly contributors.
-
-Signed-off-by: amber <amber@flourish.ch>
 ---
  .../settings/app/help/HelpSettingsState.kt    |  5 ++++
  .../securesms/util/TextSecurePreferences.java |  9 +++++++

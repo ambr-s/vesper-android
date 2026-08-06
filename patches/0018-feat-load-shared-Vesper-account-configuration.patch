@@ -1,11 +1,8 @@
-From 2dcd9c889a920f31055649d3427fb1eed3a720bf Mon Sep 17 00:00:00 2001
-From: amber <amber@flourish.ch>
-Date: Mon, 27 Jul 2026 16:24:37 +0100
+From a608747dfb34fe4333bf9861e7d550bd01633e1d Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:12 +0000
 Subject: [PATCH 18/19] feat: load shared Vesper account configuration
 
-Cache the validated per-account config response, refresh it outside the startup path, apply remote flag overrides, and source developer identity from hashed ACIs without a bundled fallback. Show the verified Vesper Developer identity on contact info sheets.
-
-Signed-off-by: amber <amber@flourish.ch>
 ---
  .../securesms/ApplicationContext.java         |   3 +
  .../securesms/keyvalue/SignalStore.kt         |   8 +
@@ -22,10 +19,10 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index 9f659b8001..9248b0dcff 100644
+index b60e266493..d0121be671 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-@@ -132,6 +132,7 @@ import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
+@@ -133,6 +133,7 @@ import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
  import org.thoughtcrime.securesms.util.SqlCipherLogTarget;
  import org.thoughtcrime.securesms.util.TextSecurePreferences;
  import org.thoughtcrime.securesms.util.VersionTracker;
@@ -33,7 +30,7 @@ index 9f659b8001..9248b0dcff 100644
  import org.thoughtcrime.securesms.util.dynamiclanguage.DynamicLanguageContextWrapper;
  import org.whispersystems.signalservice.api.websocket.SignalWebSocket;
  
-@@ -206,6 +207,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -209,6 +210,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
                  }
                })
                .addBlocking("blob-provider", this::initializeBlobProvider)
@@ -41,7 +38,7 @@ index 9f659b8001..9248b0dcff 100644
                .addBlocking("remote-config", RemoteConfig::init)
                .addBlocking("ring-rtc", this::initializeRingRtc)
                .addBlocking("glide", () -> SignalGlideModule.setRegisterGlideComponents(new SignalGlideComponents()))
-@@ -226,6 +228,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -229,6 +231,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
                .addNonBlocking(StorageSyncHelper::scheduleRoutineSync)
                .addNonBlocking(this::beginJobLoop)
                .addNonBlocking(EmojiSource::refresh)
@@ -230,7 +227,7 @@ index bd2017f6ec..b36b063c06 100644
          .padding(end = 16.dp)
          .size(20.dp)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 52795e3f97..d89a6ed195 100644
+index dc9a356e1b..d467940bd5 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -74,7 +74,7 @@ object RemoteConfig {

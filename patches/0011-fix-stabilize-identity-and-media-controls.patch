@@ -1,6 +1,6 @@
-From f1f429f110f457c484db83d54c179b8b97cd3fa6 Mon Sep 17 00:00:00 2001
+From efc1ba0aa5aeccdb5e8639de3742af8979e021e7 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
-Date: Sun, 26 Jul 2026 16:33:36 +0100
+Date: Thu, 6 Aug 2026 07:45:11 +0000
 Subject: [PATCH 11/19] fix: stabilize identity and media controls
 
 ---
@@ -95,7 +95,7 @@ index 295ec4a879..77493bf33f 100644
              tools:translationY="0dp"
              tools:visibility="visible" />
 diff --git a/app/src/main/res/layout/v2_media_review_fragment.xml b/app/src/main/res/layout/v2_media_review_fragment.xml
-index ce37b33fa6..d8835d6b6a 100644
+index bcb7a53aa9..ad57b7326b 100644
 --- a/app/src/main/res/layout/v2_media_review_fragment.xml
 +++ b/app/src/main/res/layout/v2_media_review_fragment.xml
 @@ -229,7 +229,7 @@
