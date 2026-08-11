@@ -1,7 +1,7 @@
-From 686311b877437012084b0f2ea696576e7a731269 Mon Sep 17 00:00:00 2001
+From 697ca621165e5cce86f135cba4c74e3b3f5362cc Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
-Subject: [PATCH 14/19] feat: use profile avatar as main menu trigger
+Subject: [PATCH 14/20] feat: use profile avatar as main menu trigger
 
 ---
  .../securesms/main/MainToolbar.kt             | 145 +++++++++---------

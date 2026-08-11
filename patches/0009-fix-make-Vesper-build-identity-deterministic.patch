@@ -1,7 +1,7 @@
-From fac6bcdf5619b111b74e824c6bb194d4f07cc44d Mon Sep 17 00:00:00 2001
+From 067e969c929b3bebbba0bb90740c06ba38c2077a Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
-Subject: [PATCH 09/19] fix: make Vesper build identity deterministic
+Subject: [PATCH 09/20] fix: make Vesper build identity deterministic
 
 ---
  app/build.gradle.kts                          | 40 ++++++++++-
@@ -10,7 +10,7 @@ Subject: [PATCH 09/19] fix: make Vesper build identity deterministic
  3 files changed, 125 insertions(+), 22 deletions(-)
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index a25e03d994..04bc3bd89a 100644
+index b4dac8eb53..94fb57eeb4 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -245,6 +245,8 @@ android {

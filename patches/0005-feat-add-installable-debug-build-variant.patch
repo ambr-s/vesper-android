@@ -1,7 +1,7 @@
-From 68aad886889a1ced95e7f30a32ab113feb08a026 Mon Sep 17 00:00:00 2001
+From 6d94a5c3eebede64764703ce09b2cba9d8459d51 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:10 +0000
-Subject: [PATCH 05/19] feat: add installable debug build variant
+Subject: [PATCH 05/20] feat: add installable debug build variant
 
 ---
  app/build.gradle.kts                          |  3 +++
@@ -12,7 +12,7 @@ Subject: [PATCH 05/19] feat: add installable debug build variant
  create mode 100644 app/src/debug/res/values/strings.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 7566a05ce6..7b88b0573e 100644
+index f997d4745b..12e51e8360 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -87,8 +87,10 @@ val selectableVariants = listOf(

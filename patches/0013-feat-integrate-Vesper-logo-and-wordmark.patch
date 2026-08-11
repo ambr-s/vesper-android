@@ -1,7 +1,7 @@
-From 59555bccb76c7ee3f82bc9d576a45ed24e6a7339 Mon Sep 17 00:00:00 2001
+From 2fff7f6afad72d7eca307b3bbd4d1987cc2c3fc5 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
-Subject: [PATCH 13/19] feat: integrate Vesper logo and wordmark
+Subject: [PATCH 13/20] feat: integrate Vesper logo and wordmark
 
 ---
  .../java/org/thoughtcrime/securesms/main/MainToolbar.kt   | 8 ++++++--

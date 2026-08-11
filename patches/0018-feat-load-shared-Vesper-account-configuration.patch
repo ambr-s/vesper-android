@@ -1,7 +1,7 @@
-From a608747dfb34fe4333bf9861e7d550bd01633e1d Mon Sep 17 00:00:00 2001
+From 40876868561ccd9d625e134c5cb5c9d1f21498b9 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
-Subject: [PATCH 18/19] feat: load shared Vesper account configuration
+Subject: [PATCH 18/20] feat: load shared Vesper account configuration
 
 ---
  .../securesms/ApplicationContext.java         |   3 +

@@ -1,0 +1,937 @@
+From 40848548a0a707e21f439da909a2685cd9e7411d Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Tue, 11 Aug 2026 10:53:42 +0000
+Subject: [PATCH 20/20] feat: add backup subscription diagnostics
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../app/internal/InternalSettingsFragment.kt  |   8 +
+ .../BackupSubscriptionDiagnosticsFragment.kt  |  58 ++++++
+ .../BackupSubscriptionDiagnosticsScreen.kt    | 185 ++++++++++++++++++
+ .../BackupSubscriptionDiagnosticsState.kt     | 108 ++++++++++
+ .../BackupSubscriptionDiagnosticsViewModel.kt | 176 +++++++++++++++++
+ .../securesms/jobs/BackupRefreshJob.kt        |  30 ++-
+ .../jobs/InAppPaymentKeepAliveJob.kt          |  11 ++
+ .../registration/util/RegistrationUtil.java   |   8 +-
+ .../util/VesperBackupSubscriptionPolicy.kt    |  18 ++
+ .../app_settings_with_change_number.xml       |   8 +
+ .../BackupSubscriptionDiagnosticsStateTest.kt | 108 ++++++++++
+ .../jobs/InAppPaymentKeepAliveJobTest.kt      |  24 +++
+ .../VesperBackupSubscriptionPolicyTest.kt     |  31 +++
+ 13 files changed, 762 insertions(+), 11 deletions(-)
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsFragment.kt
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsScreen.kt
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsState.kt
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicy.kt
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsStateTest.kt
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicyTest.kt
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt
+index 105ccec039..cca3a7266c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt
+@@ -292,6 +292,14 @@ class InternalSettingsFragment : DSLSettingsFragment(R.string.preferences__inter
+         }
+       )
+ 
++      clickPref(
++        title = DSLSettingsText.from("Backup Subscription Diagnostics"),
++        summary = DSLSettingsText.from("Confirm restored subscription state and run backup maintenance actions."),
++        onClick = {
++          findNavController().safeNavigate(InternalSettingsFragmentDirections.actionInternalSettingsFragmentToBackupSubscriptionDiagnosticsFragment())
++        }
++      )
++
+       clickPref(
+         title = DSLSettingsText.from("Storage Service Playground"),
+         summary = DSLSettingsText.from("Test and view storage service stuff."),
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsFragment.kt
+new file mode 100644
+index 0000000000..e67f775c04
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsFragment.kt
+@@ -0,0 +1,58 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.components.settings.app.internal.backup.subscription
++
++import android.content.ClipData
++import android.content.ClipboardManager
++import android.content.Context
++import android.widget.Toast
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.fragment.app.viewModels
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import androidx.navigation.fragment.findNavController
++import org.signal.core.ui.compose.ComposeFragment
++
++class BackupSubscriptionDiagnosticsFragment : ComposeFragment(), BackupSubscriptionDiagnosticsCallbacks {
++
++  private val viewModel: BackupSubscriptionDiagnosticsViewModel by viewModels()
++
++  @Composable
++  override fun FragmentContent() {
++    val state by viewModel.state.collectAsStateWithLifecycle()
++    BackupSubscriptionDiagnosticsScreen(state = state, callbacks = this)
++  }
++
++  override fun onNavigationClick() {
++    findNavController().popBackStack()
++  }
++
++  override fun onRefreshStatus() {
++    viewModel.refresh(checkServer = true)
++  }
++
++  override fun onRunKeepAlive() {
++    viewModel.runKeepAlive()
++  }
++
++  override fun onRunBackupCheckIn() {
++    viewModel.runBackupCheckIn()
++  }
++
++  override fun onRunBackupNow() {
++    viewModel.runBackupNow()
++  }
++
++  override fun onRefreshBackupCredentials() {
++    viewModel.refreshBackupCredentials()
++  }
++
++  override fun onCopyDiagnostics() {
++    val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
++    clipboard.setPrimaryClip(ClipData.newPlainText("Vesper backup diagnostics", viewModel.state.value.toRedactedReport()))
++    Toast.makeText(requireContext(), "Redacted diagnostics copied.", Toast.LENGTH_SHORT).show()
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsScreen.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsScreen.kt
+new file mode 100644
+index 0000000000..0ad99ee874
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsScreen.kt
+@@ -0,0 +1,185 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.components.settings.app.internal.backup.subscription
++
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.material3.LinearProgressIndicator
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import org.signal.core.ui.compose.DayNightPreviews
++import org.signal.core.ui.compose.Previews
++import org.signal.core.ui.compose.Rows
++import org.signal.core.ui.compose.Scaffolds
++import org.signal.core.ui.compose.SignalIcons
++import org.signal.core.ui.compose.Texts
++import java.text.SimpleDateFormat
++import java.util.Date
++import java.util.Locale
++import java.util.concurrent.TimeUnit
++
++@Composable
++fun BackupSubscriptionDiagnosticsScreen(
++  state: BackupSubscriptionDiagnosticsState,
++  callbacks: BackupSubscriptionDiagnosticsCallbacks
++) {
++  Scaffolds.Settings(
++    title = "Backup subscription",
++    onNavigationClick = callbacks::onNavigationClick,
++    navigationIcon = SignalIcons.ArrowStart.imageVector
++  ) { paddingValues ->
++    LazyColumn(modifier = Modifier.padding(paddingValues)) {
++      if (state.actionInProgress != null) {
++        item { LinearProgressIndicator() }
++      }
++
++      item { Texts.SectionHeader(text = "Overall") }
++      item {
++        Rows.TextRow(
++          text = when (state.health) {
++            BackupSubscriptionHealth.HEALTHY -> "Healthy"
++            BackupSubscriptionHealth.CHECKING -> "Checking"
++            BackupSubscriptionHealth.ATTENTION -> "Needs attention"
++          },
++          label = when (state.health) {
++            BackupSubscriptionHealth.HEALTHY -> "Paid entitlement, restored subscriber record and active Signal subscription confirmed."
++            BackupSubscriptionHealth.CHECKING -> "Local state is present. Waiting for Signal's subscription service."
++            BackupSubscriptionHealth.ATTENTION -> "One or more required subscription signals are missing or inactive."
++          }
++        )
++      }
++      state.actionMessage?.let { message ->
++        item { Rows.TextRow(text = "Last action", label = message) }
++      }
++
++      item { Texts.SectionHeader(text = "Local state") }
++      item { Rows.TextRow(text = "Backups enabled", label = state.backupsEnabled.yesNo()) }
++      item { Rows.TextRow(text = "Backup tier", label = state.backupTier) }
++      item { Rows.TextRow(text = "Subscriber record", label = if (state.hasSubscriber) "Present" else "Missing") }
++      item { Rows.TextRow(text = "Subscription source", label = state.subscriptionType) }
++      item { Rows.TextRow(text = "Purchase token", label = if (state.hasPurchaseToken) "Present (redacted)" else "Missing") }
++      item { Rows.TextRow(text = "Play Billing available to Vesper", label = state.playBillingSupported.yesNo()) }
++      item { Rows.TextRow(text = "Initial Play relink", label = if (state.postRegistrationRelinkEnabled) "Enabled" else "Disabled") }
++      item { Rows.TextRow(text = "Subscription mismatch flag", label = state.subscriptionMismatch.yesNo()) }
++      item { Rows.TextRow(text = "Pending redemption", label = state.pendingRedemption.yesNo()) }
++
++      item { Texts.SectionHeader(text = "Signal service") }
++      item {
++        Rows.TextRow(
++          text = "Server subscription",
++          label = when {
++            !state.serverCheckComplete -> "Checking"
++            state.serverSubscriptionActive == true -> "Active"
++            state.serverSubscriptionActive == false -> "Inactive"
++            else -> "Unknown"
++          }
++        )
++      }
++      item { Rows.TextRow(text = "Server status", label = state.serverSubscriptionStatus) }
++      item { Rows.TextRow(text = "Will cancel", label = state.serverWillCancel?.yesNo() ?: "Unknown") }
++      item { Rows.TextRow(text = "Renews / expires", label = formatEpochSeconds(state.serverRenewalEpochSeconds)) }
++
++      item { Texts.SectionHeader(text = "Maintenance") }
++      item { Rows.TextRow(text = "Last keepalive launch", label = formatMillis(state.lastKeepAliveLaunchMillis)) }
++      item { Rows.TextRow(text = "Last backup check-in", label = formatMillis(state.lastCheckInMillis)) }
++      item { Rows.TextRow(text = "Last completed backup", label = formatMillis(state.lastBackupMillis)) }
++      item { Rows.TextRow(text = "Latest payment state", label = state.latestPaymentState) }
++      item { Rows.TextRow(text = "Latest redemption stage", label = state.latestRedemptionStage) }
++      item { Rows.TextRow(text = "Latest payment error", label = state.latestPaymentError) }
++
++      item { Texts.SectionHeader(text = "Manual actions") }
++      item {
++        Rows.TextRow(
++          text = "Refresh status",
++          label = "Reload local state and query Signal's subscription service without Google Play Billing.",
++          onClick = callbacks::onRefreshStatus
++        )
++      }
++      item {
++        Rows.TextRow(
++          text = "Run backup keepalive",
++          label = "Queue only the BACKUP keepalive job and update its launch timestamp.",
++          onClick = callbacks::onRunKeepAlive
++        )
++      }
++      item {
++        Rows.TextRow(
++          text = "Run backup check-in",
++          label = "Tell Signal that this remote backup is still in use.",
++          onClick = callbacks::onRunBackupCheckIn
++        )
++      }
++      item {
++        Rows.TextRow(
++          text = "Run backup now",
++          label = "Queue a remote message and media backup.",
++          onClick = callbacks::onRunBackupNow
++        )
++      }
++      item {
++        Rows.TextRow(
++          text = "Refresh backup credentials",
++          label = "Clear cached archive credentials and fetch the server tier without downgrading local state on failure.",
++          onClick = callbacks::onRefreshBackupCredentials
++        )
++      }
++      item {
++        Rows.TextRow(
++          text = "Copy redacted diagnostics",
++          label = "Copies this status without subscriber IDs or purchase-token contents.",
++          onClick = callbacks::onCopyDiagnostics
++        )
++      }
++    }
++  }
++}
++
++private fun Boolean.yesNo(): String = if (this) "Yes" else "No"
++
++private fun formatMillis(value: Long): String {
++  return if (value <= 0) "Never" else formatDate(value)
++}
++
++private fun formatEpochSeconds(value: Long?): String {
++  return if (value == null || value <= 0) "Unknown" else formatDate(TimeUnit.SECONDS.toMillis(value))
++}
++
++private fun formatDate(value: Long): String {
++  return SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).format(Date(value))
++}
++
++interface BackupSubscriptionDiagnosticsCallbacks {
++  fun onNavigationClick() = Unit
++  fun onRefreshStatus() = Unit
++  fun onRunKeepAlive() = Unit
++  fun onRunBackupCheckIn() = Unit
++  fun onRunBackupNow() = Unit
++  fun onRefreshBackupCredentials() = Unit
++  fun onCopyDiagnostics() = Unit
++
++  object Empty : BackupSubscriptionDiagnosticsCallbacks
++}
++
++@DayNightPreviews
++@Composable
++private fun BackupSubscriptionDiagnosticsScreenPreview() {
++  Previews.Preview {
++    BackupSubscriptionDiagnosticsScreen(
++      state = BackupSubscriptionDiagnosticsState.initial().copy(
++        backupsEnabled = true,
++        backupTier = "PAID",
++        paidTier = true,
++        hasSubscriber = true,
++        subscriptionType = "Google Play Billing",
++        hasPurchaseToken = true,
++        serverCheckComplete = true,
++        serverSubscriptionActive = true,
++        serverSubscriptionStatus = "ACTIVE"
++      ),
++      callbacks = BackupSubscriptionDiagnosticsCallbacks.Empty
++    )
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsState.kt
+new file mode 100644
+index 0000000000..53482887f5
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsState.kt
+@@ -0,0 +1,108 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.components.settings.app.internal.backup.subscription
++
++enum class BackupSubscriptionHealth {
++  CHECKING,
++  HEALTHY,
++  ATTENTION
++}
++
++data class BackupSubscriptionDiagnosticsState(
++  val backupsEnabled: Boolean,
++  val backupTier: String,
++  val paidTier: Boolean,
++  val playBillingSupported: Boolean,
++  val postRegistrationRelinkEnabled: Boolean,
++  val hasSubscriber: Boolean,
++  val subscriptionType: String,
++  val hasPurchaseToken: Boolean,
++  val lastKeepAliveLaunchMillis: Long,
++  val lastCheckInMillis: Long,
++  val lastBackupMillis: Long,
++  val subscriptionMismatch: Boolean,
++  val latestPaymentState: String,
++  val latestRedemptionStage: String,
++  val latestPaymentError: String,
++  val pendingRedemption: Boolean,
++  val serverCheckComplete: Boolean,
++  val serverSubscriptionActive: Boolean?,
++  val serverSubscriptionStatus: String,
++  val serverRenewalEpochSeconds: Long?,
++  val serverWillCancel: Boolean?,
++  val actionInProgress: String?,
++  val actionMessage: String?
++) {
++  val health: BackupSubscriptionHealth
++    get() = when {
++      !backupsEnabled || !paidTier || !hasSubscriber -> BackupSubscriptionHealth.ATTENTION
++      !serverCheckComplete -> BackupSubscriptionHealth.CHECKING
++      serverSubscriptionActive == true -> BackupSubscriptionHealth.HEALTHY
++      else -> BackupSubscriptionHealth.ATTENTION
++    }
++
++  fun toRedactedReport(): String {
++    return buildString {
++      appendLine("Vesper backup subscription diagnostics")
++      appendLine("Overall: $health")
++      appendLine("Backups enabled: $backupsEnabled")
++      appendLine("Backup tier: $backupTier")
++      appendLine("Play Billing supported: $playBillingSupported")
++      appendLine("Post-registration Play relink: ${if (postRegistrationRelinkEnabled) "enabled" else "disabled"}")
++      appendLine("Subscriber record: ${if (hasSubscriber) "present" else "missing"}")
++      appendLine("Subscription type: $subscriptionType")
++      appendLine("Purchase token: ${if (hasPurchaseToken) "present (redacted)" else "missing"}")
++      appendLine("Last keepalive launch (ms): $lastKeepAliveLaunchMillis")
++      appendLine("Last backup check-in (ms): $lastCheckInMillis")
++      appendLine("Last completed backup (ms): $lastBackupMillis")
++      appendLine("Subscription mismatch: $subscriptionMismatch")
++      appendLine("Latest payment state: $latestPaymentState")
++      appendLine("Latest redemption stage: $latestRedemptionStage")
++      appendLine("Latest payment error: $latestPaymentError")
++      appendLine("Pending redemption: $pendingRedemption")
++      appendLine(
++        "Server subscription: " + when {
++          !serverCheckComplete -> "not checked"
++          serverSubscriptionActive == true -> "active"
++          else -> "inactive"
++        }
++      )
++      appendLine("Server status: $serverSubscriptionStatus")
++      appendLine("Server renewal epoch seconds: ${serverRenewalEpochSeconds ?: "unknown"}")
++      appendLine("Server will cancel: ${serverWillCancel ?: "unknown"}")
++    }.trimEnd()
++  }
++
++  companion object {
++    fun initial(): BackupSubscriptionDiagnosticsState {
++      return BackupSubscriptionDiagnosticsState(
++        backupsEnabled = false,
++        backupTier = "None",
++        paidTier = false,
++        playBillingSupported = false,
++        postRegistrationRelinkEnabled = false,
++        hasSubscriber = false,
++        subscriptionType = "None",
++        hasPurchaseToken = false,
++        lastKeepAliveLaunchMillis = 0,
++        lastCheckInMillis = 0,
++        lastBackupMillis = 0,
++        subscriptionMismatch = false,
++        latestPaymentState = "None",
++        latestRedemptionStage = "None",
++        latestPaymentError = "None",
++        pendingRedemption = false,
++        serverCheckComplete = false,
++        serverSubscriptionActive = null,
++        serverSubscriptionStatus = "Not checked",
++        serverRenewalEpochSeconds = null,
++        serverWillCancel = null,
++        actionInProgress = null,
++        actionMessage = null
++      )
++    }
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
+new file mode 100644
+index 0000000000..aa8edb8ef7
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
+@@ -0,0 +1,176 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.components.settings.app.internal.backup.subscription
++
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.viewModelScope
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.asStateFlow
++import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.launch
++import org.signal.donations.InAppPaymentType
++import org.signal.network.NetworkResult
++import org.thoughtcrime.securesms.backup.v2.BackupRepository
++import org.thoughtcrime.securesms.backup.v2.MessageBackupTier
++import org.thoughtcrime.securesms.components.settings.app.subscription.InAppPaymentsRepository
++import org.thoughtcrime.securesms.components.settings.app.subscription.RecurringInAppPaymentRepository
++import org.thoughtcrime.securesms.database.SignalDatabase
++import org.thoughtcrime.securesms.database.model.InAppPaymentSubscriberRecord
++import org.thoughtcrime.securesms.jobs.BackupMessagesJob
++import org.thoughtcrime.securesms.jobs.BackupRefreshJob
++import org.thoughtcrime.securesms.jobs.InAppPaymentKeepAliveJob
++import org.thoughtcrime.securesms.keyvalue.SignalStore
++import org.thoughtcrime.securesms.util.Environment
++import org.thoughtcrime.securesms.util.VesperBackupSubscriptionPolicy
++import org.whispersystems.signalservice.api.storage.IAPSubscriptionId
++import org.whispersystems.signalservice.api.subscriptions.ActiveSubscription
++import kotlin.time.Duration.Companion.milliseconds
++
++class BackupSubscriptionDiagnosticsViewModel : ViewModel() {
++
++  private val mutableState = MutableStateFlow(BackupSubscriptionDiagnosticsState.initial())
++  val state = mutableState.asStateFlow()
++
++  init {
++    refresh(checkServer = true)
++  }
++
++  fun refresh(checkServer: Boolean = true) {
++    viewModelScope.launch(Dispatchers.IO) {
++      mutableState.update { readLocalState(it, serverCheckComplete = if (checkServer) false else it.serverCheckComplete) }
++      if (checkServer) {
++        checkServerSubscription()
++      }
++    }
++  }
++
++  fun runKeepAlive() {
++    runAction("Backup keepalive") {
++      InAppPaymentKeepAliveJob.enqueueBackupAndTrackTime(System.currentTimeMillis().milliseconds)
++      "Backup-only keepalive queued."
++    }
++  }
++
++  fun runBackupCheckIn() {
++    runAction("Backup check-in") {
++      if (BackupRefreshJob.enqueueNow()) {
++        "Backup check-in queued."
++      } else {
++        "Backup check-in was not queued because backups are disabled or the account is not registered."
++      }
++    }
++  }
++
++  fun runBackupNow() {
++    runAction("Backup upload") {
++      BackupMessagesJob.enqueue()
++      "Backup upload queued."
++    }
++  }
++
++  fun refreshBackupCredentials() {
++    runAction("Credential refresh") {
++      BackupRepository.resetInitializedStateAndAuthCredentials()
++      val tier = BackupRepository.getBackupTierWithoutDowngrade().getOrNull()
++      if (tier != null) {
++        SignalStore.backup.backupTier = tier
++        "Backup credentials refreshed. Server tier: $tier."
++      } else {
++        "Backup credential refresh failed. Check the debug log."
++      }
++    }
++  }
++
++  private fun runAction(name: String, block: () -> String) {
++    if (mutableState.value.actionInProgress != null) {
++      return
++    }
++
++    mutableState.update { it.copy(actionInProgress = name, actionMessage = null) }
++    viewModelScope.launch(Dispatchers.IO) {
++      val message = try {
++        block()
++      } catch (e: CancellationException) {
++        throw e
++      } catch (e: Exception) {
++        "$name failed: ${e::class.simpleName}"
++      }
++
++      mutableState.update {
++        readLocalState(it, serverCheckComplete = it.serverCheckComplete)
++          .copy(actionInProgress = null, actionMessage = message)
++      }
++    }
++  }
++
++  private fun checkServerSubscription() {
++    val result = RecurringInAppPaymentRepository.getActiveSubscriptionSync(InAppPaymentSubscriberRecord.Type.BACKUP)
++    mutableState.update { current ->
++      when (result) {
++        is NetworkResult.Success -> {
++          val response = result.result
++          val subscription = response.activeSubscription
++          current.copy(
++            serverCheckComplete = true,
++            serverSubscriptionActive = response.isActive,
++            serverSubscriptionStatus = subscription?.let { ActiveSubscription.Status.getStatus(it.status).name } ?: "None",
++            serverRenewalEpochSeconds = subscription?.endOfCurrentPeriod,
++            serverWillCancel = response.willCancelAtPeriodEnd(),
++            actionMessage = current.actionMessage
++          )
++        }
++        else -> current.copy(
++          serverCheckComplete = true,
++          serverSubscriptionActive = null,
++          serverSubscriptionStatus = "Check failed: ${result::class.simpleName}",
++          serverRenewalEpochSeconds = null,
++          serverWillCancel = null
++        )
++      }
++    }
++  }
++
++  private fun readLocalState(
++    current: BackupSubscriptionDiagnosticsState,
++    serverCheckComplete: Boolean
++  ): BackupSubscriptionDiagnosticsState {
++    val subscriber = InAppPaymentsRepository.getSubscriber(InAppPaymentSubscriberRecord.Type.BACKUP)
++    val payment = SignalDatabase.inAppPayments.getLatestInAppPaymentByType(InAppPaymentType.RECURRING_BACKUP)
++    val supportsPlayBilling = Environment.Backups.supportsGooglePlayBilling()
++
++    val subscriptionType = when (subscriber?.iapSubscriptionId) {
++      is IAPSubscriptionId.GooglePlayBillingPurchaseToken -> "Google Play Billing"
++      is IAPSubscriptionId.AppleIAPOriginalTransactionId -> "Apple IAP"
++      null -> if (subscriber == null) "None" else "Unknown"
++    }
++
++    return current.copy(
++      backupsEnabled = SignalStore.backup.areBackupsEnabled,
++      backupTier = SignalStore.backup.backupTier?.name ?: "None",
++      paidTier = SignalStore.backup.backupTier == MessageBackupTier.PAID,
++      playBillingSupported = supportsPlayBilling,
++      postRegistrationRelinkEnabled = VesperBackupSubscriptionPolicy.shouldEnqueuePostRegistrationRedemption(supportsPlayBilling),
++      hasSubscriber = subscriber != null,
++      subscriptionType = subscriptionType,
++      hasPurchaseToken = subscriber?.iapSubscriptionId?.purchaseToken != null,
++      lastKeepAliveLaunchMillis = SignalStore.inAppPayments.getLastKeepAliveLaunchTime(),
++      lastCheckInMillis = SignalStore.backup.lastCheckInMillis,
++      lastBackupMillis = SignalStore.backup.lastBackupTime,
++      subscriptionMismatch = SignalStore.backup.subscriptionStateMismatchDetected,
++      latestPaymentState = payment?.state?.name ?: "None",
++      latestRedemptionStage = payment?.data?.redemption?.stage?.name ?: "None",
++      latestPaymentError = payment?.data?.error?.type?.name ?: "None",
++      pendingRedemption = SignalDatabase.inAppPayments.hasPendingBackupRedemption(),
++      serverCheckComplete = serverCheckComplete,
++      serverSubscriptionActive = if (serverCheckComplete) current.serverSubscriptionActive else null,
++      serverSubscriptionStatus = if (serverCheckComplete) current.serverSubscriptionStatus else "Checking",
++      serverRenewalEpochSeconds = if (serverCheckComplete) current.serverRenewalEpochSeconds else null,
++      serverWillCancel = if (serverCheckComplete) current.serverWillCancel else null
++    )
++  }
++}
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupRefreshJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupRefreshJob.kt
+index ab746ba3b6..fd751a9657 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupRefreshJob.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupRefreshJob.kt
+@@ -39,21 +39,31 @@ class BackupRefreshJob private constructor(
+       val lastCheckIn = SignalStore.backup.lastCheckInMillis.milliseconds
+ 
+       if ((now - lastCheckIn) >= TIME_BETWEEN_CHECKINS) {
+-        AppDependencies.jobManager.add(
+-          BackupRefreshJob(
+-            parameters = Parameters.Builder()
+-              .addConstraint(NetworkConstraint.KEY)
+-              .setMaxAttempts(Parameters.UNLIMITED)
+-              .setLifespan(1.days.inWholeMilliseconds)
+-              .setMaxInstancesForFactory(1)
+-              .build()
+-          )
+-        )
++        enqueueNow()
+       } else {
+         Log.i(TAG, "Do not need to refresh backups. Last refresh: ${lastCheckIn.inWholeMilliseconds}")
+       }
+     }
+ 
++    @JvmStatic
++    fun enqueueNow(): Boolean {
++      if (!canExecuteJob()) {
++        return false
++      }
++
++      AppDependencies.jobManager.add(
++        BackupRefreshJob(
++          parameters = Parameters.Builder()
++            .addConstraint(NetworkConstraint.KEY)
++            .setMaxAttempts(Parameters.UNLIMITED)
++            .setLifespan(1.days.inWholeMilliseconds)
++            .setMaxInstancesForFactory(1)
++            .build()
++        )
++      )
++      return true
++    }
++
+     private fun canExecuteJob(): Boolean {
+       if (!SignalStore.account.isRegistered) {
+         Log.i(TAG, "Account not registered. Exiting.")
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
+index a96e553f27..9d7317945c 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
+@@ -88,6 +88,17 @@ class InAppPaymentKeepAliveJob private constructor(
+       }
+     }
+ 
++    @JvmStatic
++    fun enqueueBackupAndTrackTime(now: Duration) {
++      if (SignalStore.account.isLinkedDevice) {
++        Log.i(TAG, "Linked device. Skipping.")
++        return
++      }
++
++      AppDependencies.jobManager.add(create(InAppPaymentSubscriberRecord.Type.BACKUP))
++      SignalStore.inAppPayments.setLastKeepAliveLaunchTime(now.inWholeMilliseconds)
++    }
++
+     @JvmStatic
+     fun enqueueAndTrackTime(now: Duration) {
+       if (SignalStore.account.isLinkedDevice) {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/registration/util/RegistrationUtil.java b/app/src/main/java/org/thoughtcrime/securesms/registration/util/RegistrationUtil.java
+index 4ab5b51700..680d29ddbc 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/registration/util/RegistrationUtil.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/registration/util/RegistrationUtil.java
+@@ -19,7 +19,9 @@ import org.thoughtcrime.securesms.keyvalue.PhoneNumberPrivacyValues.PhoneNumberD
+ import org.thoughtcrime.securesms.keyvalue.RestoreDecisionStateUtil;
+ import org.thoughtcrime.securesms.keyvalue.SignalStore;
+ import org.thoughtcrime.securesms.recipients.Recipient;
++import org.thoughtcrime.securesms.util.Environment;
+ import org.thoughtcrime.securesms.util.RemoteConfig;
++import org.thoughtcrime.securesms.util.VesperBackupSubscriptionPolicy;
+ 
+ public final class RegistrationUtil {
+ 
+@@ -60,7 +62,11 @@ public final class RegistrationUtil {
+ 
+       BackupRepository.INSTANCE.resetInitializedStateAndAuthCredentials();
+       AppDependencies.getJobManager().add(new ArchiveBackupIdReservationJob());
+-      AppDependencies.getJobManager().add(new PostRegistrationBackupRedemptionJob());
++      if (VesperBackupSubscriptionPolicy.shouldEnqueuePostRegistrationRedemption(Environment.Backups.supportsGooglePlayBilling())) {
++        AppDependencies.getJobManager().add(new PostRegistrationBackupRedemptionJob());
++      } else {
++        Log.i(TAG, "Skipping Play Billing post-registration backup relink for this application id.");
++      }
+ 
+     } else if (!SignalStore.registration().isRegistrationComplete()) {
+       Log.i(TAG, "Registration is not yet complete.", new Throwable());
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicy.kt b/app/src/main/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicy.kt
+new file mode 100644
+index 0000000000..c87502509e
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicy.kt
+@@ -0,0 +1,18 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.util
++
++/**
++ * Keeps backup subscription maintenance away from Play Billing-only paths when
++ * the current application id cannot access Signal's Play Billing entitlement.
++ */
++object VesperBackupSubscriptionPolicy {
++
++  @JvmStatic
++  fun shouldEnqueuePostRegistrationRedemption(supportsGooglePlayBilling: Boolean): Boolean {
++    return supportsGooglePlayBilling
++  }
++}
+diff --git a/app/src/main/res/navigation/app_settings_with_change_number.xml b/app/src/main/res/navigation/app_settings_with_change_number.xml
+index 80f3f6a378..8bbe7b4cad 100644
+--- a/app/src/main/res/navigation/app_settings_with_change_number.xml
++++ b/app/src/main/res/navigation/app_settings_with_change_number.xml
+@@ -917,6 +917,9 @@
+         <action
+             android:id="@+id/action_internalSettingsFragment_to_internalBackupPlaygroundFragment"
+             app:destination="@id/internalBackupPlaygroundFragment" />
++        <action
++            android:id="@+id/action_internalSettingsFragment_to_backupSubscriptionDiagnosticsFragment"
++            app:destination="@id/backupSubscriptionDiagnosticsFragment" />
+         <action
+             android:id="@+id/action_internalSettingsFragment_to_internalStorageServicePlaygroundFragment"
+             app:destination="@id/internalStorageServicePlaygroundFragment" />
+@@ -981,6 +984,11 @@
+         android:name="org.thoughtcrime.securesms.components.settings.app.internal.backup.InternalBackupPlaygroundFragment"
+         android:label="internal_backup_playground_fragment" />
+ 
++    <fragment
++        android:id="@+id/backupSubscriptionDiagnosticsFragment"
++        android:name="org.thoughtcrime.securesms.components.settings.app.internal.backup.subscription.BackupSubscriptionDiagnosticsFragment"
++        android:label="backup_subscription_diagnostics_fragment" />
++
+     <fragment
+         android:id="@+id/internalStorageServicePlaygroundFragment"
+         android:name="org.thoughtcrime.securesms.components.settings.app.internal.storage.InternalStorageServicePlaygroundFragment"
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsStateTest.kt b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsStateTest.kt
+new file mode 100644
+index 0000000000..670a4131f5
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsStateTest.kt
+@@ -0,0 +1,108 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.components.settings.app.internal.backup.subscription
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class BackupSubscriptionDiagnosticsStateTest {
++
++  @Test
++  fun `healthy requires paid local entitlement subscriber and active server subscription`() {
++    val state = state(
++      backupsEnabled = true,
++      paidTier = true,
++      hasSubscriber = true,
++      serverCheckComplete = true,
++      serverSubscriptionActive = true
++    )
++
++    assertEquals(BackupSubscriptionHealth.HEALTHY, state.health)
++  }
++
++  @Test
++  fun `unknown server state remains checking rather than claiming success`() {
++    val state = state(
++      backupsEnabled = true,
++      paidTier = true,
++      hasSubscriber = true,
++      serverCheckComplete = false,
++      serverSubscriptionActive = null
++    )
++
++    assertEquals(BackupSubscriptionHealth.CHECKING, state.health)
++  }
++
++  @Test
++  fun `inactive server subscription requires attention`() {
++    val state = state(
++      backupsEnabled = true,
++      paidTier = true,
++      hasSubscriber = true,
++      serverCheckComplete = true,
++      serverSubscriptionActive = false
++    )
++
++    assertEquals(BackupSubscriptionHealth.ATTENTION, state.health)
++  }
++
++  @Test
++  fun `report contains useful booleans but no subscription secrets`() {
++    val report = state(
++      backupsEnabled = true,
++      paidTier = true,
++      hasSubscriber = true,
++      subscriptionType = "Google Play Billing",
++      hasPurchaseToken = true,
++      serverCheckComplete = true,
++      serverSubscriptionActive = true
++    ).toRedactedReport()
++
++    assertTrue(report.contains("Subscriber record: present"))
++    assertTrue(report.contains("Purchase token: present (redacted)"))
++    assertTrue(report.contains("Server subscription: active"))
++    assertFalse(report.contains("subscriber-id-value"))
++    assertFalse(report.contains("purchase-token-value"))
++  }
++
++  private fun state(
++    backupsEnabled: Boolean = false,
++    paidTier: Boolean = false,
++    hasSubscriber: Boolean = false,
++    subscriptionType: String = "None",
++    hasPurchaseToken: Boolean = false,
++    serverCheckComplete: Boolean = false,
++    serverSubscriptionActive: Boolean? = null
++  ): BackupSubscriptionDiagnosticsState {
++    return BackupSubscriptionDiagnosticsState(
++      backupsEnabled = backupsEnabled,
++      backupTier = if (paidTier) "PAID" else "FREE",
++      paidTier = paidTier,
++      playBillingSupported = false,
++      postRegistrationRelinkEnabled = false,
++      hasSubscriber = hasSubscriber,
++      subscriptionType = subscriptionType,
++      hasPurchaseToken = hasPurchaseToken,
++      lastKeepAliveLaunchMillis = 0,
++      lastCheckInMillis = 0,
++      lastBackupMillis = 0,
++      subscriptionMismatch = false,
++      latestPaymentState = "None",
++      latestRedemptionStage = "None",
++      latestPaymentError = "None",
++      pendingRedemption = false,
++      serverCheckComplete = serverCheckComplete,
++      serverSubscriptionActive = serverSubscriptionActive,
++      serverSubscriptionStatus = "Not checked",
++      serverRenewalEpochSeconds = null,
++      serverWillCancel = null,
++      actionInProgress = null,
++      actionMessage = null
++    )
++  }
++}
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt b/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
+index d78d7a3dba..3b0f22b4fb 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
+@@ -29,6 +29,7 @@ import org.whispersystems.signalservice.api.subscriptions.ActiveSubscription.Cha
+ import org.whispersystems.signalservice.api.subscriptions.SubscriberId
+ import org.whispersystems.signalservice.internal.EmptyResponse
+ import org.whispersystems.signalservice.internal.ServiceResponse
++import kotlin.time.Duration.Companion.milliseconds
+ 
+ @RunWith(RobolectricTestRunner::class)
+ @Config(manifest = Config.NONE, application = Application::class)
+@@ -66,6 +67,29 @@ class InAppPaymentKeepAliveJobTest {
+     every { AppDependencies.donationsService.putSubscription(any()) } returns ServiceResponse(200, "", EmptyResponse.INSTANCE, null, null)
+   }
+ 
++  @Test
++  fun `manual backup keepalive enqueues backup only and tracks launch time`() {
++    every { mockSignalStore.inAppPayments.setLastKeepAliveLaunchTime(any()) } returns Unit
++
++    InAppPaymentKeepAliveJob.enqueueBackupAndTrackTime(123.milliseconds)
++
++    verify(exactly = 1) {
++      AppDependencies.jobManager.add(
++        match { job ->
++          job is InAppPaymentKeepAliveJob && job.type == InAppPaymentSubscriberRecord.Type.BACKUP
++        }
++      )
++    }
++    verify(exactly = 0) {
++      AppDependencies.jobManager.add(
++        match { job ->
++          job is InAppPaymentKeepAliveJob && job.type == InAppPaymentSubscriberRecord.Type.DONATION
++        }
++      )
++    }
++    verify(exactly = 1) { mockSignalStore.inAppPayments.setLastKeepAliveLaunchTime(123) }
++  }
++
+   @Test
+   fun `Given an unregistered local user, when I run, then I expect skip`() {
+     every { mockSignalStore.account.isRegistered } returns false
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicyTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicyTest.kt
+new file mode 100644
+index 0000000000..390387d438
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicyTest.kt
+@@ -0,0 +1,31 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.util
++
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class VesperBackupSubscriptionPolicyTest {
++
++  @Test
++  fun `post-registration relink is disabled without Play Billing support`() {
++    assertFalse(
++      VesperBackupSubscriptionPolicy.shouldEnqueuePostRegistrationRedemption(
++        supportsGooglePlayBilling = false
++      )
++    )
++  }
++
++  @Test
++  fun `post-registration relink remains available when Play Billing is supported`() {
++    assertTrue(
++      VesperBackupSubscriptionPolicy.shouldEnqueuePostRegistrationRedemption(
++        supportsGooglePlayBilling = true
++      )
++    )
++  }
++}

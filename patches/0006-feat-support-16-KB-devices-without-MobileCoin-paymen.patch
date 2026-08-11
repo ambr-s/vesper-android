@@ -1,7 +1,7 @@
-From 05ecf74f554bbcebe1f55b4372bdec6b7d9d8169 Mon Sep 17 00:00:00 2001
+From 10c219fe6941ac43d81faf5e5f5a99020a2ac61a Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:10 +0000
-Subject: [PATCH 06/19] feat: support 16 KB devices without MobileCoin payments
+Subject: [PATCH 06/20] feat: support 16 KB devices without MobileCoin payments
 
 ---
  app/build.gradle.kts                          | 10 +-
@@ -20,7 +20,7 @@ Subject: [PATCH 06/19] feat: support 16 KB devices without MobileCoin payments
  create mode 100644 app/src/main/res/values/vesper_features.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 7b88b0573e..a25e03d994 100644
+index 12e51e8360..b4dac8eb53 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -216,7 +216,8 @@ android {
