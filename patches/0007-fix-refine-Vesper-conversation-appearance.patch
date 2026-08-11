@@ -1,7 +1,7 @@
 From 53ad9f4d232e30f11e708c005264ddc11a0001db Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:10 +0000
-Subject: [PATCH 07/20] fix: refine Vesper conversation appearance
+Subject: [PATCH 07/21] fix: refine Vesper conversation appearance
 
 ---
  .../settings/app/help/HelpSettingsFragment.kt | 30 +---------------

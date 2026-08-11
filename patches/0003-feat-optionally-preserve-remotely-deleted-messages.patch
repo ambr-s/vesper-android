@@ -1,7 +1,7 @@
 From 4be420601f472b64d0a38dda2e4ff9808718d4b6 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:44:38 +0000
-Subject: [PATCH 03/20] feat: optionally preserve remotely deleted messages
+Subject: [PATCH 03/21] feat: optionally preserve remotely deleted messages
 
 ---
  .../v2/exporters/ChatItemArchiveExporter.kt   |  2 +

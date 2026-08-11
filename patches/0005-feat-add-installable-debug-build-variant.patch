@@ -1,7 +1,7 @@
 From 6d94a5c3eebede64764703ce09b2cba9d8459d51 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:10 +0000
-Subject: [PATCH 05/20] feat: add installable debug build variant
+Subject: [PATCH 05/21] feat: add installable debug build variant
 
 ---
  app/build.gradle.kts                          |  3 +++

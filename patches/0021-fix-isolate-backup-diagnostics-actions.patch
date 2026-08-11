@@ -1,0 +1,238 @@
+From e932525bab88cd8c1598ec3d10050a036e92b652 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Tue, 11 Aug 2026 11:21:16 +0000
+Subject: [PATCH 21/21] fix: isolate backup diagnostics actions
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../BackupSubscriptionDiagnosticsViewModel.kt | 15 ++++++---
+ .../RecurringInAppPaymentRepository.kt        |  6 +++-
+ .../securesms/jobs/BackupMessagesJob.kt       |  7 +++-
+ .../jobs/InAppPaymentKeepAliveJob.kt          | 18 ++++++++---
+ ...ringInAppPaymentRepositoryKeepAliveTest.kt | 15 +++++++--
+ .../jobs/InAppPaymentKeepAliveJobTest.kt      | 32 +++++++++++++++----
+ 6 files changed, 74 insertions(+), 19 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
+index aa8edb8ef7..e89ec386ca 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
+@@ -29,7 +29,6 @@ import org.thoughtcrime.securesms.util.Environment
+ import org.thoughtcrime.securesms.util.VesperBackupSubscriptionPolicy
+ import org.whispersystems.signalservice.api.storage.IAPSubscriptionId
+ import org.whispersystems.signalservice.api.subscriptions.ActiveSubscription
+-import kotlin.time.Duration.Companion.milliseconds
+ 
+ class BackupSubscriptionDiagnosticsViewModel : ViewModel() {
+ 
+@@ -51,8 +50,11 @@ class BackupSubscriptionDiagnosticsViewModel : ViewModel() {
+ 
+   fun runKeepAlive() {
+     runAction("Backup keepalive") {
+-      InAppPaymentKeepAliveJob.enqueueBackupAndTrackTime(System.currentTimeMillis().milliseconds)
+-      "Backup-only keepalive queued."
++      if (InAppPaymentKeepAliveJob.enqueueBackup()) {
++        "Backup-only keepalive queued."
++      } else {
++        "Backup keepalive was not queued because this is not an eligible registered primary account with a backup subscriber."
++      }
+     }
+   }
+ 
+@@ -68,8 +70,11 @@ class BackupSubscriptionDiagnosticsViewModel : ViewModel() {
+ 
+   fun runBackupNow() {
+     runAction("Backup upload") {
+-      BackupMessagesJob.enqueue()
+-      "Backup upload queued."
++      if (BackupMessagesJob.enqueueIfAllowed()) {
++        "Backup upload queued."
++      } else {
++        "Backup upload was not queued because this is a linked device, a restore is active, or a restore decision is pending."
++      }
+     }
+   }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt
+index 4501ee809e..fe54f98fd8 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt
+@@ -96,7 +96,11 @@ object RecurringInAppPaymentRepository {
+     response.result.ifPresent { result ->
+       val lastEndOfPeriod = SignalDatabase.inAppPayments.getByLatestEndOfPeriod(type.inAppPaymentType)?.endOfPeriodSeconds ?: 0L
+       if (result.isActive && result.activeSubscription.endOfCurrentPeriod > lastEndOfPeriod) {
+-        InAppPaymentKeepAliveJob.enqueueAndTrackTime(System.currentTimeMillis().milliseconds)
++        if (type == InAppPaymentSubscriberRecord.Type.BACKUP) {
++          InAppPaymentKeepAliveJob.enqueueBackup()
++        } else {
++          InAppPaymentKeepAliveJob.enqueueAndTrackTime(System.currentTimeMillis().milliseconds)
++        }
+       }
+     }
+ 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
+index 6794fe2021..b39368e526 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
+@@ -106,12 +106,17 @@ class BackupMessagesJob private constructor(
+     }
+ 
+     fun enqueue() {
++      enqueueIfAllowed()
++    }
++
++    fun enqueueIfAllowed(): Boolean {
+       if (!isBackupAllowed()) {
+         Log.d(TAG, "Skip enqueueing BackupMessagesJob.", true)
+-        return
++        return false
+       }
+ 
+       AppDependencies.jobManager.add(BackupMessagesJob())
++      return true
+     }
+ 
+     fun cancel() {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
+index 9d7317945c..36f997e117 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
+@@ -89,14 +89,24 @@ class InAppPaymentKeepAliveJob private constructor(
+     }
+ 
+     @JvmStatic
+-    fun enqueueBackupAndTrackTime(now: Duration) {
++    fun enqueueBackup(): Boolean {
++      if (!SignalStore.account.isRegistered) {
++        Log.i(TAG, "Unregistered account. Skipping backup keepalive.")
++        return false
++      }
++
+       if (SignalStore.account.isLinkedDevice) {
+-        Log.i(TAG, "Linked device. Skipping.")
+-        return
++        Log.i(TAG, "Linked device. Skipping backup keepalive.")
++        return false
++      }
++
++      if (InAppPaymentsRepository.getSubscriber(InAppPaymentSubscriberRecord.Type.BACKUP) == null) {
++        Log.i(TAG, "Backup subscriber not present. Skipping backup keepalive.")
++        return false
+       }
+ 
+       AppDependencies.jobManager.add(create(InAppPaymentSubscriberRecord.Type.BACKUP))
+-      SignalStore.inAppPayments.setLastKeepAliveLaunchTime(now.inWholeMilliseconds)
++      return true
+     }
+ 
+     @JvmStatic
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepositoryKeepAliveTest.kt b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepositoryKeepAliveTest.kt
+index 1e9fb58b2c..9947b2c4bf 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepositoryKeepAliveTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepositoryKeepAliveTest.kt
+@@ -58,6 +58,7 @@ class RecurringInAppPaymentRepositoryKeepAliveTest {
+ 
+     InAppPaymentsTestRule.mockLocalSubscriberAccess(subscriber())
+ 
++    every { mockSignalStore.account.isRegistered } returns true
+     every { mockSignalStore.account.isLinkedDevice } returns false
+     every { SignalStore.backup.backupTierInternalOverride } returns null
+     every { SignalStore.inAppPayments.setLastKeepAliveLaunchTime(any()) } returns Unit
+@@ -77,7 +78,7 @@ class RecurringInAppPaymentRepositoryKeepAliveTest {
+   }
+ 
+   @Test
+-  fun `Given a backup subscription whose period has advanced, when I getActiveSubscription, then I enqueue a keep-alive`() {
++  fun `Given a backup subscription whose period has advanced, when I getActiveSubscription, then I enqueue only a backup keep-alive`() {
+     val endOfCurrentPeriod = setUpActiveSubscription()
+ 
+     every { SignalStore.inAppPayments.getLastEndOfPeriod() } returns 0L
+@@ -85,7 +86,17 @@ class RecurringInAppPaymentRepositoryKeepAliveTest {
+ 
+     RecurringInAppPaymentRepository.getActiveSubscriptionSync(InAppPaymentSubscriberRecord.Type.BACKUP)
+ 
+-    verify(atLeast = 1) { AppDependencies.jobManager.add(ofType(InAppPaymentKeepAliveJob::class)) }
++    verify(exactly = 1) {
++      AppDependencies.jobManager.add(
++        match { job -> job is InAppPaymentKeepAliveJob && job.type == InAppPaymentSubscriberRecord.Type.BACKUP }
++      )
++    }
++    verify(exactly = 0) {
++      AppDependencies.jobManager.add(
++        match { job -> job is InAppPaymentKeepAliveJob && job.type == InAppPaymentSubscriberRecord.Type.DONATION }
++      )
++    }
++    verify(exactly = 0) { SignalStore.inAppPayments.setLastKeepAliveLaunchTime(any()) }
+   }
+ 
+   @Test
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt b/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
+index 3b0f22b4fb..f3ff9359e8 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
+@@ -7,6 +7,7 @@ package org.thoughtcrime.securesms.jobs
+ 
+ import android.app.Application
+ import assertk.assertThat
++import assertk.assertions.isFalse
+ import assertk.assertions.isTrue
+ import io.mockk.every
+ import io.mockk.verify
+@@ -29,7 +30,6 @@ import org.whispersystems.signalservice.api.subscriptions.ActiveSubscription.Cha
+ import org.whispersystems.signalservice.api.subscriptions.SubscriberId
+ import org.whispersystems.signalservice.internal.EmptyResponse
+ import org.whispersystems.signalservice.internal.ServiceResponse
+-import kotlin.time.Duration.Companion.milliseconds
+ 
+ @RunWith(RobolectricTestRunner::class)
+ @Config(manifest = Config.NONE, application = Application::class)
+@@ -63,16 +63,16 @@ class InAppPaymentKeepAliveJobTest {
+       iapSubscriptionId = null
+     )
+     every { InAppPaymentsRepository.getSubscriber(InAppPaymentSubscriberRecord.Type.DONATION) } returns subscriber
++    every { InAppPaymentsRepository.getSubscriber(InAppPaymentSubscriberRecord.Type.BACKUP) } returns subscriber.copy(type = InAppPaymentSubscriberRecord.Type.BACKUP)
+ 
+     every { AppDependencies.donationsService.putSubscription(any()) } returns ServiceResponse(200, "", EmptyResponse.INSTANCE, null, null)
+   }
+ 
+   @Test
+-  fun `manual backup keepalive enqueues backup only and tracks launch time`() {
+-    every { mockSignalStore.inAppPayments.setLastKeepAliveLaunchTime(any()) } returns Unit
+-
+-    InAppPaymentKeepAliveJob.enqueueBackupAndTrackTime(123.milliseconds)
++  fun `manual backup keepalive enqueues backup only without changing shared launch time`() {
++    val enqueued = InAppPaymentKeepAliveJob.enqueueBackup()
+ 
++    assertThat(enqueued).isTrue()
+     verify(exactly = 1) {
+       AppDependencies.jobManager.add(
+         match { job ->
+@@ -87,7 +87,27 @@ class InAppPaymentKeepAliveJobTest {
+         }
+       )
+     }
+-    verify(exactly = 1) { mockSignalStore.inAppPayments.setLastKeepAliveLaunchTime(123) }
++    verify(exactly = 0) { mockSignalStore.inAppPayments.setLastKeepAliveLaunchTime(any()) }
++  }
++
++  @Test
++  fun `manual backup keepalive rejects an unregistered account`() {
++    every { mockSignalStore.account.isRegistered } returns false
++
++    val enqueued = InAppPaymentKeepAliveJob.enqueueBackup()
++
++    assertThat(enqueued).isFalse()
++    verify(exactly = 0) { AppDependencies.jobManager.add(any()) }
++  }
++
++  @Test
++  fun `manual backup keepalive rejects an account without a backup subscriber`() {
++    every { InAppPaymentsRepository.getSubscriber(InAppPaymentSubscriberRecord.Type.BACKUP) } returns null
++
++    val enqueued = InAppPaymentKeepAliveJob.enqueueBackup()
++
++    assertThat(enqueued).isFalse()
++    verify(exactly = 0) { AppDependencies.jobManager.add(any()) }
+   }
+ 
+   @Test

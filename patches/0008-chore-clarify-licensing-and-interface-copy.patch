@@ -1,7 +1,7 @@
 From d6d3018e80e05736e2310d9a8ca7877a00c5263d Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
-Subject: [PATCH 08/20] chore: clarify licensing and interface copy
+Subject: [PATCH 08/21] chore: clarify licensing and interface copy
 
 ---
  .../debug/res/drawable/ic_launcher_background.xml    |  6 +++++-

@@ -1,7 +1,7 @@
 From 40848548a0a707e21f439da909a2685cd9e7411d Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Tue, 11 Aug 2026 10:53:42 +0000
-Subject: [PATCH 20/20] feat: add backup subscription diagnostics
+Subject: [PATCH 20/21] feat: add backup subscription diagnostics
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
