@@ -277,6 +277,7 @@ def export_patch_series(
             "--suffix=.patch",
             "--filename-max-length=64",
             "--default-prefix",
+            "-U3",
             "-O/dev/null",
             "--output-directory",
             str(generated_directory),

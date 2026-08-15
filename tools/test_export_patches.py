@@ -354,6 +354,14 @@ class StablePatchExportTest(unittest.TestCase):
 
         self.assertEqual(1, len(list(self.output.glob("*.patch"))))
 
+    def test_forces_nonzero_diff_context(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "diff.context", "0", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        self.assertEqual(1, len(list(self.output.glob("*.patch"))))
+
     def test_forces_descriptive_patch_filename_policy(self) -> None:
         exporter = load_exporter()
         run("git", "config", "format.numberedFiles", "true", cwd=self.repository)
