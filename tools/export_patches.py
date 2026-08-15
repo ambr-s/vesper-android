@@ -32,7 +32,7 @@ SUBJECT_PREFIX_PATTERN = re.compile(r"^\[PATCH(?: [0-9]+/[0-9]+)?\]\s*")
 
 def git(repository: Path, *arguments: str, env: dict[str, str] | None = None) -> str:
     completed = subprocess.run(
-        ["git", "-C", str(repository), *arguments],
+        ["git", "-c", "diff.orderFile=/dev/null", "-C", str(repository), *arguments],
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -44,7 +44,7 @@ def git(repository: Path, *arguments: str, env: dict[str, str] | None = None) ->
 
 def git_bytes(repository: Path, *arguments: str) -> bytes:
     return subprocess.run(
-        ["git", "-C", str(repository), *arguments],
+        ["git", "-c", "diff.orderFile=/dev/null", "-C", str(repository), *arguments],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -228,6 +228,12 @@ def export_patch_series(
             old_by_subject[subject].append(content)
 
     pathspecs = [".", *(f":(exclude){path}" for path in excludes)]
+    merges = git(repository, "rev-list", "--merges", f"{base}..HEAD").splitlines()
+    if merges:
+        raise RuntimeError(
+            "Merge commits are not supported in the feature patch range: "
+            + ", ".join(commit[:12] for commit in merges)
+        )
     commits = [
         commit
         for commit in git(repository, "rev-list", "--reverse", f"{base}..HEAD").splitlines()
@@ -266,9 +272,12 @@ def export_patch_series(
             "--no-thread",
             "--no-notes",
             "--numbered",
+            "--no-numbered-files",
             "--subject-prefix=PATCH",
             "--suffix=.patch",
+            "--filename-max-length=64",
             "--default-prefix",
+            "-O/dev/null",
             "--output-directory",
             str(generated_directory),
             f"{base}..HEAD",

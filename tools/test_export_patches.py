@@ -340,6 +340,48 @@ class StablePatchExportTest(unittest.TestCase):
         self.assertNotIn(b"Notes:", patch)
         self.assertNotIn(b"private local review note", patch)
 
+    def test_ignores_configured_diff_order_file(self) -> None:
+        exporter = load_exporter()
+        run(
+            "git",
+            "config",
+            "diff.orderFile",
+            str(self.root / "missing-order-file"),
+            cwd=self.repository,
+        )
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        self.assertEqual(1, len(list(self.output.glob("*.patch"))))
+
+    def test_forces_descriptive_patch_filename_policy(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "format.numberedFiles", "true", cwd=self.repository)
+        run("git", "config", "format.filenameMaxLength", "12", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        self.assertEqual(
+            ["0001-feat-add-Vesper-behaviour.patch"],
+            [patch.name for patch in self.output.glob("*.patch")],
+        )
+
+    def test_rejects_merge_commits_with_actionable_error(self) -> None:
+        exporter = load_exporter()
+        main_branch = run("git", "branch", "--show-current", cwd=self.repository).strip()
+        run("git", "checkout", "-q", "-b", "side", cwd=self.repository)
+        (self.repository / "side.txt").write_text("side\n")
+        run("git", "add", "side.txt", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "feat: add side", cwd=self.repository)
+        run("git", "checkout", "-q", main_branch, cwd=self.repository)
+        (self.repository / "main.txt").write_text("main\n")
+        run("git", "add", "main.txt", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "feat: add main", cwd=self.repository)
+        run("git", "merge", "-q", "--no-ff", "-m", "merge side", "side", cwd=self.repository)
+
+        with self.assertRaisesRegex(RuntimeError, "Merge commits are not supported"):
+            exporter.export_patch_series(self.repository, self.output, self.base, [])
+
     def test_forces_canonical_numbered_patch_subjects(self) -> None:
         exporter = load_exporter()
         (self.repository / "second.txt").write_text("second feature\n")
