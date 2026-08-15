@@ -28,7 +28,9 @@ from typing import Iterable
 
 
 SUBJECT_PREFIX_PATTERN = re.compile(r"^\[PATCH(?: [0-9]+/[0-9]+)?\]\s*")
-SUBJECT_HEADER_PATTERN = re.compile(rb"^Subject:.*(?:\n[ \t].*)*", re.MULTILINE)
+SUBJECT_HEADER_PATTERN = re.compile(
+    rb"^Subject:.*(?:\n[ \t].*)*", re.MULTILINE | re.IGNORECASE
+)
 
 
 def git(repository: Path, *arguments: str, env: dict[str, str] | None = None) -> str:
@@ -168,12 +170,44 @@ def applied_trees(sandbox: Path, parent: str, patch: Path) -> set[str]:
         applicable_patch.write_bytes(normalized)
         try:
             git(sandbox, "reset", "--hard", "--quiet", parent)
-            git(sandbox, "apply", "--whitespace=nowarn", str(applicable_patch))
-            git(sandbox, "add", "--all")
+            git(
+                sandbox,
+                "apply",
+                "--cached",
+                "--whitespace=nowarn",
+                str(applicable_patch),
+            )
             trees.add(git(sandbox, "write-tree").strip())
         except subprocess.CalledProcessError:
             continue
     return trees
+
+
+def filtered_commit_tree(
+    repository: Path,
+    sandbox: Path,
+    parent: str,
+    commit: str,
+    pathspecs: list[str],
+) -> str:
+    patch = sandbox.parent / "expected.patch"
+    patch.write_bytes(
+        git_bytes(
+            repository,
+            "diff-tree",
+            "--binary",
+            "--full-index",
+            "--no-commit-id",
+            "-p",
+            parent,
+            commit,
+            "--",
+            *pathspecs,
+        )
+    )
+    git(sandbox, "reset", "--hard", "--quiet", parent)
+    git(sandbox, "apply", "--cached", "--whitespace=nowarn", str(patch))
+    return git(sandbox, "write-tree").strip()
 
 
 def export_patch_series(
@@ -250,7 +284,9 @@ def export_patch_series(
                         f"Generated patch lacks a surviving author sign-off: {subject}"
                     )
                 parent = git(repository, "rev-parse", f"{commit}^").strip()
-                expected_tree = git(repository, "rev-parse", f"{commit}^{{tree}}").strip()
+                expected_tree = filtered_commit_tree(
+                    repository, sandbox, parent, commit, pathspecs
+                )
                 if expected_tree not in applied_trees(sandbox, parent, generated_patch):
                     raise RuntimeError(f"Generated patch does not apply to {parent}: {subject}")
 

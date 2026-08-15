@@ -5,11 +5,92 @@ Subject: [PATCH 07/21] fix: refine Vesper conversation appearance
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
+ .../settings/app/help/HelpSettingsFragment.kt | 30 +---------------
  .../V2ConversationItemTextOnlyViewHolder.kt   |  5 +--
  .../securesms/keyvalue/SettingsValues.java    |  2 +-
  .../reactions/ReactionsConversationView.java  | 35 +++++++++++++++++--
- 3 files changed, 37 insertions(+), 5 deletions(-)
+ 4 files changed, 38 insertions(+), 34 deletions(-)
 
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
+index 68247d948c..763a97aa25 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsFragment.kt
+@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+-import androidx.compose.foundation.text.InlineTextContent
+-import androidx.compose.foundation.text.appendInlineContent
+-import androidx.compose.material3.Icon
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.runtime.getValue
+@@ -27,14 +24,10 @@ import androidx.compose.ui.platform.LocalContext
+ import androidx.compose.ui.res.stringResource
+ import androidx.compose.ui.res.vectorResource
+ import androidx.compose.ui.text.LinkAnnotation
+-import androidx.compose.ui.text.Placeholder
+-import androidx.compose.ui.text.PlaceholderVerticalAlign
+ import androidx.compose.ui.text.SpanStyle
+ import androidx.compose.ui.text.buildAnnotatedString
+ import androidx.compose.ui.text.withLink
+ import androidx.compose.ui.text.withStyle
+-import androidx.compose.ui.unit.dp
+-import androidx.compose.ui.unit.sp
+ import androidx.fragment.app.viewModels
+ import androidx.lifecycle.compose.collectAsStateWithLifecycle
+ import androidx.navigation.NavController
+@@ -171,7 +164,6 @@ class HelpSettingsFragment : ComposeFragment() {
+         }
+ 
+         item {
+-          val externalLinkId = "vesper-website-icon"
+           val aboutLabel = buildAnnotatedString {
+             append(getString(R.string.HelpSettingsFragment__vesper_messenger_by))
+             append(" ")
+@@ -182,7 +174,6 @@ class HelpSettingsFragment : ComposeFragment() {
+             ) {
+               withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                 append(getString(R.string.HelpSettingsFragment__amber_systems))
+-                appendInlineContent(externalLinkId, "[external link]")
+               }
+             }
+             append("\n")
+@@ -190,22 +181,6 @@ class HelpSettingsFragment : ComposeFragment() {
+             append("\n")
+             append(getString(R.string.HelpSettingsFragment__signal_is_a_501c3))
+           }
+-          val inlineContent = mapOf(
+-            externalLinkId to InlineTextContent(
+-              placeholder = Placeholder(
+-                width = 20.sp,
+-                height = 16.sp,
+-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+-              )
+-            ) {
+-              Icon(
+-                imageVector = ImageVector.vectorResource(R.drawable.symbol_open_20),
+-                contentDescription = null,
+-                tint = MaterialTheme.colorScheme.primary,
+-                modifier = Modifier.padding(start = 4.dp)
+-              )
+-            }
+-          )
+ 
+           Row(
+             modifier = Modifier
+@@ -213,10 +188,7 @@ class HelpSettingsFragment : ComposeFragment() {
+               .padding(defaultPadding()),
+             verticalAlignment = CenterVertically
+           ) {
+-            TextAndLabel(
+-              label = aboutLabel,
+-              inlineContent = inlineContent
+-            )
++            TextAndLabel(label = aboutLabel)
+           }
+         }
+       }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/items/V2ConversationItemTextOnlyViewHolder.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/items/V2ConversationItemTextOnlyViewHolder.kt
 index 24cc490730..a21a43e16b 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/items/V2ConversationItemTextOnlyViewHolder.kt
@@ -53,7 +134,7 @@ index 53537b8db2..520439795e 100644
  
    public int getMessageFontSize() {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
-index 50570a6827..a7dcd2e132 100644
+index f984e9acd3..7378fbc511 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
 @@ -1,6 +1,7 @@
@@ -72,7 +153,7 @@ index 50570a6827..a7dcd2e132 100644
  
  import org.signal.core.ui.util.ThemeUtil;
  import org.thoughtcrime.securesms.R;
-@@ -37,6 +39,8 @@ public class ReactionsConversationView extends LinearLayout {
+@@ -38,6 +40,8 @@ public class ReactionsConversationView extends LinearLayout {
    private List<ReactionRecord> records;
    private int                  bubbleWidth;
    private boolean              isSettingBubbleWidth;
@@ -81,7 +162,7 @@ index 50570a6827..a7dcd2e132 100644
  
    public ReactionsConversationView(Context context) {
      super(context);
-@@ -60,6 +64,8 @@ public class ReactionsConversationView extends LinearLayout {
+@@ -61,6 +65,8 @@ public class ReactionsConversationView extends LinearLayout {
    public void clear() {
      this.records.clear();
      this.bubbleWidth = 0;
@@ -90,7 +171,7 @@ index 50570a6827..a7dcd2e132 100644
      removeAllViews();
    }
  
-@@ -87,6 +93,13 @@ public class ReactionsConversationView extends LinearLayout {
+@@ -88,6 +94,13 @@ public class ReactionsConversationView extends LinearLayout {
          pill.setVisibility(bubbleWidth == 0 ? INVISIBLE : VISIBLE);
        }
  
@@ -104,7 +185,7 @@ index 50570a6827..a7dcd2e132 100644
        measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
  
        int railWidth = getMeasuredWidth();
-@@ -129,9 +142,13 @@ public class ReactionsConversationView extends LinearLayout {
+@@ -130,9 +143,13 @@ public class ReactionsConversationView extends LinearLayout {
      List<Reaction> reactions = buildSortedReactionsList(records);
  
      removeAllViews();
@@ -119,7 +200,7 @@ index 50570a6827..a7dcd2e132 100644
      }
  
      for (Reaction reaction : reactions) {
-@@ -238,14 +255,28 @@ public class ReactionsConversationView extends LinearLayout {
+@@ -239,14 +256,28 @@ public class ReactionsConversationView extends LinearLayout {
  
      emojiView.setVisibility(GONE);
      spacer.setVisibility(GONE);

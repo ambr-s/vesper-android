@@ -245,6 +245,48 @@ class StablePatchExportTest(unittest.TestCase):
 
         self.assertEqual(canonical, next(self.output.glob("*.patch")).read_bytes())
 
+    def test_exports_mixed_commit_using_non_excluded_tree(self) -> None:
+        exporter = load_exporter()
+        (self.repository / "owned.txt").write_text("owned overlay\n")
+        run("git", "add", "owned.txt", cwd=self.repository)
+        run("git", "commit", "--amend", "-q", "--no-edit", cwd=self.repository)
+
+        exporter.export_patch_series(
+            self.repository, self.output, self.base, ["owned.txt"]
+        )
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertIn(b"feature.txt", patch)
+        self.assertNotIn(b"owned.txt", patch)
+
+    def test_exports_force_added_ignored_file(self) -> None:
+        exporter = load_exporter()
+        run("git", "checkout", "-q", self.base, cwd=self.repository)
+        (self.repository / ".gitignore").write_text("*.ignored\n")
+        run("git", "add", ".gitignore", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "upstream ignores fixture", cwd=self.repository)
+        ignored_base = run("git", "rev-parse", "HEAD", cwd=self.repository).strip()
+        (self.repository / "feature.ignored").write_text("tracked feature\n")
+        run("git", "add", "-f", "feature.ignored", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "feat: add ignored file", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, ignored_base, [])
+
+        self.assertIn(
+            b"feature.ignored", next(self.output.glob("*.patch")).read_bytes()
+        )
+
+    def test_regenerates_retained_candidate_with_lowercase_subject_header(self) -> None:
+        exporter = load_exporter()
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+        patch = next(self.output.glob("*.patch"))
+        canonical = patch.read_bytes()
+        patch.write_bytes(canonical.replace(b"\nSubject:", b"\nsubject:", 1))
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        self.assertEqual(canonical, next(self.output.glob("*.patch")).read_bytes())
+
     def test_exports_binary_delta_patches(self) -> None:
         exporter = load_exporter()
         run("git", "checkout", "-q", self.base, cwd=self.repository)
