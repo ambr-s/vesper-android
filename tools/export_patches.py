@@ -139,48 +139,54 @@ def has_author_signoff(content: bytes) -> bool:
     return expected in message.decode("utf-8", errors="replace").splitlines()
 
 
-def patch_diff_candidates(content: bytes) -> list[bytes]:
-    first_line_end = content.find(b"\n")
-    if first_line_end < 0 or not content.startswith(b"From "):
-        raise ValueError("Patch has no mbox envelope")
-    mail = content[first_line_end + 1 :]
-    header_end = mail.find(b"\n\n")
-    if header_end < 0:
-        raise ValueError("Patch has incomplete mail headers")
-    payload = mail[header_end + 2 :]
-    return [
-        payload[match.start() :]
-        for match in re.finditer(rb"^diff --git ", payload, flags=re.MULTILINE)
-    ]
+def commit_body(repository: Path, commit: str) -> bytes:
+    return git_bytes(repository, "show", "-s", "--format=%b%x00", commit).split(
+        b"\x00", maxsplit=1
+    )[0]
 
 
-def applied_trees(sandbox: Path, parent: str, patch: Path) -> set[str]:
-    trees: set[str] = set()
-    for position, diff in enumerate(patch_diff_candidates(patch.read_bytes())):
-        if b"GIT binary patch" in diff:
-            normalized = diff
-        else:
-            normalized = re.sub(
-                rb"^index [0-9a-f]+\.\.[0-9a-f]+(?: [0-7]+)?\n",
-                b"",
-                diff,
-                flags=re.MULTILINE,
-            )
-        applicable_patch = sandbox.parent / f"applicable-{position}.patch"
-        applicable_patch.write_bytes(normalized)
-        try:
-            git(sandbox, "reset", "--hard", "--quiet", parent)
-            git(
-                sandbox,
-                "apply",
-                "--cached",
-                "--whitespace=nowarn",
-                str(applicable_patch),
-            )
-            trees.add(git(sandbox, "write-tree").strip())
-        except subprocess.CalledProcessError:
-            continue
-    return trees
+def complete_patch_diff(content: bytes, source_body: bytes) -> bytes:
+    expected_prefix = source_body.rstrip(b"\n")
+    if expected_prefix:
+        expected_prefix += b"\n"
+    expected_prefix += b"---\n"
+    payload = patch_payload(content)
+    if not payload.startswith(expected_prefix):
+        raise ValueError("Patch body does not match source commit")
+    remainder = payload[len(expected_prefix) :]
+    first_diff = re.search(rb"^diff --git ", remainder, flags=re.MULTILINE)
+    if first_diff is None:
+        raise ValueError("Patch has no diff")
+    return remainder[first_diff.start() :]
+
+
+def applied_trees(
+    sandbox: Path, parent: str, patch: Path, source_body: bytes
+) -> set[str]:
+    diff = complete_patch_diff(patch.read_bytes(), source_body)
+    if b"GIT binary patch" in diff:
+        normalized = diff
+    else:
+        normalized = re.sub(
+            rb"^index [0-9a-f]+\.\.[0-9a-f]+(?: [0-7]+)?\n",
+            b"",
+            diff,
+            flags=re.MULTILINE,
+        )
+    applicable_patch = sandbox.parent / "applicable.patch"
+    applicable_patch.write_bytes(normalized)
+    try:
+        git(sandbox, "reset", "--hard", "--quiet", parent)
+        git(
+            sandbox,
+            "apply",
+            "--cached",
+            "--whitespace=nowarn",
+            str(applicable_patch),
+        )
+        return {git(sandbox, "write-tree").strip()}
+    except subprocess.CalledProcessError:
+        return set()
 
 
 def filtered_commit_tree(
@@ -279,6 +285,7 @@ def export_patch_series(
             for commit, generated_patch in zip(commits, generated, strict=True):
                 generated_content = generated_patch.read_bytes()
                 subject = patch_subject(generated_content)
+                source_body = commit_body(repository, commit)
                 if require_author_signoff and not has_author_signoff(generated_content):
                     raise RuntimeError(
                         f"Generated patch lacks a surviving author sign-off: {subject}"
@@ -287,7 +294,9 @@ def export_patch_series(
                 expected_tree = filtered_commit_tree(
                     repository, sandbox, parent, commit, pathspecs
                 )
-                if expected_tree not in applied_trees(sandbox, parent, generated_patch):
+                if expected_tree not in applied_trees(
+                    sandbox, parent, generated_patch, source_body
+                ):
                     raise RuntimeError(f"Generated patch does not apply to {parent}: {subject}")
 
                 selected_content = generated_content
@@ -298,7 +307,8 @@ def export_patch_series(
                     old_patch.write_bytes(old_content)
                     if (
                         matches_commit_provenance(old_content, repository, commit)
-                        and expected_tree in applied_trees(sandbox, parent, old_patch)
+                        and expected_tree
+                        in applied_trees(sandbox, parent, old_patch, source_body)
                     ):
                         selected_content = canonicalize_envelope_and_subject(
                             old_content, generated_content

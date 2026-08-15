@@ -287,6 +287,44 @@ class StablePatchExportTest(unittest.TestCase):
 
         self.assertEqual(canonical, next(self.output.glob("*.patch")).read_bytes())
 
+    def test_rejects_retained_patch_when_only_a_later_file_suffix_matches(self) -> None:
+        exporter = load_exporter()
+        run("git", "checkout", "-q", self.base, cwd=self.repository)
+        (self.repository / "a.txt").write_text("base a\n")
+        (self.repository / "b.txt").write_text("base b\n")
+        run("git", "add", "a.txt", "b.txt", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "upstream adds files", cwd=self.repository)
+        multi_base = run("git", "rev-parse", "HEAD", cwd=self.repository).strip()
+        (self.repository / "a.txt").write_text("VESPER A\n")
+        (self.repository / "b.txt").write_text("VESPER B\n")
+        run("git", "commit", "-qam", "feat: update both files", cwd=self.repository)
+        feature_author_date = run(
+            "git", "show", "-s", "--format=%aI", "HEAD", cwd=self.repository
+        ).strip()
+        exporter.export_patch_series(self.repository, self.output, multi_base, [])
+        original = next(self.output.glob("*.patch")).read_bytes()
+
+        run("git", "checkout", "-q", multi_base, cwd=self.repository)
+        (self.repository / "a.txt").write_text("VESPER A\n")
+        run("git", "commit", "-qam", "upstream absorbs first change", cwd=self.repository)
+        rebased_base = run("git", "rev-parse", "HEAD", cwd=self.repository).strip()
+        (self.repository / "b.txt").write_text("VESPER B\n")
+        run(
+            "git",
+            "commit",
+            "-qam",
+            "feat: update both files",
+            f"--date={feature_author_date}",
+            cwd=self.repository,
+        )
+
+        exporter.export_patch_series(self.repository, self.output, rebased_base, [])
+
+        updated = next(self.output.glob("*.patch")).read_bytes()
+        self.assertNotEqual(original, updated)
+        self.assertNotIn(b"diff --git a/a.txt", updated)
+        self.assertIn(b"diff --git a/b.txt", updated)
+
     def test_exports_binary_delta_patches(self) -> None:
         exporter = load_exporter()
         run("git", "checkout", "-q", self.base, cwd=self.repository)
