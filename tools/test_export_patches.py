@@ -245,6 +245,19 @@ class StablePatchExportTest(unittest.TestCase):
 
         self.assertEqual(canonical, next(self.output.glob("*.patch")).read_bytes())
 
+    def test_regenerates_provenance_matching_candidate_without_diff(self) -> None:
+        exporter = load_exporter()
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+        patch = next(self.output.glob("*.patch"))
+        canonical = patch.read_bytes()
+        diff_start = canonical.find(b"\ndiff --git ")
+        self.assertGreater(diff_start, 0)
+        patch.write_bytes(canonical[: diff_start + 1])
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        self.assertEqual(canonical, next(self.output.glob("*.patch")).read_bytes())
+
     def test_exports_mixed_commit_using_non_excluded_tree(self) -> None:
         exporter = load_exporter()
         (self.repository / "owned.txt").write_text("owned overlay\n")

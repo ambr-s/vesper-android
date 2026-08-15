@@ -163,19 +163,19 @@ def complete_patch_diff(content: bytes, source_body: bytes) -> bytes:
 def applied_trees(
     sandbox: Path, parent: str, patch: Path, source_body: bytes
 ) -> set[str]:
-    diff = complete_patch_diff(patch.read_bytes(), source_body)
-    if b"GIT binary patch" in diff:
-        normalized = diff
-    else:
-        normalized = re.sub(
-            rb"^index [0-9a-f]+\.\.[0-9a-f]+(?: [0-7]+)?\n",
-            b"",
-            diff,
-            flags=re.MULTILINE,
-        )
-    applicable_patch = sandbox.parent / "applicable.patch"
-    applicable_patch.write_bytes(normalized)
     try:
+        diff = complete_patch_diff(patch.read_bytes(), source_body)
+        if b"GIT binary patch" in diff:
+            normalized = diff
+        else:
+            normalized = re.sub(
+                rb"^index [0-9a-f]+\.\.[0-9a-f]+(?: [0-7]+)?\n",
+                b"",
+                diff,
+                flags=re.MULTILINE,
+            )
+        applicable_patch = sandbox.parent / "applicable.patch"
+        applicable_patch.write_bytes(normalized)
         git(sandbox, "reset", "--hard", "--quiet", parent)
         git(
             sandbox,
@@ -185,7 +185,7 @@ def applied_trees(
             str(applicable_patch),
         )
         return {git(sandbox, "write-tree").strip()}
-    except subprocess.CalledProcessError:
+    except (ValueError, subprocess.CalledProcessError):
         return set()
 
 
