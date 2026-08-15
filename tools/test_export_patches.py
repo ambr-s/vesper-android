@@ -242,6 +242,17 @@ class StablePatchExportTest(unittest.TestCase):
         self.assertNotIn(b"base-commit:", patch)
         self.assertIn(b"diff --git a/feature.txt b/feature.txt", patch)
 
+    def test_forces_default_diff_prefixes(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "format.noprefix", "true", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertIn(b"diff --git a/feature.txt b/feature.txt", patch)
+        self.assertIn(b"--- a/feature.txt", patch)
+        self.assertIn(b"+++ b/feature.txt", patch)
+
     def test_forces_patch_filename_suffix(self) -> None:
         exporter = load_exporter()
         run("git", "config", "format.suffix", ".mbox", cwd=self.repository)
