@@ -294,6 +294,41 @@ class StablePatchExportTest(unittest.TestCase):
         self.assertEqual(1, patch.count(b"\nSubject:"))
         self.assertNotIn(b"Subject: Injected", patch)
 
+    def test_replaces_all_retained_mail_headers(self) -> None:
+        exporter = load_exporter()
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+        patch_path = next(self.output.glob("*.patch"))
+        patch = patch_path.read_bytes()
+        patch_path.write_bytes(
+            patch.replace(
+                b"From: Vesper Test <vesper-test@example.invalid>\n",
+                b"From: Vesper Test <vesper-test@example.invalid>\n"
+                b"From: Evil <evil@example.invalid>\n",
+                1,
+            )
+        )
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        retained = next(self.output.glob("*.patch")).read_bytes()
+        self.assertEqual(1, retained.count(b"\nFrom:"))
+        self.assertNotIn(b"Evil <evil@example.invalid>", retained)
+
+    def test_disables_configured_threading(self) -> None:
+        exporter = load_exporter()
+        (self.repository / "second.txt").write_text("second feature\n")
+        run("git", "add", "second.txt", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "feat: add second feature", cwd=self.repository)
+        run("git", "config", "format.thread", "deep", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        for patch_path in self.output.glob("*.patch"):
+            patch = patch_path.read_bytes()
+            self.assertNotIn(b"Message-ID:", patch)
+            self.assertNotIn(b"In-Reply-To:", patch)
+            self.assertNotIn(b"References:", patch)
+
     def test_forces_canonical_numbered_patch_subjects(self) -> None:
         exporter = load_exporter()
         (self.repository / "second.txt").write_text("second feature\n")

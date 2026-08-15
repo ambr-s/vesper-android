@@ -28,9 +28,6 @@ from typing import Iterable
 
 
 SUBJECT_PREFIX_PATTERN = re.compile(r"^\[PATCH(?: [0-9]+/[0-9]+)?\]\s*")
-SUBJECT_HEADER_PATTERN = re.compile(
-    rb"^Subject:.*(?:\n[ \t].*)*", re.MULTILINE | re.IGNORECASE
-)
 
 
 def git(repository: Path, *arguments: str, env: dict[str, str] | None = None) -> str:
@@ -121,16 +118,11 @@ def matches_commit_provenance(content: bytes, repository: Path, commit: str) -> 
 
 
 def canonicalize_envelope_and_subject(old: bytes, generated: bytes) -> bytes:
-    old_line_end = old.find(b"\n")
-    generated_line_end = generated.find(b"\n")
-    if old_line_end < 0 or generated_line_end < 0:
-        raise ValueError("Patch has no mbox envelope")
-    result = generated[:generated_line_end] + old[old_line_end:]
-    generated_subject = SUBJECT_HEADER_PATTERN.search(generated)
-    old_subject = SUBJECT_HEADER_PATTERN.search(result)
-    if generated_subject is None or old_subject is None:
-        raise ValueError("Patch has no Subject header")
-    return result[: old_subject.start()] + generated_subject.group() + result[old_subject.end() :]
+    old_header_end = old.find(b"\n\n")
+    generated_header_end = generated.find(b"\n\n")
+    if old_header_end < 0 or generated_header_end < 0:
+        raise ValueError("Patch has incomplete mail headers")
+    return generated[: generated_header_end + 2] + old[old_header_end + 2 :]
 
 
 def has_author_signoff(content: bytes) -> bool:
@@ -271,6 +263,7 @@ def export_patch_series(
             "--no-from",
             "--no-signoff",
             "--no-add-header",
+            "--no-thread",
             "--numbered",
             "--subject-prefix=PATCH",
             "--suffix=.patch",
