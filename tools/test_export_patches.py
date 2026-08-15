@@ -234,6 +234,17 @@ class StablePatchExportTest(unittest.TestCase):
 
         self.assertEqual(canonical, next(self.output.glob("*.patch")).read_bytes())
 
+    def test_regenerates_when_retained_candidate_is_malformed(self) -> None:
+        exporter = load_exporter()
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+        patch = next(self.output.glob("*.patch"))
+        canonical = patch.read_bytes()
+        patch.write_bytes(b"truncated stale patch\n")
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        self.assertEqual(canonical, next(self.output.glob("*.patch")).read_bytes())
+
     def test_exports_binary_delta_patches(self) -> None:
         exporter = load_exporter()
         run("git", "checkout", "-q", self.base, cwd=self.repository)

@@ -189,7 +189,11 @@ def export_patch_series(
     if output_directory.exists():
         for patch in sorted(output_directory.glob("*.patch")):
             content = patch.read_bytes()
-            old_by_subject[patch_subject(content)].append(content)
+            try:
+                subject = patch_subject(content)
+            except ValueError:
+                continue
+            old_by_subject[subject].append(content)
 
     pathspecs = [".", *(f":(exclude){path}" for path in excludes)]
     commits = [
