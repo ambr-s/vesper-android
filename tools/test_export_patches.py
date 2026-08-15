@@ -284,6 +284,30 @@ class StablePatchExportTest(unittest.TestCase):
         patch = next(self.output.glob("*.patch")).read_bytes()
         self.assertNotIn(b"Signed-off-by: Vesper Test <vesper-test@example.invalid>", patch)
 
+    def test_disables_configured_extra_mail_headers(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "format.headers", "Subject: Injected", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertEqual(1, patch.count(b"\nSubject:"))
+        self.assertNotIn(b"Subject: Injected", patch)
+
+    def test_forces_canonical_numbered_patch_subjects(self) -> None:
+        exporter = load_exporter()
+        (self.repository / "second.txt").write_text("second feature\n")
+        run("git", "add", "second.txt", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "feat: add second feature", cwd=self.repository)
+        run("git", "config", "format.numbered", "false", cwd=self.repository)
+        run("git", "config", "format.subjectPrefix", "VESPER", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patches = sorted(self.output.glob("*.patch"))
+        self.assertIn(b"Subject: [PATCH 1/2] feat: add Vesper behaviour", patches[0].read_bytes())
+        self.assertIn(b"Subject: [PATCH 2/2] feat: add second feature", patches[1].read_bytes())
+
     def test_duplicate_subjects_are_mapped_in_commit_order(self) -> None:
         exporter = load_exporter()
         (self.repository / "second.txt").write_text("second feature\n")
