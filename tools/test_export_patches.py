@@ -209,6 +209,19 @@ class StablePatchExportTest(unittest.TestCase):
         self.assertNotEqual(original_bytes, updated_bytes)
         self.assertIn(b"Updated provenance and attribution.", updated_bytes)
 
+    def test_disables_configured_cover_letters(self) -> None:
+        exporter = load_exporter()
+        (self.repository / "second.txt").write_text("second feature\n")
+        run("git", "add", "second.txt", cwd=self.repository)
+        run("git", "commit", "-q", "-m", "feat: add second feature", cwd=self.repository)
+        run("git", "config", "format.coverLetter", "auto", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patches = sorted(self.output.glob("*.patch"))
+        self.assertEqual(2, len(patches))
+        self.assertFalse(any("cover-letter" in patch.name for patch in patches))
+
     def test_duplicate_subjects_are_mapped_in_commit_order(self) -> None:
         exporter = load_exporter()
         (self.repository / "second.txt").write_text("second feature\n")
