@@ -242,6 +242,37 @@ class StablePatchExportTest(unittest.TestCase):
         self.assertNotIn(b"base-commit:", patch)
         self.assertIn(b"diff --git a/feature.txt b/feature.txt", patch)
 
+    def test_forces_patch_filename_suffix(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "format.suffix", ".mbox", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patches = sorted(self.output.glob("*.patch"))
+        self.assertEqual(1, len(patches))
+        self.assertEqual([], list(self.output.glob("*.mbox")))
+
+    def test_disables_configured_from_rewriting(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "user.name", "Different Exporter", cwd=self.repository)
+        run("git", "config", "user.email", "exporter@example.invalid", cwd=self.repository)
+        run("git", "config", "format.from", "true", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertIn(b"From: Vesper Test <vesper-test@example.invalid>", patch)
+        self.assertNotIn(b"From: Different Exporter <exporter@example.invalid>", patch)
+
+    def test_disables_configured_signoff_injection(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "format.signOff", "true", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertNotIn(b"Signed-off-by: Vesper Test <vesper-test@example.invalid>", patch)
+
     def test_duplicate_subjects_are_mapped_in_commit_order(self) -> None:
         exporter = load_exporter()
         (self.repository / "second.txt").write_text("second feature\n")
