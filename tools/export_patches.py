@@ -266,6 +266,8 @@ def export_patch_series(
             "--zero-commit",
             "--no-signature",
             "--no-cover-letter",
+            "--no-attach",
+            "--no-base",
             "--output-directory",
             str(generated_directory),
             f"{base}..HEAD",

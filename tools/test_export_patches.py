@@ -222,6 +222,26 @@ class StablePatchExportTest(unittest.TestCase):
         self.assertEqual(2, len(patches))
         self.assertFalse(any("cover-letter" in patch.name for patch in patches))
 
+    def test_disables_configured_mime_attachments(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "format.attach", "true", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertNotIn(b"Content-Type: multipart/mixed", patch)
+        self.assertIn(b"diff --git a/feature.txt b/feature.txt", patch)
+
+    def test_disables_configured_automatic_base_selection(self) -> None:
+        exporter = load_exporter()
+        run("git", "config", "format.useAutoBase", "true", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertNotIn(b"base-commit:", patch)
+        self.assertIn(b"diff --git a/feature.txt b/feature.txt", patch)
+
     def test_duplicate_subjects_are_mapped_in_commit_order(self) -> None:
         exporter = load_exporter()
         (self.repository / "second.txt").write_text("second feature\n")
