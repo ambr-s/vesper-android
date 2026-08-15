@@ -329,6 +329,17 @@ class StablePatchExportTest(unittest.TestCase):
             self.assertNotIn(b"In-Reply-To:", patch)
             self.assertNotIn(b"References:", patch)
 
+    def test_disables_configured_git_notes(self) -> None:
+        exporter = load_exporter()
+        run("git", "notes", "add", "-m", "private local review note", cwd=self.repository)
+        run("git", "config", "format.notes", "true", cwd=self.repository)
+
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+
+        patch = next(self.output.glob("*.patch")).read_bytes()
+        self.assertNotIn(b"Notes:", patch)
+        self.assertNotIn(b"private local review note", patch)
+
     def test_forces_canonical_numbered_patch_subjects(self) -> None:
         exporter = load_exporter()
         (self.repository / "second.txt").write_text("second feature\n")
