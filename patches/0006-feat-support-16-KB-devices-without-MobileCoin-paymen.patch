@@ -1,8 +1,9 @@
-From 10c219fe6941ac43d81faf5e5f5a99020a2ac61a Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
-Date: Thu, 6 Aug 2026 07:45:10 +0000
+Date: Sat, 15 Aug 2026 08:31:55 +0000
 Subject: [PATCH 06/21] feat: support 16 KB devices without MobileCoin payments
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  app/build.gradle.kts                          | 10 +-
  app/src/main/AndroidManifest.xml              |  1 +
@@ -14,16 +15,14 @@ Subject: [PATCH 06/21] feat: support 16 KB devices without MobileCoin payments
  .../messages/SyncMessageProcessor.kt          |  6 ++
  app/src/main/res/values/vesper_features.xml   |  5 +
  .../securesms/keyvalue/PaymentsValuesTest.kt  | 92 ++-----------------
- gradle/libs.versions.toml                     |  2 +-
- gradle/verification-metadata.xml              |  8 ++
- 12 files changed, 70 insertions(+), 96 deletions(-)
+ 10 files changed, 61 insertions(+), 95 deletions(-)
  create mode 100644 app/src/main/res/values/vesper_features.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 12e51e8360..b4dac8eb53 100644
+index 4d0bfeedc0..58d040dcc3 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
-@@ -216,7 +216,8 @@ android {
+@@ -213,7 +213,8 @@ android {
      jniLibs {
        excludes += setOf(
          "**/*.dylib",
@@ -33,7 +32,7 @@ index 12e51e8360..b4dac8eb53 100644
        )
      }
      resources {
-@@ -312,6 +313,7 @@ android {
+@@ -309,6 +310,7 @@ android {
      buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_6cmGZopuTsV8novGgJJW9JpC00vLIgtQ1D\"")
      buildConfigField("boolean", "TRACING_ENABLED", "false")
      buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
@@ -41,7 +40,7 @@ index 12e51e8360..b4dac8eb53 100644
  
      ndk {
        abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-@@ -570,12 +572,6 @@ androidComponents {
+@@ -567,12 +569,6 @@ androidComponents {
        variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
      }
  
@@ -55,10 +54,10 @@ index 12e51e8360..b4dac8eb53 100644
      if (variant.name.contains("nightly", ignoreCase = true)) {
        var tag = getNightlyTagForCurrentCommit()
 diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
-index e06e19e6d1..4e9976b7ed 100644
+index 6534be85a9..97215ec9da 100644
 --- a/app/src/main/AndroidManifest.xml
 +++ b/app/src/main/AndroidManifest.xml
-@@ -792,6 +792,7 @@
+@@ -793,6 +793,7 @@
          <activity
              android:name=".payments.preferences.PaymentsActivity"
              android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"
@@ -89,18 +88,18 @@ index 1c4ce2306e..e557442b2b 100644
        actionButton.setVisibility(VISIBLE);
        actionButton.setOnClickListener(v -> {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index 958b443fd8..179a85adf2 100644
+index c789dcdbcf..9037c03ce8 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -137,6 +137,7 @@ import org.signal.core.util.setActionItemTint
- import org.signal.donations.InAppPaymentType
+@@ -139,6 +139,7 @@ import org.signal.donations.InAppPaymentType
+ import org.signal.emoji.EmojiEventListener
  import org.signal.ringrtc.CallLinkRootKey
  import org.thoughtcrime.securesms.BlockUnblockDialog
 +import org.thoughtcrime.securesms.BuildConfig
  import org.thoughtcrime.securesms.MainActivity
  import org.thoughtcrime.securesms.MuteDialog
  import org.thoughtcrime.securesms.R
-@@ -3116,6 +3117,15 @@ class ConversationFragment :
+@@ -3117,6 +3118,15 @@ class ConversationFragment :
    }
  
    private fun handleViewPaymentDetails(conversationMessage: ConversationMessage) {
@@ -189,11 +188,11 @@ index 0742995fc2..f4706ec031 100644
        return
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index c05768c9c3..783b3c49ee 100644
+index 6217226412..50206723ce 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-@@ -16,6 +16,7 @@ import org.signal.core.util.orNull
- import org.signal.core.util.toOptional
+@@ -17,6 +17,7 @@ import org.signal.core.util.toOptional
+ import org.signal.emoji.EmojiUtil
  import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation
  import org.signal.network.util.Preconditions
 +import org.thoughtcrime.securesms.BuildConfig
@@ -213,10 +212,10 @@ index c05768c9c3..783b3c49ee 100644
        warn(envelope.clientTimestamp!!, "Ignoring payment message without notification")
        return null
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
-index 99c9aec03d..17821a919d 100644
+index 9f2d9c0561..47e02d1b2d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
-@@ -25,6 +25,7 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord
+@@ -26,6 +26,7 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord
  import org.signal.ringrtc.CallException
  import org.signal.ringrtc.CallId
  import org.signal.ringrtc.CallLinkRootKey
@@ -224,7 +223,7 @@ index 99c9aec03d..17821a919d 100644
  import org.thoughtcrime.securesms.attachments.Attachment
  import org.thoughtcrime.securesms.attachments.DatabaseAttachment
  import org.thoughtcrime.securesms.attachments.TombstoneAttachment
-@@ -1247,6 +1248,11 @@ object SyncMessageProcessor {
+@@ -1269,6 +1270,11 @@ object SyncMessageProcessor {
    private fun handleSynchronizeOutgoingPayment(outgoingPayment: SyncMessage.OutgoingPayment, envelopeTimestamp: Long) {
      log(envelopeTimestamp, "Synchronize outgoing payment.")
  
@@ -359,35 +358,3 @@ index b3be92f2b0..78924e1b83 100644
 +    assertEquals(PaymentsAvailability.DISABLED_REMOTELY, paymentsValues.paymentsAvailability)
    }
  }
-diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
-index 96e1e97932..b1b46061c4 100644
---- a/gradle/libs.versions.toml
-+++ b/gradle/libs.versions.toml
-@@ -185,7 +185,7 @@ rxjava3-rxjava = "io.reactivex.rxjava3:rxjava:3.1.12"
- rxjava3-rxandroid = "io.reactivex.rxjava3:rxandroid:3.0.2"
- rxjava3-rxkotlin = "io.reactivex.rxjava3:rxkotlin:3.0.1"
- rxdogtag = "com.uber.rxdogtag2:rxdogtag:2.0.2"
--conscrypt-android = "org.conscrypt:conscrypt-android:2.5.3"
-+conscrypt-android = "org.conscrypt:conscrypt-android:2.6.1"
- mobilecoin = "com.mobilecoin:android-sdk:6.1.2"
- leolin-shortcutbadger = "me.leolin:ShortcutBadger:1.1.22"
- glide-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
-diff --git a/gradle/verification-metadata.xml b/gradle/verification-metadata.xml
-index 76bf3c40e1..232d0b1dfc 100644
---- a/gradle/verification-metadata.xml
-+++ b/gradle/verification-metadata.xml
-@@ -6704,6 +6704,14 @@ https://docs.gradle.org/current/userguide/dependency_verification.html
-             <sha256 value="551ae4e301c571760d1791e647db6ed1dcb10d34dcae7aa12b67f220f2ce98d1" origin="Generated by Gradle"/>
-          </artifact>
-       </component>
-+      <component group="org.conscrypt" name="conscrypt-android" version="2.6.1">
-+         <artifact name="conscrypt-android-2.6.1.aar">
-+            <sha256 value="3d1a7fd58c1c52f46abe580219b6a27355d1343ff07c8f6fd3cd86c9a28cce57" origin="Generated by Gradle"/>
-+         </artifact>
-+         <artifact name="conscrypt-android-2.6.1.module">
-+            <sha256 value="be7e18493b60d133cd2a7cbbf578cd41b994bacc8c6f736c4ba44ef6036068b1" origin="Generated by Gradle"/>
-+         </artifact>
-+      </component>
-       <component group="org.conscrypt" name="conscrypt-openjdk-uber" version="2.5.2">
-          <artifact name="conscrypt-openjdk-uber-2.5.2.jar">
-             <sha256 value="eaf537d98e033d0f0451cd1b8cc74e02d7b55ec882da63c88060d806ba89c348" origin="Generated by Gradle"/>

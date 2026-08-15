@@ -34,10 +34,21 @@ git -C "$WORK" merge-base --is-ancestor "$OVERLAY_COMMIT" HEAD || {
 }
 
 mapfile -t FEATURE_COMMITS < <(git -C "$WORK" rev-list --reverse "$OVERLAY_COMMIT..HEAD")
-if ((${#FEATURE_COMMITS[@]} == 0)); then
-  echo "No feature commits to export." >&2
-  exit 0
-fi
+
+for commit in "${FEATURE_COMMITS[@]}"; do
+  author="$(git -C "$WORK" show -s --format='%an <%ae>' "$commit")"
+  signoffs="$(
+    git -C "$WORK" show -s \
+      --format='%(trailers:key=Signed-off-by,valueonly)' \
+      "$commit"
+  )"
+  if ! grep -Fqx -- "$author" <<< "$signoffs"; then
+    subject="$(git -C "$WORK" show -s --format=%s "$commit")"
+    echo "Feature commit lacks its author's DCO sign-off: $subject" >&2
+    echo "Amend it with: git commit --amend -s" >&2
+    exit 1
+  fi
+done
 
 OVERLAY_EXCLUDES=()
 while IFS= read -r -d '' overlay_file; do
@@ -48,18 +59,22 @@ while IFS= read -r -d '' overlay_file; do
     exit 1
   }
   cp -- "$source_file" "$overlay_file"
-  OVERLAY_EXCLUDES+=(":(exclude)$relative_path")
+  OVERLAY_EXCLUDES+=("$relative_path")
 done < <(find "$ROOT/overlay" -type f -print0)
 
 mkdir -p "$ROOT/patches"
-find "$ROOT/patches" -maxdepth 1 -type f -name '*.patch' -delete
 
 echo "Exporting overlay files and feature commits."
 echo "Overlay files live in overlay/. Patches come from commits after the two"
 echo "materialisation commits."
 echo
-git -C "$WORK" format-patch \
-  --no-signature \
-  --output-directory "$ROOT/patches" \
-  "$OVERLAY_COMMIT..HEAD" \
-  -- . "${OVERLAY_EXCLUDES[@]}"
+EXPORT_ARGS=(
+  --work "$WORK"
+  --output "$ROOT/patches"
+  --base "$OVERLAY_COMMIT"
+  --require-author-signoff
+)
+for relative_path in "${OVERLAY_EXCLUDES[@]}"; do
+  EXPORT_ARGS+=(--exclude "$relative_path")
+done
+python3 "$ROOT/tools/export_patches.py" "${EXPORT_ARGS[@]}"

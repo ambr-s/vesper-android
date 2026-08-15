@@ -1,8 +1,9 @@
-From a00bdf328ea38b4fb873923d8497abee41f075c1 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:44:38 +0000
 Subject: [PATCH 02/21] feat: allow disabling debug logs
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../settings/app/help/HelpSettingsState.kt    |  5 ++++
  .../securesms/util/TextSecurePreferences.java |  9 +++++++

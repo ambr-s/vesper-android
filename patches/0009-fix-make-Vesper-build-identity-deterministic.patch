@@ -1,19 +1,20 @@
-From 067e969c929b3bebbba0bb90740c06ba38c2077a Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
-Date: Thu, 6 Aug 2026 07:45:11 +0000
+Date: Sat, 15 Aug 2026 08:33:23 +0000
 Subject: [PATCH 09/21] fix: make Vesper build identity deterministic
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  app/build.gradle.kts                          | 40 ++++++++++-
- .../securesms/jobs/ApkUpdateJob.kt            | 68 ++++++++++++++++---
+ .../securesms/jobs/ApkUpdateJob.kt            | 69 ++++++++++++++++---
  .../securesms/jobs/ApkUpdateJobTest.kt        | 39 ++++++++---
- 3 files changed, 125 insertions(+), 22 deletions(-)
+ 3 files changed, 126 insertions(+), 22 deletions(-)
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index b4dac8eb53..94fb57eeb4 100644
+index 58d040dcc3..32718d71e6 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
-@@ -245,6 +245,8 @@ android {
+@@ -242,6 +242,8 @@ android {
    }
  
    defaultConfig {
@@ -22,7 +23,7 @@ index b4dac8eb53..94fb57eeb4 100644
      applicationId = "systems.amber.vesper"
      if (currentHotfixVersion >= maxHotfixVersions) {
        throw AssertionError("Hotfix version offset is too large!")
-@@ -264,7 +266,9 @@ android {
+@@ -261,7 +263,9 @@ android {
  
      manifestPlaceholders["mapsKey"] = "AIzaSyCSx9xea86GwDKGznCAULE9Y5a8b-TfN9U"
  
@@ -33,7 +34,7 @@ index b4dac8eb53..94fb57eeb4 100644
      buildConfigField("String", "GIT_HASH", "\"${getGitHash()}\"")
      buildConfigField("String", "SIGNAL_URL", "\"https://chat.signal.org\"")
      buildConfigField("String", "STORAGE_URL", "\"https://storage.signal.org\"")
-@@ -886,6 +890,40 @@ fun getLastCommitTimestamp(): String {
+@@ -884,6 +888,40 @@ fun getLastCommitTimestamp(): String {
    }.standardOutput.asText.get() + "000"
  }
  
@@ -75,10 +76,10 @@ index b4dac8eb53..94fb57eeb4 100644
    return providers.exec {
      commandLine("git", "rev-parse", "HEAD")
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
-index da0a980982..e148c3c35d 100644
+index da0a980982..94e837cab6 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/ApkUpdateJob.kt
-@@ -82,8 +82,30 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+@@ -82,8 +82,31 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
        Log.d(TAG, "Got descriptor: $updateDescriptor")
      }
  
@@ -98,7 +99,8 @@ index da0a980982..e148c3c35d 100644
 +      Log.w(TAG, "The available build reuses sequence ${BuildConfig.VESPER_BUILD_SEQUENCE} with a different build ID; refusing to replace the installed build.")
 +    }
 +
-+    if (shouldUpdate(
++    if (
++      shouldUpdate(
 +        currentVersionCode = currentVersionCode,
 +        currentBuildSequence = BuildConfig.VESPER_BUILD_SEQUENCE,
 +        currentBuildTimestamp = BuildConfig.BUILD_TIMESTAMP,
@@ -111,7 +113,7 @@ index da0a980982..e148c3c35d 100644
        val digest: ByteArray = Hex.fromStringCondensed(updateDescriptor.digest)
        val downloadStatus: DownloadStatus = getDownloadStatus(updateDescriptor.url, digest)
  
-@@ -97,7 +119,7 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+@@ -97,7 +120,7 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
          handleDownloadStart(updateDescriptor.url, updateDescriptor.versionName, digest, updateDescriptor.uploadTimestamp ?: 0)
        }
      } else {
@@ -120,7 +122,7 @@ index da0a980982..e148c3c35d 100644
      }
  
      SignalStore.apkUpdate.lastSuccessfulCheck = System.currentTimeMillis()
-@@ -223,7 +245,13 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+@@ -223,7 +246,13 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
      val uploadTimestamp: Long? = null,
  
      @JsonProperty
@@ -135,7 +137,7 @@ index da0a980982..e148c3c35d 100644
    )
  
    private class DownloadStatus(val status: Status, val downloadId: Long) {
-@@ -243,14 +271,34 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
+@@ -243,14 +272,34 @@ class ApkUpdateJob private constructor(parameters: Parameters) : BaseJob(paramet
  
  internal fun shouldUpdate(
    currentVersionCode: Int,

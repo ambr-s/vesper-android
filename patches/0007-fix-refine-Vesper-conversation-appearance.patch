@@ -1,8 +1,9 @@
-From 53ad9f4d232e30f11e708c005264ddc11a0001db Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
-Date: Thu, 6 Aug 2026 07:45:10 +0000
+Date: Sat, 15 Aug 2026 08:32:16 +0000
 Subject: [PATCH 07/21] fix: refine Vesper conversation appearance
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../settings/app/help/HelpSettingsFragment.kt | 30 +---------------
  .../V2ConversationItemTextOnlyViewHolder.kt   |  5 +--
@@ -133,7 +134,7 @@ index 53537b8db2..520439795e 100644
  
    public int getMessageFontSize() {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
-index f2c642753e..a64670b7b9 100644
+index f984e9acd3..7378fbc511 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
 @@ -1,6 +1,7 @@

@@ -1,14 +1,15 @@
-From 2fff7f6afad72d7eca307b3bbd4d1987cc2c3fc5 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
 Subject: [PATCH 13/21] feat: integrate Vesper logo and wordmark
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../java/org/thoughtcrime/securesms/main/MainToolbar.kt   | 8 ++++++--
  1 file changed, 6 insertions(+), 2 deletions(-)
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
-index 968093d286..7bf02a291e 100644
+index 313df449e9..7757bbc3f0 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
 @@ -56,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
@@ -19,7 +20,7 @@ index 968093d286..7bf02a291e 100644
  import androidx.compose.ui.graphics.vector.ImageVector
  import androidx.compose.ui.layout.onPlaced
  import androidx.compose.ui.layout.positionInWindow
-@@ -426,8 +427,11 @@ private fun PrimaryToolbar(
+@@ -427,8 +428,11 @@ private fun PrimaryToolbar(
        }
      },
      title = {

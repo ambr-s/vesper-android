@@ -1,8 +1,9 @@
-From 6d94a5c3eebede64764703ce09b2cba9d8459d51 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:10 +0000
 Subject: [PATCH 05/21] feat: add installable debug build variant
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  app/build.gradle.kts                          |  3 +++
  .../res/drawable/ic_launcher_background.xml   | 27 +++++++++++++++++++
@@ -12,10 +13,10 @@ Subject: [PATCH 05/21] feat: add installable debug build variant
  create mode 100644 app/src/debug/res/values/strings.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index f997d4745b..12e51e8360 100644
+index fe39784581..4d0bfeedc0 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
-@@ -87,8 +87,10 @@ val selectableVariants = listOf(
+@@ -84,8 +84,10 @@ val selectableVariants = listOf(
    "playProdQuickstart",
    "playStagingQuickstart",
    "websiteProdSpinner",
@@ -26,7 +27,7 @@ index f997d4745b..12e51e8360 100644
    "githubProdRelease"
  )
  
-@@ -338,6 +340,7 @@ android {
+@@ -335,6 +337,7 @@ android {
        if (debugKeystorePropertiesProvider.orNull != null) {
          signingConfig = signingConfigs["debug"]
        }

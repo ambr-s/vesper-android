@@ -1,8 +1,9 @@
-From 40876868561ccd9d625e134c5cb5c9d1f21498b9 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
 Subject: [PATCH 18/21] feat: load shared Vesper account configuration
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../securesms/ApplicationContext.java         |   3 +
  .../securesms/keyvalue/SignalStore.kt         |   8 +
@@ -19,7 +20,7 @@ Subject: [PATCH 18/21] feat: load shared Vesper account configuration
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index b60e266493..d0121be671 100644
+index d4faf54f04..af969a842f 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 @@ -133,6 +133,7 @@ import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
@@ -147,7 +148,7 @@ index ebaf08f5ee..d7d6e08ed1 100644
    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
-index bd2017f6ec..b36b063c06 100644
+index 4a55ea1a80..b201b542d4 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
 @@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
@@ -227,7 +228,7 @@ index bd2017f6ec..b36b063c06 100644
          .padding(end = 16.dp)
          .size(20.dp)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index dc9a356e1b..d467940bd5 100644
+index 547bb5a9f0..632103777a 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -74,7 +74,7 @@ object RemoteConfig {

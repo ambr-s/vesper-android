@@ -52,6 +52,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Validate patch tooling
+        run: |
+          python3 tools/test_export_patches.py -v
+          python3 -m py_compile tools/export_patches.py tools/test_export_patches.py
+          bash -n tools/export.sh tools/materialize.sh
+
       - name: Resolve Signal tag
         id: version
         env:
@@ -129,6 +135,7 @@ jobs:
           echo "unsigned=${apks[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Check signing credentials
+        if: github.event_name != 'pull_request'
         env:
           SECRET_KEYSTORE: ${{ secrets.SECRET_KEYSTORE }}
           SECRET_KEYSTORE_ALIAS: ${{ secrets.SECRET_KEYSTORE_ALIAS }}
@@ -147,6 +154,7 @@ jobs:
           fi
 
       - name: Check publishing credentials
+        if: github.event_name != 'pull_request'
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -165,6 +173,7 @@ jobs:
           fi
 
       - name: Sign and verify universal APK
+        if: github.event_name != 'pull_request'
         id: signed
         env:
           KEYSTORE_BASE64: ${{ secrets.SECRET_KEYSTORE }}
@@ -194,6 +203,7 @@ jobs:
           echo "filename=$(basename "$signed_apk")" >> "$GITHUB_OUTPUT"
 
       - name: Upload signed build artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: Vesper-${{ steps.version.outputs.tag }}-signed
@@ -201,6 +211,7 @@ jobs:
           if-no-files-found: error
 
       - name: Build update manifest
+        if: github.event_name != 'pull_request'
         id: manifest
         env:
           SIGNED_APK: ${{ steps.signed.outputs.path }}
@@ -258,6 +269,7 @@ jobs:
           echo "path=$manifest" >> "$GITHUB_OUTPUT"
 
       - name: Publish APK, then update manifest
+        if: github.event_name != 'pull_request'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -282,6 +294,7 @@ jobs:
             --content-type 'application/json'
 
       - name: Advance known-good pin and tag
+        if: github.event_name != 'pull_request'
         env:
           ADVANCE_PIN: ${{ inputs.advance_pin }}
           SIGNAL_TAG: ${{ steps.version.outputs.tag }}
@@ -302,6 +315,7 @@ jobs:
           fi
 
       - name: Create or update draft GitHub release
+        if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           SIGNAL_TAG: ${{ steps.version.outputs.tag }}

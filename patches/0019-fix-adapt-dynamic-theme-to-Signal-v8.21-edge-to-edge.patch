@@ -1,25 +1,13 @@
-From d57bbbd943367421dbec0f04de3565df8c8446c4 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
 Subject: [PATCH 19/21] fix: adapt dynamic theme to Signal v8.21 edge-to-edge
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
- .../java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt  | 2 ++
  .../thoughtcrime/securesms/util/Material3OnScrollHelper.kt  | 6 ++++--
- 2 files changed, 6 insertions(+), 2 deletions(-)
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-index 6fe9ad0dde..fb0ec1d846 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-+++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-@@ -1,5 +1,7 @@
- package org.thoughtcrime.securesms.keyvalue
- 
-+import org.thoughtcrime.securesms.util.RemoteConfig
-+
- class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(store) {
-   companion object {
-     const val INDIVIDUAL_CHAT_PLAINTEXT_EXPORT: String = "labs.individual_chat_plaintext_export"
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt b/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
 index b634764cd4..4346f5f72e 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
