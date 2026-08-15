@@ -1,8 +1,9 @@
-From 4be420601f472b64d0a38dda2e4ff9808718d4b6 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
-Date: Thu, 6 Aug 2026 07:44:38 +0000
+Date: Sat, 15 Aug 2026 08:31:14 +0000
 Subject: [PATCH 03/21] feat: optionally preserve remotely deleted messages
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../v2/exporters/ChatItemArchiveExporter.kt   |  2 +
  .../app/privacy/PrivacySettingsFragment.kt    | 24 ++++++++++++
@@ -18,7 +19,7 @@ Subject: [PATCH 03/21] feat: optionally preserve remotely deleted messages
  create mode 100644 app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt b/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
-index 9bd292bc6e..0ad1b6ec6a 100644
+index d5915c1c45..7b949ba5ff 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
 @@ -100,6 +100,7 @@ import org.thoughtcrime.securesms.database.model.databaseprotos.ThreadMergeEvent
@@ -29,7 +30,7 @@ index 9bd292bc6e..0ad1b6ec6a 100644
  import org.thoughtcrime.securesms.mms.PartAuthority
  import org.thoughtcrime.securesms.mms.QuoteModel
  import org.thoughtcrime.securesms.payments.FailureReason
-@@ -1437,6 +1438,7 @@ private fun BodyRangeList.BodyRange.Style.toRemote(): BackupBodyRange.Style {
+@@ -1443,6 +1444,7 @@ private fun BodyRangeList.BodyRange.Style.toRemote(): BackupBodyRange.Style {
  
  private fun List<ReactionRecord>?.toRemote(exportState: ExportState): List<Reaction> {
    return this
@@ -116,7 +117,7 @@ index 924569866d..23ac7d4a24 100644
        screenLockActivityTimeout = SignalStore.settings.screenLockTimeout,
        screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(AppDependencies.application),
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index ce416014d4..c05768c9c3 100644
+index bd2dc27747..6217226412 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 @@ -586,9 +586,16 @@ object DataMessageProcessor {
@@ -184,7 +185,7 @@ index 0000000000..ca20eb4bbf
 +  }
 +}
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
-index 846d155297..f2c642753e 100644
+index 17aba829f1..f984e9acd3 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
 @@ -13,11 +13,12 @@ import androidx.annotation.NonNull;
@@ -195,7 +196,7 @@ index 846d155297..f2c642753e 100644
 +import org.signal.core.ui.util.ThemeUtil;
  import org.thoughtcrime.securesms.R;
  import org.thoughtcrime.securesms.components.emoji.EmojiImageView;
- import org.thoughtcrime.securesms.components.emoji.EmojiUtil;
+ import org.signal.emoji.EmojiUtil;
  import org.thoughtcrime.securesms.database.model.ReactionRecord;
 +import org.thoughtcrime.securesms.messages.PreservedRemoteDelete;
  import org.thoughtcrime.securesms.recipients.Recipient;
@@ -247,7 +248,7 @@ index 846d155297..f2c642753e 100644
      private String  baseEmoji;
      private String  displayEmoji;
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt
-index e7182106ec..6039b15393 100644
+index 3cc35b589f..92b3e48c84 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsRepository.kt
 @@ -10,6 +10,7 @@ import org.thoughtcrime.securesms.database.SignalDatabase

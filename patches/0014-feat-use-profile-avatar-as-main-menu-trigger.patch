@@ -1,17 +1,18 @@
-From 697ca621165e5cce86f135cba4c74e3b3f5362cc Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
 Subject: [PATCH 14/21] feat: use profile avatar as main menu trigger
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../securesms/main/MainToolbar.kt             | 145 +++++++++---------
  1 file changed, 72 insertions(+), 73 deletions(-)
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
-index 7bf02a291e..5781c4bf26 100644
+index 7757bbc3f0..96336cc968 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
-@@ -376,62 +376,21 @@ private fun PrimaryToolbar(
+@@ -377,62 +377,21 @@ private fun PrimaryToolbar(
    enabled: Boolean = true,
    onSearchButtonPositioned: (Float) -> Unit
  ) {
@@ -80,7 +81,7 @@ index 7bf02a291e..5781c4bf26 100644
        )
      },
      actions = {
-@@ -461,23 +420,24 @@ private fun PrimaryToolbar(
+@@ -462,23 +421,24 @@ private fun PrimaryToolbar(
          )
        }
  
@@ -121,7 +122,7 @@ index 7bf02a291e..5781c4bf26 100644
          }
        }
      }
-@@ -485,11 +445,15 @@ private fun PrimaryToolbar(
+@@ -486,11 +446,15 @@ private fun PrimaryToolbar(
  }
  
  @Composable
@@ -139,7 +140,7 @@ index 7bf02a291e..5781c4bf26 100644
    Tooltips.PlainBelowAnchor(
      onDismiss = onDismiss,
      isTooltipVisible = isTooltipVisible,
-@@ -497,12 +461,45 @@ private fun TooltipOverflowButton(
+@@ -498,12 +462,45 @@ private fun TooltipOverflowButton(
        Text(text = stringResource(R.string.ConversationListFragment__turn_your_notification_profile_on_or_off_here))
      },
      anchorContent = {
@@ -190,7 +191,7 @@ index 7bf02a291e..5781c4bf26 100644
          )
        }
      }
-@@ -826,10 +823,12 @@ private fun ArchiveToolbarPreview() {
+@@ -842,10 +839,12 @@ private fun ArchiveToolbarPreview() {
  
  @DayNightPreviews
  @Composable

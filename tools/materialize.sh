@@ -106,7 +106,10 @@ fi
 shopt -s nullglob
 PATCHES=("$ROOT"/patches/*.patch)
 if ((${#PATCHES[@]})); then
-  git -C "$WORK" -c commit.gpgsign=false am --3way --committer-date-is-author-date "${PATCHES[@]}"
+  # Stable exports deliberately retain an older patch byte-for-byte only when
+  # it still applies directly and reproduces the rebased commit exactly.
+  # Avoid --3way: filtered clones may not contain retained preimage blobs.
+  git -C "$WORK" -c commit.gpgsign=false am --committer-date-is-author-date "${PATCHES[@]}"
 fi
 
 if [[ -n "$STAGING_ROOT" ]]; then

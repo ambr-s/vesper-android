@@ -1,8 +1,9 @@
-From e3ab86d78fb4c34db0511950be64400d96c12146 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
 Subject: [PATCH 12/21] fix: theme media control backgrounds
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../media_gallery_button_background.xml            | 14 +++++++++++---
  .../image_editor_hud_clear_all_background.xml      |  2 +-

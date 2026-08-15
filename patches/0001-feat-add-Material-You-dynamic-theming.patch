@@ -1,4 +1,4 @@
-From 410f85864509bef8da6b651db0900dc67ef7fc21 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
 Subject: [PATCH 01/21] feat: add Material You dynamic theming
@@ -24,7 +24,6 @@ Signed-off-by: amber <amber@flourish.ch>
  .../donate/DonateToSignalFragment.kt          |   4 +-
  .../manage/ManageDonationsFragment.kt         |   4 +-
  .../main/QrImageSelectionActivity.kt          |   9 +
- .../ConversationSettingsFragment.kt           |   6 +-
  .../webrtc/v2/WebRtcCallActivity.kt           |   5 +
  .../contacts/paged/ContactSearchModels.kt     |   2 +-
  .../conversation/ConversationItem.java        |  19 +-
@@ -80,7 +79,7 @@ Signed-off-by: amber <amber@flourish.ch>
  .../core/ui/compose/theme/SignalTheme.kt      | 208 +++++++++--
  .../org/signal/core/ui/fonts/SignalSymbols.kt |   9 +-
  .../org/signal/core/ui/util/ThemeUtil.java    |  27 +-
- 73 files changed, 1005 insertions(+), 328 deletions(-)
+ 72 files changed, 1001 insertions(+), 326 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java b/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java
@@ -125,7 +124,7 @@ index 4982c2605f..22721e75df 100644
  
      WindowUtil.clearLightStatusBar(getWindow());
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
-index c253939dc6..604258e906 100644
+index 7595e99082..0d7813a021 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
 @@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
@@ -299,7 +298,7 @@ index bb51b3f77b..3a39cf4946 100644
    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
-index 55551dd188..0b57735526 100644
+index 2952e812d8..c61bf7c840 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
 @@ -1,7 +1,5 @@
@@ -663,23 +662,6 @@ index 960882133d..9e57182fc2 100644
      super.onCreate(savedInstanceState)
      enableEdgeToEdge()
      setContentView(R.layout.username_qr_image_selection_activity)
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt
-index 2edd372628..eb0b57439c 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt
-+++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/conversation/ConversationSettingsFragment.kt
-@@ -276,8 +276,10 @@ class ConversationSettingsFragment :
-       views = listOf(toolbar!!),
-       lifecycleOwner = viewLifecycleOwner
-     ) {
--      override val inactiveColorSet = ColorSet(
--        toolbarColorRes = CoreUiR.color.signal_colorBackground_0
-+      override val inactiveColorSet = ColorSet.from(
-+        requireContext(),
-+        toolbarColorRef = CoreUiR.color.signal_colorBackground_0,
-+        statusBarColorRef = com.google.android.material.R.attr.colorSurface
-       )
-     }
-   }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
 index b8fd8831fc..c331f20aca 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
@@ -718,7 +700,7 @@ index b8fd8831fc..c331f20aca 100644
      initializeScreenshotSecurity()
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
-index 129558d369..0003ec9c38 100644
+index 8db89fe456..6942742b48 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
 @@ -422,7 +422,7 @@ object ContactSearchModels {
@@ -731,7 +713,7 @@ index 129558d369..0003ec9c38 100644
          }
        )
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
-index 9666790521..869679f441 100644
+index 1ec17390a4..400d99cb27 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
 @@ -129,6 +129,7 @@ import org.thoughtcrime.securesms.linkpreview.LinkPreview;
@@ -866,10 +848,10 @@ index 5b58874ee0..10a6aab945 100644
        )
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index ec468e9a76..958b443fd8 100644
+index ec224f5b20..c789dcdbcf 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -398,6 +398,7 @@ import java.util.Optional
+@@ -399,6 +399,7 @@ import java.util.Optional
  import java.util.concurrent.ExecutionException
  import kotlin.time.Duration.Companion.days
  import kotlin.time.Duration.Companion.milliseconds
@@ -877,7 +859,7 @@ index ec468e9a76..958b443fd8 100644
  import org.signal.core.ui.R as CoreUiR
  
  /**
-@@ -1825,9 +1826,9 @@ class ConversationFragment :
+@@ -1826,9 +1827,9 @@ class ConversationFragment :
      if (!resources.isSplitPane() || isFullScreenPane) {
        binding.toolbar.setNavigationIcon(CoreUiR.drawable.symbol_arrow_start_24)
        binding.toolbar.navigationIcon?.setTint(
@@ -889,7 +871,7 @@ index ec468e9a76..958b443fd8 100644
          )
        )
        binding.toolbar.setNavigationContentDescription(R.string.ConversationFragment__content_description_back_button)
-@@ -1911,12 +1912,12 @@ class ConversationFragment :
+@@ -1912,12 +1913,12 @@ class ConversationFragment :
  
      val wallpaperEnabled = chatWallpaper != null || recipient.isReleaseNotes
  
@@ -904,7 +886,7 @@ index ec468e9a76..958b443fd8 100644
        }
      )
  
-@@ -1942,9 +1943,9 @@ class ConversationFragment :
+@@ -1943,9 +1944,9 @@ class ConversationFragment :
      )
  
      binding.scrollDateHeader.setTextColor(
@@ -916,7 +898,7 @@ index ec468e9a76..958b443fd8 100644
        )
      )
  
-@@ -1984,10 +1985,10 @@ class ConversationFragment :
+@@ -1985,10 +1986,10 @@ class ConversationFragment :
      val navColor = if (hasWallpaper) {
        R.color.conversation_navigation_wallpaper
      } else {
@@ -929,7 +911,7 @@ index ec468e9a76..958b443fd8 100644
    }
  
    private fun presentChatColors(chatColors: ChatColors) {
-@@ -4310,12 +4311,12 @@ class ConversationFragment :
+@@ -4317,12 +4318,12 @@ class ConversationFragment :
          }
        }
  
@@ -1062,7 +1044,7 @@ index a383e0d872..52d106744d 100644
      }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java
-index 535bc443f7..4e84dc6476 100644
+index 3f24462315..75fda86f2d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversationlist/ConversationListItem.java
 @@ -16,8 +16,6 @@
@@ -1374,7 +1356,7 @@ index 01de1886ad..002b52b900 100644
      super.onCreate(savedInstanceState);
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
-index fe79b981d1..121560522a 100644
+index 541a64fede..e66804518a 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
 @@ -51,6 +51,8 @@ import org.thoughtcrime.securesms.mediasend.v2.review.MediaReviewFragment
@@ -1603,7 +1585,7 @@ index ae10256f2b..0119ae26f3 100644
      binding.usernameTextFocusedStroke.setBackgroundColor(color);
      binding.usernameTextWrapper.setHintTextColor(ColorStateList.valueOf(color));
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index c0694b19bb..37d6cefdd2 100644
+index f02ea02bbc..37636f4638 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 @@ -61,7 +61,6 @@ import org.whispersystems.signalservice.api.util.OptionalUtil
@@ -1614,7 +1596,7 @@ index c0694b19bb..37d6cefdd2 100644
  
  /**
   * A recipient represents something you can send messages to or receive messages from. They could be individuals, groups, or even distribution lists.
-@@ -695,7 +694,7 @@ class Recipient(
+@@ -696,7 +695,7 @@ class Recipient(
  
        if (isIndividual && !isSelf) {
          val isLtr = ViewUtil.isLtr(context)

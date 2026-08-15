@@ -1,4 +1,4 @@
-From b0364e440bfaa7fb77d59a722ec0dd5c24438c18 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
 Subject: [PATCH 04/21] feat: finish Vesper settings and help surfaces
@@ -17,7 +17,7 @@ Signed-off-by: amber <amber@flourish.ch>
  .../app/help/HelpSettingsViewModel.kt         |  53 +++++++++
  .../settings/app/labs/LabsSettingsFragment.kt |   2 +-
  .../securesms/jobs/ApkUpdateJob.kt            |  39 ++++---
- .../securesms/keyvalue/LabsValues.kt          |  14 +--
+ .../securesms/keyvalue/LabsValues.kt          |  12 +-
  .../securesms/keyvalue/MiscellaneousValues.kt |  26 +++++
  .../securesms/util/RemoteConfig.kt            |  14 +++
  .../res/drawable/reaction_pill_background.xml |   2 +-
@@ -25,12 +25,12 @@ Signed-off-by: amber <amber@flourish.ch>
  .../main/res/layout/dsl_settings_toolbar.xml  |   2 +-
  app/src/main/res/values/strings.xml           |   5 +
  .../securesms/jobs/ApkUpdateJobTest.kt        |  34 ++++++
- 18 files changed, 309 insertions(+), 58 deletions(-)
+ 18 files changed, 309 insertions(+), 56 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index 6a303e1dab..b60e266493 100644
+index f706929155..d4faf54f04 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 @@ -69,6 +69,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
@@ -132,7 +132,7 @@ index b37ef04415..4c80f78b88 100644
    }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
-index 4cffd35d8f..44f81d1728 100644
+index c5bf78fcde..76b01138bc 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
 @@ -519,21 +519,21 @@ private fun AppSettingsContent(
@@ -555,18 +555,10 @@ index 4153c40fbc..93da6ff198 100644
 +      )
 +}
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-index a05db3074c..6fe9ad0dde 100644
+index a05db3074c..fb0ec1d846 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-@@ -1,7 +1,5 @@
- package org.thoughtcrime.securesms.keyvalue
- 
--import org.thoughtcrime.securesms.util.RemoteConfig
--
- class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(store) {
-   companion object {
-     const val INDIVIDUAL_CHAT_PLAINTEXT_EXPORT: String = "labs.individual_chat_plaintext_export"
-@@ -18,17 +16,17 @@ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(
+@@ -18,17 +18,17 @@ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(
  
    public override fun getKeysToIncludeInBackup(): List<String> = emptyList()
  
@@ -635,7 +627,7 @@ index fa6a52f214..e5eefc491e 100644
     * High-water mark of the most recently consumed share payload, as set by
     * [org.thoughtcrime.securesms.conversation.ConversationArgs.shareDataTimestamp]. Any share whose timestamp is at or
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 3fda97f4d6..dc9a356e1b 100644
+index afcb7b553e..547bb5a9f0 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -91,9 +91,14 @@ object RemoteConfig {
@@ -714,10 +706,10 @@ index 8cf26a497e..4435845403 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
-index b697834f8c..b65dd784a4 100644
+index 3efee883f4..9594c489de 100644
 --- a/app/src/main/res/values/strings.xml
 +++ b/app/src/main/res/values/strings.xml
-@@ -4423,6 +4423,8 @@
+@@ -4416,6 +4416,8 @@
  
      <!-- Internal only preferences -->
      <string name="preferences__internal_preferences" translatable="false">Internal Preferences</string>
@@ -726,7 +718,7 @@ index b697834f8c..b65dd784a4 100644
      <string name="preferences__internal_details" translatable="false">Internal Details</string>
      <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
  
-@@ -6057,6 +6059,9 @@
+@@ -6050,6 +6052,9 @@
      <string name="HelpFragment__licenced_under_the_agplv3">Licensed under the GNU AGPLv3</string>
      <!-- Non-English translations should use "Signal is a nonprofit." instead, dropping the 501c3 reference. -->
      <string name="HelpSettingsFragment__signal_is_a_501c3">Signal is a 501c3 nonprofit</string>

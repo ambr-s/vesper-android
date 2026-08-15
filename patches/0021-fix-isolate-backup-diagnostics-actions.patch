@@ -1,4 +1,4 @@
-From e932525bab88cd8c1598ec3d10050a036e92b652 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Tue, 11 Aug 2026 11:21:16 +0000
 Subject: [PATCH 21/21] fix: isolate backup diagnostics actions
@@ -71,10 +71,10 @@ index 4501ee809e..fe54f98fd8 100644
      }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
-index 6794fe2021..b39368e526 100644
+index 5d3bb61c46..d4e94ec4d5 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
-@@ -106,12 +106,17 @@ class BackupMessagesJob private constructor(
+@@ -110,12 +110,17 @@ class BackupMessagesJob private constructor(
      }
  
      fun enqueue() {

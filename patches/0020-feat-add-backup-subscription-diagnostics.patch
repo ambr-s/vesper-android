@@ -1,4 +1,4 @@
-From 40848548a0a707e21f439da909a2685cd9e7411d Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Tue, 11 Aug 2026 10:53:42 +0000
 Subject: [PATCH 20/21] feat: add backup subscription diagnostics
@@ -28,7 +28,7 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperBackupSubscriptionPolicyTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt
-index 105ccec039..cca3a7266c 100644
+index 4f7aabe9df..aa30cb61f2 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/InternalSettingsFragment.kt
 @@ -292,6 +292,14 @@ class InternalSettingsFragment : DSLSettingsFragment(R.string.preferences__inter

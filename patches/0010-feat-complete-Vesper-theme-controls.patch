@@ -1,8 +1,9 @@
-From 61b1cb529cee91b4930e9a176b91f940f63746f0 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
 Subject: [PATCH 10/21] feat: complete Vesper theme controls
 
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../appearance/AppearanceSettingsFragment.kt  |  17 +-
  .../app/appearance/AppearanceSettingsState.kt |   1 +
@@ -830,7 +831,7 @@ index 85b6413df3..295ec4a879 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/layout/v2_media_review_fragment.xml b/app/src/main/res/layout/v2_media_review_fragment.xml
-index 16765572d5..bcb7a53aa9 100644
+index 2e7debfe05..bb9e926a28 100644
 --- a/app/src/main/res/layout/v2_media_review_fragment.xml
 +++ b/app/src/main/res/layout/v2_media_review_fragment.xml
 @@ -22,7 +22,7 @@
@@ -891,7 +892,7 @@ index 16765572d5..bcb7a53aa9 100644
              tools:alpha="1"
              tools:visibility="visible" />
  
-@@ -291,7 +291,7 @@
+@@ -312,7 +312,7 @@
              app:layout_goneMarginStart="10dp"
              app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
              app:srcCompat="@drawable/symbol_save_android_24"
@@ -900,7 +901,7 @@ index 16765572d5..bcb7a53aa9 100644
              tools:visibility="visible" />
  
          <com.google.android.material.imageview.ShapeableImageView
-@@ -301,7 +301,7 @@
+@@ -322,7 +322,7 @@
              android:layout_marginStart="12dp"
              android:layout_marginEnd="10dp"
              android:layout_marginBottom="16dp"
@@ -909,7 +910,7 @@ index 16765572d5..bcb7a53aa9 100644
              android:contentDescription="@string/MediaReviewFragment__send_media_accessibility_label"
              android:padding="4dp"
              android:scaleType="centerInside"
-@@ -313,7 +313,7 @@
+@@ -334,7 +334,7 @@
              app:layout_goneMarginStart="10dp"
              app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Signal.Circle"
              app:srcCompat="@drawable/symbol_send_fill_24"
@@ -918,7 +919,7 @@ index 16765572d5..bcb7a53aa9 100644
              tools:visibility="visible" />
  
      </androidx.constraintlayout.widget.ConstraintLayout>
-@@ -337,4 +337,4 @@
+@@ -358,4 +358,4 @@
              android:indeterminateBehavior="cycle" />
      </org.thoughtcrime.securesms.util.views.TouchInterceptingFrameLayout>
  

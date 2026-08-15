@@ -1,0 +1,83 @@
+# Copyright 2026 Vesper contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+name: Validate Vesper Android PR
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vesper-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Signal pinned release
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out Vesper patchset
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate patch tooling
+        run: |
+          python3 tools/test_export_patches.py -v
+          python3 -m py_compile tools/export_patches.py tools/test_export_patches.py
+          bash -n tools/export.sh tools/materialize.sh
+
+      - name: Resolve Signal tag
+        id: version
+        run: |
+          tag="$(sed -n 's/^signal=//p' upstream.pin)"
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid Signal tag: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Materialise Vesper
+        run: ./tools/materialize.sh --tag "${{ steps.version.outputs.tag }}"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Install declared Android toolchain
+        run: |
+          compile_sdk="$(sed -n 's/^compileSdk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          build_tools="$(sed -n 's/^buildTools = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          ndk="$(sed -n 's/^ndk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          sdkmanager="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          mapfile -t platform_packages < <(
+            "$sdkmanager" --list | sed -n "s/^[[:space:]]*\(platforms;android-${compile_sdk}\(\.0\)\?\)[[:space:]].*/\1/p" | sort -u
+          )
+          if [[ "${#platform_packages[@]}" -ne 1 ]]; then
+            printf 'Could not resolve exactly one Android platform package for compileSdk %s. Found: %s\n' \
+              "$compile_sdk" "${platform_packages[*]:-(none)}" >&2
+            exit 1
+          fi
+
+          echo "y" | "$sdkmanager" --install \
+            "${platform_packages[0]}" \
+            "build-tools;$build_tools" \
+            "ndk;$ndk"
+
+      - name: Build release APKs
+        working-directory: work
+        run: ./gradlew :Signal-Android:assembleWebsiteProdRelease --stacktrace
