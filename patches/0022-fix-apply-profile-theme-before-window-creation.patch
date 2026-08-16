@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Sun, 16 Aug 2026 13:57:30 +0000
+Subject: [PATCH 22/22] fix: apply profile theme before window creation
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../profiles/manage/EditProfileActivity.java  |  6 ++-
+ .../EditProfileActivityThemeLifecycleTest.kt  | 42 +++++++++++++++++++
+ 2 files changed, 47 insertions(+), 1 deletion(-)
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivity.java b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivity.java
+index 59a3da55b1..a907168bdd 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivity.java
++++ b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivity.java
+@@ -47,9 +47,13 @@ public class EditProfileActivity extends PassphraseRequiredActivity implements R
+   }
+ 
+   @Override
+-  public void onCreate(Bundle bundle, boolean ready) {
++  protected void onPreCreate() {
++    super.onPreCreate();
+     dynamicTheme.onCreate(this);
++  }
+ 
++  @Override
++  public void onCreate(Bundle bundle, boolean ready) {
+     setContentView(R.layout.edit_profile_activity);
+ 
+     if (bundle == null) {
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+new file mode 100644
+index 0000000000..10927f5b86
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+@@ -0,0 +1,42 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++
++package org.thoughtcrime.securesms.profiles.manage
++
++import android.app.Application
++import android.util.TypedValue
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.rules.RuleChain
++import org.junit.runner.RunWith
++import org.robolectric.Robolectric
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.annotation.Config
++import org.signal.core.ui.R
++import org.thoughtcrime.securesms.keyvalue.SettingsValues
++import org.thoughtcrime.securesms.keyvalue.SignalStore
++import org.thoughtcrime.securesms.testutil.MockAppDependenciesRule
++import org.thoughtcrime.securesms.testutil.SignalStoreRule
++
++@RunWith(RobolectricTestRunner::class)
++@Config(application = Application::class, sdk = [34])
++class EditProfileActivityThemeLifecycleTest {
++
++  @get:Rule
++  val rules: RuleChain = RuleChain
++    .outerRule(MockAppDependenciesRule())
++    .around(SignalStoreRule())
++
++  @Test
++  fun `dynamic theme is applied from the pre-create lifecycle hook`() {
++    SignalStore.settings.setTheme(SettingsValues.Theme.LIGHT, true)
++    val activity = Robolectric.buildActivity(EditProfileActivity::class.java).create().get()
++
++    val dynamicColors = TypedValue()
++    activity.theme.resolveAttribute(R.attr.dynamic_colors, dynamicColors, true)
++    assertTrue(dynamicColors.data != 0)
++  }
++}

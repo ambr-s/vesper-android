@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
-Subject: [PATCH 18/21] feat: load shared Vesper account configuration
+Subject: [PATCH 18/22] feat: load shared Vesper account configuration
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
