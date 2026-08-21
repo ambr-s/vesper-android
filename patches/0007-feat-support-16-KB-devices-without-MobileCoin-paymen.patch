@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sat, 15 Aug 2026 08:31:55 +0000
-Subject: [PATCH 06/22] feat: support 16 KB devices without MobileCoin payments
+Subject: [PATCH 07/24] feat: support 16 KB devices without MobileCoin payments
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
