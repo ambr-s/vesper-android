@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
-Subject: [PATCH 18/22] feat: load shared Vesper account configuration
+Subject: [PATCH 19/24] feat: load shared Vesper account configuration
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
@@ -228,7 +228,7 @@ index 4a55ea1a80..b201b542d4 100644
          .padding(end = 16.dp)
          .size(20.dp)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 547bb5a9f0..632103777a 100644
+index 5c4ee67e42..91f98b8544 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -74,7 +74,7 @@ object RemoteConfig {

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
-Subject: [PATCH 17/22] fix: theme automatic message bubbles
+Subject: [PATCH 18/24] fix: theme automatic message bubbles
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
@@ -108,10 +108,10 @@ index f7f6ea1acb..8f61d99f38 100644
    private val internalEvents = SingleLiveEvent<Event>()
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index 3efddf0ef8..9696987ade 100644
+index 8ba2bc9c24..c6d30a1dea 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-@@ -428,7 +428,7 @@ class Recipient(
+@@ -436,7 +436,7 @@ class Recipient(
  
    /** The chat color to use when the "automatic" chat color setting is active, which derives a color from the wallpaper. */
    private val autoChatColor: ChatColors

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sat, 15 Aug 2026 08:32:16 +0000
-Subject: [PATCH 07/22] fix: refine Vesper conversation appearance
+Subject: [PATCH 08/24] fix: refine Vesper conversation appearance
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---

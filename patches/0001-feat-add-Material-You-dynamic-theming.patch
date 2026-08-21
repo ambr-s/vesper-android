@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
-Subject: [PATCH 01/22] feat: add Material You dynamic theming
+Subject: [PATCH 01/24] feat: add Material You dynamic theming
 
 Adapted from Molly work by Oscar Mira and other Molly contributors.
 
@@ -42,7 +42,6 @@ Signed-off-by: amber <amber@flourish.ch>
  .../logsubmit/SubmitDebugLogActivity.java     |  16 +-
  .../securesms/main/MainNavigation.kt          |  15 +-
  .../mediasend/AvatarSelectionActivity.java    |  10 +
- .../mediasend/v2/MediaSelectionActivity.kt    |  11 +
  .../v2/stories/ChooseStoryTypeBottomSheet.kt  |   8 +-
  .../MessageRequestBarColorTheme.kt            |  35 +-
  .../preferences/model/PaymentItem.java        |   7 +-
@@ -79,7 +78,7 @@ Signed-off-by: amber <amber@flourish.ch>
  .../core/ui/compose/theme/SignalTheme.kt      | 208 +++++++++--
  .../org/signal/core/ui/fonts/SignalSymbols.kt |   9 +-
  .../org/signal/core/ui/util/ThemeUtil.java    |  27 +-
- 72 files changed, 1001 insertions(+), 326 deletions(-)
+ 71 files changed, 990 insertions(+), 326 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java b/app/src/main/java/org/thoughtcrime/securesms/AvatarPreviewActivity.java
@@ -205,7 +204,7 @@ index 59263d882f..232813e2f9 100644
    override fun attachBaseContext(newBase: Context) {
      delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt b/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt
-index 775f41d1f3..b8787cca74 100644
+index 7b8a165745..acc7ed68e6 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/calls/log/CallLogAdapter.kt
 @@ -5,7 +5,6 @@ import android.text.style.TextAppearanceSpan
@@ -216,7 +215,7 @@ index 775f41d1f3..b8787cca74 100644
  import androidx.core.widget.TextViewCompat
  import com.bumptech.glide.Glide
  import org.signal.core.ui.util.ThemeUtil
-@@ -375,12 +374,12 @@ class CallLogAdapter(
+@@ -377,12 +376,12 @@ class CallLogAdapter(
          start = getCallStateDrawableRes(call.record)
        )
  
@@ -663,10 +662,10 @@ index 960882133d..9e57182fc2 100644
      enableEdgeToEdge()
      setContentView(R.layout.username_qr_image_selection_activity)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
-index b8fd8831fc..c331f20aca 100644
+index a1408c9554..75ff72e98b 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
-@@ -83,6 +83,8 @@ import org.thoughtcrime.securesms.safety.SafetyNumberBottomSheet
+@@ -82,6 +82,8 @@ import org.thoughtcrime.securesms.safety.SafetyNumberBottomSheet
  import org.thoughtcrime.securesms.service.webrtc.CallLinkDisconnectReason
  import org.thoughtcrime.securesms.service.webrtc.SignalCallManager
  import org.thoughtcrime.securesms.sms.MessageSender
@@ -675,7 +674,7 @@ index b8fd8831fc..c331f20aca 100644
  import org.thoughtcrime.securesms.util.FullscreenHelper
  import org.thoughtcrime.securesms.util.RemoteConfig
  import org.thoughtcrime.securesms.util.TextSecurePreferences
-@@ -127,6 +129,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
+@@ -126,6 +128,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
    private var ephemeralStateDisposable = Disposable.empty()
    private val callPermissionsDialogController = CallPermissionsDialogController()
    private val eventBusSubscriber = EventBusSubscriber()
@@ -683,7 +682,7 @@ index b8fd8831fc..c331f20aca 100644
    private val mediaProjectionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
      if (result.resultCode == RESULT_OK && result.data != null) {
        AppDependencies.signalCallManager.startScreenShare(result.data!!)
-@@ -145,6 +148,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
+@@ -144,6 +147,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
  
    @SuppressLint("MissingInflatedId")
    override fun onCreate(savedInstanceState: Bundle?) {
@@ -691,7 +690,7 @@ index b8fd8831fc..c331f20aca 100644
      val callIntent: CallIntent = getCallIntent()
      Log.i(TAG, "onCreate(${callIntent.isStartedFromFullScreen})")
  
-@@ -258,6 +262,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
+@@ -255,6 +259,7 @@ class WebRtcCallActivity : BaseActivity(), SafetyNumberChangeDialog.Callback, Re
    override fun onResume() {
      Log.i(TAG, "onResume()")
      super.onResume()
@@ -700,10 +699,10 @@ index b8fd8831fc..c331f20aca 100644
      initializeScreenshotSecurity()
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
-index 8db89fe456..6942742b48 100644
+index 051afd67c5..2443b290f1 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/contacts/paged/ContactSearchModels.kt
-@@ -422,7 +422,7 @@ object ContactSearchModels {
+@@ -439,7 +439,7 @@ object ContactSearchModels {
          ActionItem(CoreUiR.drawable.symbol_settings_android_24, context.getString(R.string.ContactSearchItems__story_settings)) {
            callbacks.onOpenStorySettings(model.story)
          },
@@ -848,10 +847,10 @@ index 5b58874ee0..10a6aab945 100644
        )
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index ec224f5b20..c789dcdbcf 100644
+index 358146300e..ecc3c3e6e3 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -399,6 +399,7 @@ import java.util.Optional
+@@ -398,6 +398,7 @@ import java.util.Optional
  import java.util.concurrent.ExecutionException
  import kotlin.time.Duration.Companion.days
  import kotlin.time.Duration.Companion.milliseconds
@@ -859,7 +858,7 @@ index ec224f5b20..c789dcdbcf 100644
  import org.signal.core.ui.R as CoreUiR
  
  /**
-@@ -1826,9 +1827,9 @@ class ConversationFragment :
+@@ -1825,9 +1826,9 @@ class ConversationFragment :
      if (!resources.isSplitPane() || isFullScreenPane) {
        binding.toolbar.setNavigationIcon(CoreUiR.drawable.symbol_arrow_start_24)
        binding.toolbar.navigationIcon?.setTint(
@@ -871,7 +870,7 @@ index ec224f5b20..c789dcdbcf 100644
          )
        )
        binding.toolbar.setNavigationContentDescription(R.string.ConversationFragment__content_description_back_button)
-@@ -1912,12 +1913,12 @@ class ConversationFragment :
+@@ -1911,12 +1912,12 @@ class ConversationFragment :
  
      val wallpaperEnabled = chatWallpaper != null || recipient.isReleaseNotes
  
@@ -886,7 +885,7 @@ index ec224f5b20..c789dcdbcf 100644
        }
      )
  
-@@ -1943,9 +1944,9 @@ class ConversationFragment :
+@@ -1942,9 +1943,9 @@ class ConversationFragment :
      )
  
      binding.scrollDateHeader.setTextColor(
@@ -898,7 +897,7 @@ index ec224f5b20..c789dcdbcf 100644
        )
      )
  
-@@ -1985,10 +1986,10 @@ class ConversationFragment :
+@@ -1984,10 +1985,10 @@ class ConversationFragment :
      val navColor = if (hasWallpaper) {
        R.color.conversation_navigation_wallpaper
      } else {
@@ -911,7 +910,7 @@ index ec224f5b20..c789dcdbcf 100644
    }
  
    private fun presentChatColors(chatColors: ChatColors) {
-@@ -4317,12 +4318,12 @@ class ConversationFragment :
+@@ -4307,12 +4308,12 @@ class ConversationFragment :
          }
        }
  
@@ -1153,7 +1152,7 @@ index 0b2327b9c3..e4e604106b 100644
        ImageViewCompat.setImageTintList(clearButton, iconTint)
        input.setHintTextColor(iconTint)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-index 125cc28a32..53537b8db2 100644
+index 621bcca22d..c7745bfc16 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 @@ -41,6 +41,7 @@ public final class SettingsValues extends SignalStoreValues {
@@ -1164,7 +1163,7 @@ index 125cc28a32..53537b8db2 100644
    public static final  String MESSAGE_FONT_SIZE                       = "settings.message.font.size";
    public static final  String LANGUAGE                                = "settings.language";
    public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
-@@ -70,6 +71,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -74,6 +75,7 @@ public final class SettingsValues extends SignalStoreValues {
    private static final String KEEP_MUTED_CHATS_ARCHIVED               = "settings.keepMutedChatsArchived";
    private static final String USE_COMPACT_NAVIGATION_BAR              = "settings.useCompactNavigationBar";
    private static final String THREAD_TRIM_SYNC_TO_LINKED_DEVICES      = "settings.storage.syncThreadTrimDeletes";
@@ -1172,7 +1171,7 @@ index 125cc28a32..53537b8db2 100644
    private static final String PASSPHRASE_DISABLED                     = "settings.passphrase.disabled";
    private static final String PASSPHRASE_TIMEOUT_ENABLED              = "settings.passphrase.timeout.enabled";
    private static final String PASSPHRASE_TIMEOUT                      = "settings.passphrase.timeout";
-@@ -128,6 +130,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -132,6 +134,7 @@ public final class SettingsValues extends SignalStoreValues {
                           THREAD_TRIM_ENABLED,
                           LANGUAGE,
                           THEME,
@@ -1180,7 +1179,7 @@ index 125cc28a32..53537b8db2 100644
                           MESSAGE_FONT_SIZE,
                           PREFER_SYSTEM_EMOJI,
                           ENTER_KEY_SENDS,
-@@ -149,6 +152,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -153,6 +156,7 @@ public final class SettingsValues extends SignalStoreValues {
                           KEEP_MUTED_CHATS_ARCHIVED,
                           USE_COMPACT_NAVIGATION_BAR,
                           THREAD_TRIM_SYNC_TO_LINKED_DEVICES,
@@ -1188,7 +1187,7 @@ index 125cc28a32..53537b8db2 100644
                           PASSPHRASE_DISABLED,
                           PASSPHRASE_TIMEOUT_ENABLED,
                           PASSPHRASE_TIMEOUT,
-@@ -242,10 +246,19 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -246,10 +250,19 @@ public final class SettingsValues extends SignalStoreValues {
    }
  
    public void setTheme(@NonNull Theme theme) {
@@ -1208,7 +1207,7 @@ index 125cc28a32..53537b8db2 100644
    public int getMessageFontSize() {
      return getInteger(MESSAGE_FONT_SIZE, TextSecurePreferences.getMessageBodyTextSize(AppDependencies.getApplication()));
    }
-@@ -522,6 +535,14 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -558,6 +571,14 @@ public final class SettingsValues extends SignalStoreValues {
      return getBoolean(USE_COMPACT_NAVIGATION_BAR, false);
    }
  
@@ -1355,42 +1354,6 @@ index 01de1886ad..002b52b900 100644
      EdgeToEdge.enable(this);
      super.onCreate(savedInstanceState);
  
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
-index 541a64fede..e66804518a 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
-+++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/MediaSelectionActivity.kt
-@@ -51,6 +51,8 @@ import org.thoughtcrime.securesms.mediasend.v2.review.MediaReviewFragment
- import org.thoughtcrime.securesms.mediasend.v2.text.TextStoryPostCreationFragment
- import org.thoughtcrime.securesms.recipients.RecipientId
- import org.thoughtcrime.securesms.stories.Stories
-+import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme
-+import org.thoughtcrime.securesms.util.DynamicTheme
- import org.thoughtcrime.securesms.util.navigation.safeNavigate
- 
- class MediaSelectionActivity :
-@@ -93,6 +95,12 @@ class MediaSelectionActivity :
-     get() = intent.getCharSequenceExtra(MESSAGE)
- 
-   private val debouncer = Debouncer(200)
-+  private val theme: DynamicTheme = DynamicNoActionBarTheme()
-+
-+  override fun onResume() {
-+    super.onResume()
-+    theme.onResume(this)
-+  }
- 
-   override fun attachBaseContext(newBase: Context) {
-     delegate.localNightMode = AppCompatDelegate.MODE_NIGHT_YES
-@@ -100,6 +108,9 @@ class MediaSelectionActivity :
-   }
- 
-   override fun onPreCreate() {
-+    super.onPreCreate()
-+    theme.onCreate(this)
-+
-     val sendType: MessageSendType = requireNotNull(intent.getParcelableExtraCompat(MESSAGE_SEND_TYPE, MessageSendType::class.java))
-     val initialMedia: List<Media> = intent.getParcelableArrayListExtraCompat(MEDIA, Media::class.java) ?: listOf()
-     val message: CharSequence? = if (shareToTextStory) null else draftText
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/stories/ChooseStoryTypeBottomSheet.kt b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/stories/ChooseStoryTypeBottomSheet.kt
 index c333d12197..a6f66ab725 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v2/stories/ChooseStoryTypeBottomSheet.kt
@@ -1585,10 +1548,10 @@ index ae10256f2b..0119ae26f3 100644
      binding.usernameTextFocusedStroke.setBackgroundColor(color);
      binding.usernameTextWrapper.setHintTextColor(ColorStateList.valueOf(color));
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index f02ea02bbc..37636f4638 100644
+index 38a98f58eb..9f92f115e1 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-@@ -61,7 +61,6 @@ import org.whispersystems.signalservice.api.util.OptionalUtil
+@@ -62,7 +62,6 @@ import org.whispersystems.signalservice.api.util.OptionalUtil
  import java.util.LinkedList
  import java.util.Objects
  import java.util.Optional
@@ -1596,7 +1559,7 @@ index f02ea02bbc..37636f4638 100644
  
  /**
   * A recipient represents something you can send messages to or receive messages from. They could be individuals, groups, or even distribution lists.
-@@ -696,7 +695,7 @@ class Recipient(
+@@ -704,7 +703,7 @@ class Recipient(
  
        if (isIndividual && !isSelf) {
          val isLtr = ViewUtil.isLtr(context)
@@ -2836,7 +2799,7 @@ index 254cfffa57..cea9e80f5c 100644
          content = imageContent
        )
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index 722cc64f3b..81bd06a888 100644
+index 2d79b5165b..d44a03f1ab 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 @@ -1,21 +1,31 @@
@@ -2902,7 +2865,7 @@ index 722cc64f3b..81bd06a888 100644
    surfaceVariant = Color(0xFFE7E6F2),
    background = Color(0xFFF6F6FF),
    error = Color(0xFFE00052),
-@@ -132,7 +157,7 @@ private val lightExtendedColors = ExtendedColors(
+@@ -134,7 +159,7 @@ private val lightExtendedColors = ExtendedColors(
  private val darkExtendedColors = ExtendedColors(
    neutralSurface = Color(0x14FFFFFF),
    colorOnCustom = Color(0xFFFFFFFF),
@@ -2911,7 +2874,7 @@ index 722cc64f3b..81bd06a888 100644
    colorSurface1 = Color(0xFF181137),
    colorSurface2 = Color(0xFF1E1645),
    colorSurface3 = Color(0xFF231A4E),
-@@ -157,13 +182,28 @@ private val darkExtendedColors = ExtendedColors(
+@@ -161,13 +186,28 @@ private val darkExtendedColors = ExtendedColors(
  )
  
  private val darkColorScheme = darkColorScheme(
@@ -2942,7 +2905,7 @@ index 722cc64f3b..81bd06a888 100644
    surfaceVariant = Color(0xFF302F33),
    background = Color(0xFF100E1F),
    error = Color(0xFFFE006E),
-@@ -178,35 +218,38 @@ private val darkColorScheme = darkColorScheme(
+@@ -182,35 +222,38 @@ private val darkColorScheme = darkColorScheme(
    outline = Color(0xFF5D5D66)
  )
  
@@ -3000,7 +2963,7 @@ index 722cc64f3b..81bd06a888 100644
          typography = typography,
          content = content
        )
-@@ -227,6 +270,123 @@ fun ForceLightColors(content: @Composable () -> Unit) {
+@@ -231,6 +274,123 @@ fun ForceLightColors(content: @Composable () -> Unit) {
    }
  }
  

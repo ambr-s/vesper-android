@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:42 +0100
-Subject: [PATCH 04/22] feat: finish Vesper settings and help surfaces
+Subject: [PATCH 05/24] feat: finish Vesper settings and help surfaces
 
 Adapted from Molly work by Oscar Mira and other Molly contributors.
 
@@ -17,7 +17,6 @@ Signed-off-by: amber <amber@flourish.ch>
  .../app/help/HelpSettingsViewModel.kt         |  53 +++++++++
  .../settings/app/labs/LabsSettingsFragment.kt |   2 +-
  .../securesms/jobs/ApkUpdateJob.kt            |  39 ++++---
- .../securesms/keyvalue/LabsValues.kt          |  12 +-
  .../securesms/keyvalue/MiscellaneousValues.kt |  26 +++++
  .../securesms/util/RemoteConfig.kt            |  14 +++
  .../res/drawable/reaction_pill_background.xml |   2 +-
@@ -25,7 +24,7 @@ Signed-off-by: amber <amber@flourish.ch>
  .../main/res/layout/dsl_settings_toolbar.xml  |   2 +-
  app/src/main/res/values/strings.xml           |   5 +
  .../securesms/jobs/ApkUpdateJobTest.kt        |  34 ++++++
- 18 files changed, 309 insertions(+), 56 deletions(-)
+ 17 files changed, 303 insertions(+), 50 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
 
@@ -132,10 +131,10 @@ index b37ef04415..4c80f78b88 100644
    }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
-index c5bf78fcde..76b01138bc 100644
+index a85e6652b2..56ca068596 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/AppSettingsFragment.kt
-@@ -519,21 +519,21 @@ private fun AppSettingsContent(
+@@ -520,21 +520,21 @@ private fun AppSettingsContent(
            )
          }
  
@@ -449,7 +448,7 @@ index 0000000000..99a298f2a2
 +  }
 +}
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
-index 03ed443ad9..1cb91bef76 100644
+index 90939af9cb..e2a968c576 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 @@ -81,7 +81,7 @@ private fun LabsSettingsContent(
@@ -554,34 +553,6 @@ index 4153c40fbc..93da6ff198 100644
 +        availableBuildTimestamp > currentBuildTimestamp
 +      )
 +}
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-index a05db3074c..fb0ec1d846 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-+++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/LabsValues.kt
-@@ -18,17 +18,17 @@ class LabsValues internal constructor(store: KeyValueStore) : SignalStoreValues(
- 
-   public override fun getKeysToIncludeInBackup(): List<String> = emptyList()
- 
--  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true).falseForExternalUsers()
-+  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true)
- 
--  var storyArchive by booleanValue(STORY_ARCHIVE, true).falseForExternalUsers()
-+  var storyArchive by booleanValue(STORY_ARCHIVE, true)
- 
--  var incognito by booleanValue(INCOGNITO, true).falseForExternalUsers()
-+  var incognito by booleanValue(INCOGNITO, true)
- 
--  var betterSearch by booleanValue(BETTER_SEARCH, true).falseForExternalUsers()
-+  var betterSearch by booleanValue(BETTER_SEARCH, true)
- 
--  var starredMessages by booleanValue(STARRED_MESSAGES, true).falseForExternalUsers()
-+  var starredMessages by booleanValue(STARRED_MESSAGES, true)
- 
--  var stickerReplies by booleanValue(STICKER_REPLIES, false).falseForExternalUsers()
-+  var stickerReplies by booleanValue(STICKER_REPLIES, false)
- 
-   var muteBreakthroughNotifications by booleanValue(MUTE_BREAKTHROUGH_NOTIFICATIONS, true).falseForExternalUsers()
- 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
 index fa6a52f214..e5eefc491e 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/MiscellaneousValues.kt
@@ -627,7 +598,7 @@ index fa6a52f214..e5eefc491e 100644
     * High-water mark of the most recently consumed share payload, as set by
     * [org.thoughtcrime.securesms.conversation.ConversationArgs.shareDataTimestamp]. Any share whose timestamp is at or
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index afcb7b553e..547bb5a9f0 100644
+index 154cc6e27c..5c4ee67e42 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -91,9 +91,14 @@ object RemoteConfig {
@@ -706,10 +677,10 @@ index 8cf26a497e..4435845403 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
-index 3efee883f4..9594c489de 100644
+index 73397c00b2..c9ae652181 100644
 --- a/app/src/main/res/values/strings.xml
 +++ b/app/src/main/res/values/strings.xml
-@@ -4416,6 +4416,8 @@
+@@ -4413,6 +4413,8 @@
  
      <!-- Internal only preferences -->
      <string name="preferences__internal_preferences" translatable="false">Internal Preferences</string>
@@ -718,7 +689,7 @@ index 3efee883f4..9594c489de 100644
      <string name="preferences__internal_details" translatable="false">Internal Details</string>
      <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
  
-@@ -6050,6 +6052,9 @@
+@@ -6043,6 +6045,9 @@
      <string name="HelpFragment__licenced_under_the_agplv3">Licensed under the GNU AGPLv3</string>
      <!-- Non-English translations should use "Signal is a nonprofit." instead, dropping the 501c3 reference. -->
      <string name="HelpSettingsFragment__signal_is_a_501c3">Signal is a 501c3 nonprofit</string>

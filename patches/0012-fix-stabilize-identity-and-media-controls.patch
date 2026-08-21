@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:11 +0000
+Subject: [PATCH 12/24] fix: stabilize identity and media controls
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ app/src/main/res/layout/v2_media_image_editor_hud.xml | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/app/src/main/res/layout/v2_media_image_editor_hud.xml b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+index 295ec4a879..77493bf33f 100644
+--- a/app/src/main/res/layout/v2_media_image_editor_hud.xml
++++ b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+@@ -75,7 +75,7 @@
+             app:layout_constraintStart_toStartOf="parent"
+             app:layout_goneMarginEnd="10dp"
+             app:srcCompat="@drawable/symbol_x_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+@@ -173,7 +173,7 @@
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_goneMarginStart="10dp"
+             app:srcCompat="@drawable/symbol_check_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />
+@@ -228,7 +228,7 @@
+             app:layout_constraintBottom_toBottomOf="@id/image_editor_hud_draw_color_bar"
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="@id/image_editor_hud_draw_color_bar"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -247,7 +247,7 @@
+             app:layout_constraintEnd_toEndOf="parent"
+             app:layout_constraintTop_toTopOf="@id/image_editor_hud_draw_color_bar"
+             app:srcCompat="@drawable/symbol_text_square_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:visibility="visible" />
+ 
+@@ -324,7 +324,7 @@
+             app:layout_goneMarginEnd="10dp"
+             app:layout_goneMarginStart="10dp"
+             app:srcCompat="@drawable/symbol_crop_unlock_24"
+-            app:tint="?attr/filled_tonal_icon_button_icon_color"
++            app:tint="@color/signal_dark_colorOnSurface"
+             tools:alpha="1"
+             tools:translationY="0dp"
+             tools:visibility="visible" />

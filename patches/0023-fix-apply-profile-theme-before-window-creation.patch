@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sun, 16 Aug 2026 13:57:30 +0000
-Subject: [PATCH 22/22] fix: apply profile theme before window creation
+Subject: [PATCH 23/24] fix: apply profile theme before window creation
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
