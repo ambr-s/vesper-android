@@ -78,10 +78,10 @@ index 455a82e044..2812e6b6d1 100644
      }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index 9f92f115e1..8ba2bc9c24 100644
+index 89699d5e55..08f62d888d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-@@ -335,6 +335,12 @@ class Recipient(
+@@ -336,6 +336,12 @@ class Recipient(
    /** Whether or not to show a special verified badge, indicating this is a special conversation (like release notes or note to self). */
    val showVerified: Boolean = isReleaseNotes || isSelf
  
@@ -94,7 +94,7 @@ index 9f92f115e1..8ba2bc9c24 100644
    /** The notification channel, if both set and supported by the system. Otherwise null. */
    val notificationChannel: String? = if (!NotificationChannels.supported()) null else notificationChannelValue
  
-@@ -688,7 +694,7 @@ class Recipient(
+@@ -693,7 +699,7 @@ class Recipient(
      return buildSpannedString {
        append(name)
  

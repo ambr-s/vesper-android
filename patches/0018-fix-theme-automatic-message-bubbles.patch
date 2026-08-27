@@ -108,10 +108,10 @@ index f7f6ea1acb..8f61d99f38 100644
    private val internalEvents = SingleLiveEvent<Event>()
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index 8ba2bc9c24..c6d30a1dea 100644
+index 08f62d888d..4e1b77accb 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-@@ -436,7 +436,7 @@ class Recipient(
+@@ -441,7 +441,7 @@ class Recipient(
  
    /** The chat color to use when the "automatic" chat color setting is active, which derives a color from the wallpaper. */
    private val autoChatColor: ChatColors

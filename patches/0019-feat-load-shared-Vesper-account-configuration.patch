@@ -228,7 +228,7 @@ index 4a55ea1a80..b201b542d4 100644
          .padding(end = 16.dp)
          .size(20.dp)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 5c4ee67e42..91f98b8544 100644
+index 8b68940790..63bbbced50 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -74,7 +74,7 @@ object RemoteConfig {

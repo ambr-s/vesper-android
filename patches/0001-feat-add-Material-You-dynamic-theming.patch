@@ -123,10 +123,10 @@ index 4982c2605f..22721e75df 100644
  
      WindowUtil.clearLightStatusBar(getWindow());
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
-index 7595e99082..0d7813a021 100644
+index 8b5f1a6c2d..06cd3ca154 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
-@@ -60,7 +60,6 @@ import androidx.compose.ui.Alignment
+@@ -61,7 +61,6 @@ import androidx.compose.ui.Alignment
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.draw.clip
  import androidx.compose.ui.graphics.toArgb
@@ -134,7 +134,7 @@ index 7595e99082..0d7813a021 100644
  import androidx.compose.ui.platform.LocalFocusManager
  import androidx.compose.ui.platform.LocalResources
  import androidx.compose.ui.unit.Dp
-@@ -92,10 +91,10 @@ import kotlinx.coroutines.withContext
+@@ -93,10 +92,10 @@ import kotlinx.coroutines.withContext
  import org.signal.core.ui.BottomSheetUtil
  import org.signal.core.ui.compose.Snackbars
  import org.signal.core.ui.compose.theme.SignalTheme
@@ -146,27 +146,21 @@ index 7595e99082..0d7813a021 100644
  import org.signal.core.util.AppForegroundObserver
  import org.signal.core.util.Util
  import org.signal.core.util.concurrent.LifecycleDisposable
-@@ -569,7 +568,7 @@ class MainActivity :
-               Column(
-                 modifier = Modifier
-                   .clip(contentLayoutData.navigationBarShape)
--                  .background(color = SignalTheme.colors.colorSurface2)
-+                  .background(color = colorAttribute(R.attr.navbar_container_color))
-               ) {
-                 MainNavigationBar(
-                   state = mainNavigationState,
-@@ -790,9 +789,8 @@ class MainActivity :
-           SignalTheme.colors.colorSurface1
-         }
+@@ -444,12 +443,11 @@ class MainActivity :
+           wrappedNavigator.scaffoldValue.primary == PaneAdaptedValue.Expanded &&
+           detailLocation is MainNavigationDetailLocation.Conversation
  
 -        val context = LocalContext.current
          val isDarkTheme = isSystemInDarkTheme()
--        val navBarColor = if (isSplitPane) backgroundColor.toArgb() else ThemeUtil.getThemedColor(context, org.signal.core.ui.R.attr.vesper_colorSurface2)
-+        val navBarColor = if (isSplitPane) backgroundColor.toArgb() else 0
+         val navBarColor = when {
+           isSplitPane -> SignalTheme.colors.colorSurface1.toArgb()
+           isConversationFullscreen -> Color.TRANSPARENT
+-          else -> ThemeUtil.getThemedColor(context, org.signal.core.ui.R.attr.vesper_colorSurface2)
++          else -> colorAttribute(org.signal.core.ui.R.attr.vesper_colorSurface2).toArgb()
+         }
+ 
          LaunchedEffect(isDarkTheme, navBarColor) {
-           if (Build.VERSION.SDK_INT >= 26) {
-             enableEdgeToEdge(
-@@ -805,6 +803,10 @@ class MainActivity :
+@@ -464,6 +462,10 @@ class MainActivity :
            } else {
              enableEdgeToEdge()
            }
@@ -176,7 +170,16 @@ index 7595e99082..0d7813a021 100644
 +          }
          }
  
-         val modifier = when {
+         val anchors = remember(contentLayoutData, mainToolbarState, listPaneWidth, navigationType) {
+@@ -597,7 +599,7 @@ class MainActivity :
+               Column(
+                 modifier = Modifier
+                   .clip(contentLayoutData.navigationBarShape)
+-                  .background(color = SignalTheme.colors.colorSurface2)
++                  .background(color = colorAttribute(R.attr.navbar_container_color))
+               ) {
+                 MainNavigationBar(
+                   state = mainNavigationState,
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/avatar/photo/PhotoEditorActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/avatar/photo/PhotoEditorActivity.kt
 index 59263d882f..232813e2f9 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/avatar/photo/PhotoEditorActivity.kt
@@ -662,7 +665,7 @@ index 960882133d..9e57182fc2 100644
      enableEdgeToEdge()
      setContentView(R.layout.username_qr_image_selection_activity)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
-index a1408c9554..75ff72e98b 100644
+index b20457eb37..e39bea32e6 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/webrtc/v2/WebRtcCallActivity.kt
 @@ -82,6 +82,8 @@ import org.thoughtcrime.securesms.safety.SafetyNumberBottomSheet
@@ -1152,7 +1155,7 @@ index 0b2327b9c3..e4e604106b 100644
        ImageViewCompat.setImageTintList(clearButton, iconTint)
        input.setHintTextColor(iconTint)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-index 621bcca22d..c7745bfc16 100644
+index aa7e27a9ea..320daee28c 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 @@ -41,6 +41,7 @@ public final class SettingsValues extends SignalStoreValues {
@@ -1163,7 +1166,7 @@ index 621bcca22d..c7745bfc16 100644
    public static final  String MESSAGE_FONT_SIZE                       = "settings.message.font.size";
    public static final  String LANGUAGE                                = "settings.language";
    public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
-@@ -74,6 +75,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -76,6 +77,7 @@ public final class SettingsValues extends SignalStoreValues {
    private static final String KEEP_MUTED_CHATS_ARCHIVED               = "settings.keepMutedChatsArchived";
    private static final String USE_COMPACT_NAVIGATION_BAR              = "settings.useCompactNavigationBar";
    private static final String THREAD_TRIM_SYNC_TO_LINKED_DEVICES      = "settings.storage.syncThreadTrimDeletes";
@@ -1171,7 +1174,7 @@ index 621bcca22d..c7745bfc16 100644
    private static final String PASSPHRASE_DISABLED                     = "settings.passphrase.disabled";
    private static final String PASSPHRASE_TIMEOUT_ENABLED              = "settings.passphrase.timeout.enabled";
    private static final String PASSPHRASE_TIMEOUT                      = "settings.passphrase.timeout";
-@@ -132,6 +134,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -134,6 +136,7 @@ public final class SettingsValues extends SignalStoreValues {
                           THREAD_TRIM_ENABLED,
                           LANGUAGE,
                           THEME,
@@ -1179,7 +1182,7 @@ index 621bcca22d..c7745bfc16 100644
                           MESSAGE_FONT_SIZE,
                           PREFER_SYSTEM_EMOJI,
                           ENTER_KEY_SENDS,
-@@ -153,6 +156,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -155,6 +158,7 @@ public final class SettingsValues extends SignalStoreValues {
                           KEEP_MUTED_CHATS_ARCHIVED,
                           USE_COMPACT_NAVIGATION_BAR,
                           THREAD_TRIM_SYNC_TO_LINKED_DEVICES,
@@ -1187,7 +1190,7 @@ index 621bcca22d..c7745bfc16 100644
                           PASSPHRASE_DISABLED,
                           PASSPHRASE_TIMEOUT_ENABLED,
                           PASSPHRASE_TIMEOUT,
-@@ -246,10 +250,19 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -248,10 +252,19 @@ public final class SettingsValues extends SignalStoreValues {
    }
  
    public void setTheme(@NonNull Theme theme) {
@@ -1207,7 +1210,7 @@ index 621bcca22d..c7745bfc16 100644
    public int getMessageFontSize() {
      return getInteger(MESSAGE_FONT_SIZE, TextSecurePreferences.getMessageBodyTextSize(AppDependencies.getApplication()));
    }
-@@ -558,6 +571,14 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -576,6 +589,14 @@ public final class SettingsValues extends SignalStoreValues {
      return getBoolean(USE_COMPACT_NAVIGATION_BAR, false);
    }
  
@@ -1533,7 +1536,7 @@ index b709e562b8..2794bb4fd2 100644
          case CONNECTED:
            proxyStatus.setText(R.string.preferences_connected_to_proxy);
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
-index ae10256f2b..0119ae26f3 100644
+index 520f25032c..e8b4fbbf02 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/profiles/manage/UsernameEditFragment.java
 @@ -190,8 +190,8 @@ public class UsernameEditFragment extends LoggingFragment {
@@ -1548,7 +1551,7 @@ index ae10256f2b..0119ae26f3 100644
      binding.usernameTextFocusedStroke.setBackgroundColor(color);
      binding.usernameTextWrapper.setHintTextColor(ColorStateList.valueOf(color));
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index 38a98f58eb..9f92f115e1 100644
+index 0d9c50bd4a..89699d5e55 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 @@ -62,7 +62,6 @@ import org.whispersystems.signalservice.api.util.OptionalUtil
@@ -1559,7 +1562,7 @@ index 38a98f58eb..9f92f115e1 100644
  
  /**
   * A recipient represents something you can send messages to or receive messages from. They could be individuals, groups, or even distribution lists.
-@@ -704,7 +703,7 @@ class Recipient(
+@@ -709,7 +708,7 @@ class Recipient(
  
        if (isIndividual && !isSelf) {
          val isLtr = ViewUtil.isLtr(context)
@@ -2733,7 +2736,7 @@ index a084177fd3..bbe42c1f7c 100644
  
      <style name="Theme.Signal.AlertDialog.Light.Cornered" parent="MaterialAlertDialog.Material3">
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt b/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt
-index 254cfffa57..cea9e80f5c 100644
+index 41467894f7..b1a94b4fa7 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/Buttons.kt
 @@ -27,6 +27,7 @@ import androidx.compose.material3.ButtonElevation
@@ -2744,7 +2747,7 @@ index 254cfffa57..cea9e80f5c 100644
  import androidx.compose.material3.MaterialTheme
  import androidx.compose.material3.ProvideTextStyle
  import androidx.compose.material3.Surface
-@@ -41,7 +42,9 @@ import androidx.compose.ui.res.painterResource
+@@ -42,7 +43,9 @@ import androidx.compose.ui.res.painterResource
  import androidx.compose.ui.res.stringResource
  import androidx.compose.ui.tooling.preview.Preview
  import androidx.compose.ui.unit.dp
@@ -2754,7 +2757,7 @@ index 254cfffa57..cea9e80f5c 100644
  
  object Buttons {
  
-@@ -93,7 +96,10 @@ object Buttons {
+@@ -94,7 +97,10 @@ object Buttons {
      modifier: Modifier = Modifier,
      enabled: Boolean = true,
      shape: Shape = ButtonDefaults.filledTonalShape,
@@ -2766,7 +2769,7 @@ index 254cfffa57..cea9e80f5c 100644
      elevation: ButtonElevation? = ButtonDefaults.filledTonalButtonElevation(),
      border: BorderStroke? = null,
      contentPadding: PaddingValues = largeButtonContentPadding,
-@@ -120,7 +126,10 @@ object Buttons {
+@@ -121,7 +127,10 @@ object Buttons {
      modifier: Modifier = Modifier,
      enabled: Boolean = true,
      shape: Shape = ButtonDefaults.filledTonalShape,
@@ -2778,7 +2781,7 @@ index 254cfffa57..cea9e80f5c 100644
      elevation: ButtonElevation? = ButtonDefaults.filledTonalButtonElevation(),
      border: BorderStroke? = null,
      contentPadding: PaddingValues = mediumButtonContentPadding,
-@@ -193,7 +202,7 @@ object Buttons {
+@@ -217,7 +226,7 @@ object Buttons {
          painter = painterResource(iconResId),
          contentDescription = null,
          modifier = Modifier.padding(16.dp),
@@ -2787,7 +2790,7 @@ index 254cfffa57..cea9e80f5c 100644
        )
      }
    }
-@@ -214,6 +223,10 @@ object Buttons {
+@@ -238,6 +247,10 @@ object Buttons {
          onClick = onClick,
          shape = RoundedCornerShape(18.dp),
          modifier = Modifier.size(56.dp),

@@ -351,7 +351,7 @@ index b61464abe2..6f62d279c1 100644
  
      // endregion
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-index 5784cda543..94ea17086b 100644
+index 4895121b6b..f01d7514b7 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 @@ -42,6 +42,7 @@ public final class SettingsValues extends SignalStoreValues {
@@ -362,7 +362,7 @@ index 5784cda543..94ea17086b 100644
    public static final  String MESSAGE_FONT_SIZE                       = "settings.message.font.size";
    public static final  String LANGUAGE                                = "settings.language";
    public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
-@@ -135,6 +136,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -137,6 +138,7 @@ public final class SettingsValues extends SignalStoreValues {
                           LANGUAGE,
                           THEME,
                           DYNAMIC_COLORS_ENABLED,
@@ -370,7 +370,7 @@ index 5784cda543..94ea17086b 100644
                           MESSAGE_FONT_SIZE,
                           PREFER_SYSTEM_EMOJI,
                           ENTER_KEY_SENDS,
-@@ -263,6 +265,15 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -265,6 +267,15 @@ public final class SettingsValues extends SignalStoreValues {
      return getBoolean(DYNAMIC_COLORS_ENABLED, true);
    }
  

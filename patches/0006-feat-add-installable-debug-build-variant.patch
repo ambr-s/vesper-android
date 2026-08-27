@@ -13,7 +13,7 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  create mode 100644 app/src/debug/res/values/strings.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 4a9643b254..0c20922be3 100644
+index bc5aeffd44..154cd8df62 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
 @@ -85,8 +85,10 @@ val selectableVariants = listOf(
