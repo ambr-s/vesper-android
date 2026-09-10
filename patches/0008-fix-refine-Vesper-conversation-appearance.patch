@@ -121,10 +121,10 @@ index 24cc490730..a21a43e16b 100644
          }
        }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-index 53537b8db2..520439795e 100644
+index bc085dd4a3..f57d6f1724 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-@@ -256,7 +256,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -264,7 +264,7 @@ public final class SettingsValues extends SignalStoreValues {
    }
  
    public boolean isDynamicColorsEnabled() {

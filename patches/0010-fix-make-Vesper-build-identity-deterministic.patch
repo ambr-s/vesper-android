@@ -11,10 +11,10 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  3 files changed, 126 insertions(+), 22 deletions(-)
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 58d040dcc3..32718d71e6 100644
+index 9e4d5090b0..2c477a88b1 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
-@@ -242,6 +242,8 @@ android {
+@@ -243,6 +243,8 @@ android {
    }
  
    defaultConfig {
@@ -23,7 +23,7 @@ index 58d040dcc3..32718d71e6 100644
      applicationId = "systems.amber.vesper"
      if (currentHotfixVersion >= maxHotfixVersions) {
        throw AssertionError("Hotfix version offset is too large!")
-@@ -261,7 +263,9 @@ android {
+@@ -262,7 +264,9 @@ android {
  
      manifestPlaceholders["mapsKey"] = "AIzaSyCSx9xea86GwDKGznCAULE9Y5a8b-TfN9U"
  
@@ -34,7 +34,7 @@ index 58d040dcc3..32718d71e6 100644
      buildConfigField("String", "GIT_HASH", "\"${getGitHash()}\"")
      buildConfigField("String", "SIGNAL_URL", "\"https://chat.signal.org\"")
      buildConfigField("String", "STORAGE_URL", "\"https://storage.signal.org\"")
-@@ -884,6 +888,40 @@ fun getLastCommitTimestamp(): String {
+@@ -890,6 +894,40 @@ fun getLastCommitTimestamp(): String {
    }.standardOutput.asText.get() + "000"
  }
  

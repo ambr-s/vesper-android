@@ -351,7 +351,7 @@ index b61464abe2..6f62d279c1 100644
  
      // endregion
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-index 4895121b6b..f01d7514b7 100644
+index f57d6f1724..dbf8127ffb 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
 @@ -42,6 +42,7 @@ public final class SettingsValues extends SignalStoreValues {
@@ -362,7 +362,7 @@ index 4895121b6b..f01d7514b7 100644
    public static final  String MESSAGE_FONT_SIZE                       = "settings.message.font.size";
    public static final  String LANGUAGE                                = "settings.language";
    public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
-@@ -137,6 +138,7 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -139,6 +140,7 @@ public final class SettingsValues extends SignalStoreValues {
                           LANGUAGE,
                           THEME,
                           DYNAMIC_COLORS_ENABLED,
@@ -370,7 +370,7 @@ index 4895121b6b..f01d7514b7 100644
                           MESSAGE_FONT_SIZE,
                           PREFER_SYSTEM_EMOJI,
                           ENTER_KEY_SENDS,
-@@ -265,6 +267,15 @@ public final class SettingsValues extends SignalStoreValues {
+@@ -267,6 +269,15 @@ public final class SettingsValues extends SignalStoreValues {
      return getBoolean(DYNAMIC_COLORS_ENABLED, true);
    }
  
@@ -694,10 +694,10 @@ index d58facf745..fd13072f77 100644
 \ No newline at end of file
 +</shape>
 diff --git a/app/src/main/res/layout/v2_conversation_fragment.xml b/app/src/main/res/layout/v2_conversation_fragment.xml
-index d22c785c01..3141d90bff 100644
+index 100be3be57..e923326045 100644
 --- a/app/src/main/res/layout/v2_conversation_fragment.xml
 +++ b/app/src/main/res/layout/v2_conversation_fragment.xml
-@@ -125,13 +125,13 @@
+@@ -104,13 +104,13 @@
                  android:fontFamily="sans-serif-medium"
                  android:text="@string/ConversationActivity_join"
                  android:textAllCaps="false"

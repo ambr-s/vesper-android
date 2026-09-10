@@ -19,10 +19,10 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  create mode 100644 app/src/main/res/drawable/vesper_preserved_delete_pill_background.xml
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt b/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
-index d5915c1c45..7b949ba5ff 100644
+index b7f48cb226..a5b40aad36 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/backup/v2/exporters/ChatItemArchiveExporter.kt
-@@ -100,6 +100,7 @@ import org.thoughtcrime.securesms.database.model.databaseprotos.ThreadMergeEvent
+@@ -101,6 +101,7 @@ import org.thoughtcrime.securesms.database.model.databaseprotos.ThreadMergeEvent
  import org.thoughtcrime.securesms.dependencies.AppDependencies
  import org.thoughtcrime.securesms.keyvalue.SignalStore
  import org.thoughtcrime.securesms.linkpreview.LinkPreview
@@ -30,7 +30,7 @@ index d5915c1c45..7b949ba5ff 100644
  import org.thoughtcrime.securesms.mms.PartAuthority
  import org.thoughtcrime.securesms.mms.QuoteModel
  import org.thoughtcrime.securesms.payments.FailureReason
-@@ -1443,6 +1444,7 @@ private fun BodyRangeList.BodyRange.Style.toRemote(): BackupBodyRange.Style {
+@@ -1495,6 +1496,7 @@ private fun BodyRangeList.BodyRange.Style.toRemote(): BackupBodyRange.Style {
  
  private fun List<ReactionRecord>?.toRemote(exportState: ExportState): List<Reaction> {
    return this
@@ -117,10 +117,10 @@ index 924569866d..23ac7d4a24 100644
        screenLockActivityTimeout = SignalStore.settings.screenLockTimeout,
        screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(AppDependencies.application),
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index bd2dc27747..6217226412 100644
+index 996bdbb245..4c711b010d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-@@ -586,9 +586,16 @@ object DataMessageProcessor {
+@@ -590,9 +590,16 @@ object DataMessageProcessor {
      val targetMessage: MessageRecord? = SignalDatabase.messages.getMessageFor(targetSentTimestamp, senderRecipientId)
  
      return if (targetMessage != null && MessageConstraintsUtil.isValidRemoteDeleteReceive(targetMessage, senderRecipientId, envelope.serverTimestamp!!)) {

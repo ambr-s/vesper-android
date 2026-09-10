@@ -9,10 +9,10 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  1 file changed, 72 insertions(+), 73 deletions(-)
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
-index 7757bbc3f0..96336cc968 100644
+index dcf75b2de6..db85345d65 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
-@@ -377,62 +377,21 @@ private fun PrimaryToolbar(
+@@ -384,62 +384,21 @@ private fun PrimaryToolbar(
    enabled: Boolean = true,
    onSearchButtonPositioned: (Float) -> Unit
  ) {
@@ -81,7 +81,7 @@ index 7757bbc3f0..96336cc968 100644
        )
      },
      actions = {
-@@ -462,23 +421,24 @@ private fun PrimaryToolbar(
+@@ -469,23 +428,24 @@ private fun PrimaryToolbar(
          )
        }
  
@@ -106,23 +106,23 @@ index 7757bbc3f0..96336cc968 100644
 -        controller = controller
 -      ) {
 -        when (state.destination) {
--          MainNavigationListLocation.ARCHIVE -> Unit
--          MainNavigationListLocation.CHATS -> ChatDropdownItems(state, callback, dismiss)
--          MainNavigationListLocation.CALLS -> CallDropdownItems(state.callFilter, callback, dismiss)
--          MainNavigationListLocation.STORIES -> StoryDropDownItems(callback, dismiss)
+-          MainListRoute.Archive -> Unit
+-          MainListRoute.Chats -> ChatDropdownItems(state, callback, dismiss)
+-          MainListRoute.Calls -> CallDropdownItems(state.callFilter, callback, dismiss)
+-          MainListRoute.Stories -> StoryDropDownItems(callback, dismiss)
 +        DropdownMenus.Menu(
 +          controller = controller
 +        ) {
 +          when (state.destination) {
-+            MainNavigationListLocation.ARCHIVE -> Unit
-+            MainNavigationListLocation.CHATS -> ChatDropdownItems(state, callback, dismiss)
-+            MainNavigationListLocation.CALLS -> CallDropdownItems(state.callFilter, callback, dismiss)
-+            MainNavigationListLocation.STORIES -> StoryDropDownItems(callback, dismiss)
++            MainListRoute.Archive -> Unit
++            MainListRoute.Chats -> ChatDropdownItems(state, callback, dismiss)
++            MainListRoute.Calls -> CallDropdownItems(state.callFilter, callback, dismiss)
++            MainListRoute.Stories -> StoryDropDownItems(callback, dismiss)
 +          }
          }
        }
      }
-@@ -486,11 +446,15 @@ private fun PrimaryToolbar(
+@@ -493,11 +453,15 @@ private fun PrimaryToolbar(
  }
  
  @Composable
@@ -140,7 +140,7 @@ index 7757bbc3f0..96336cc968 100644
    Tooltips.PlainBelowAnchor(
      onDismiss = onDismiss,
      isTooltipVisible = isTooltipVisible,
-@@ -498,12 +462,45 @@ private fun TooltipOverflowButton(
+@@ -505,12 +469,45 @@ private fun TooltipOverflowButton(
        Text(text = stringResource(R.string.ConversationListFragment__turn_your_notification_profile_on_or_off_here))
      },
      anchorContent = {
@@ -191,7 +191,7 @@ index 7757bbc3f0..96336cc968 100644
          )
        }
      }
-@@ -842,10 +839,12 @@ private fun ArchiveToolbarPreview() {
+@@ -849,10 +846,12 @@ private fun ArchiveToolbarPreview() {
  
  @DayNightPreviews
  @Composable

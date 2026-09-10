@@ -18,15 +18,15 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java b/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
-index 3a39cf4946..5e8b02c4fe 100644
+index 7f9e0cacb5..c1c0e062ca 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/FromTextView.java
 @@ -62,7 +62,7 @@ public class FromTextView extends SimpleEmojiTextView {
        builder.append(suffix);
      }
  
--    if (asThread && recipient.getShowVerified()) {
-+    if (asThread && recipient.getShowVerifiedBadge()) {
+-    if (asThread && recipient.getShowVerified() && !showSelfAsYou) {
++    if (asThread && recipient.getShowVerifiedBadge() && !showSelfAsYou) {
        Drawable official = ContextUtil.requireDrawable(getContext(), R.drawable.ic_official_20);
        official.setBounds(0, 0, ViewUtil.dpToPx(20), ViewUtil.dpToPx(20));
  
@@ -78,10 +78,10 @@ index 455a82e044..2812e6b6d1 100644
      }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index 89699d5e55..08f62d888d 100644
+index c4f053968f..9205cd95a4 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-@@ -336,6 +336,12 @@ class Recipient(
+@@ -335,6 +335,12 @@ class Recipient(
    /** Whether or not to show a special verified badge, indicating this is a special conversation (like release notes or note to self). */
    val showVerified: Boolean = isReleaseNotes || isSelf
  
@@ -94,7 +94,7 @@ index 89699d5e55..08f62d888d 100644
    /** The notification channel, if both set and supported by the system. Otherwise null. */
    val notificationChannel: String? = if (!NotificationChannels.supported()) null else notificationChannelValue
  
-@@ -693,7 +699,7 @@ class Recipient(
+@@ -692,7 +698,7 @@ class Recipient(
      return buildSpannedString {
        append(name)
  

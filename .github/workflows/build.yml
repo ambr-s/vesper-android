@@ -85,6 +85,9 @@ jobs:
       - name: Materialise Vesper
         run: ./tools/materialize.sh --tag "${{ steps.version.outputs.tag }}"
 
+      - name: Validate materialised theme hooks
+        run: python3 tools/test_materialised_theme.py -v
+
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
 

@@ -9,7 +9,7 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  1 file changed, 6 insertions(+), 2 deletions(-)
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
-index 313df449e9..7757bbc3f0 100644
+index 773532e291..dcf75b2de6 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
 @@ -56,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
@@ -20,7 +20,7 @@ index 313df449e9..7757bbc3f0 100644
  import androidx.compose.ui.graphics.vector.ImageVector
  import androidx.compose.ui.layout.onPlaced
  import androidx.compose.ui.layout.positionInWindow
-@@ -427,8 +428,11 @@ private fun PrimaryToolbar(
+@@ -434,8 +435,11 @@ private fun PrimaryToolbar(
        }
      },
      title = {

@@ -18,10 +18,21 @@ Links association.
 You need JDK 21 and the Android SDK declared by the pinned Signal release.
 
 ```bash
+python3 tools/test_export_patches.py -v
 ./tools/materialize.sh
+python3 tools/test_materialised_theme.py -v
 cd work
 ./gradlew :Signal-Android:assembleWebsiteProdRelease
 ```
+
+Trusted same-repository pull requests run these gates and upload an unsigned
+universal APK without signing credentials or publishing updates. The existing
+main-branch workflow signs and publishes builds after merge.
+
+The materialised-theme checks protect source-level hooks that can be lost during
+an upstream rebase: applying the media-send theme before activity creation and
+using the navbar surface for its gesture-navigation inset. They supplement the
+release build, not on-device lifecycle or visual testing.
 
 Make source changes in `work/`, commit them there, run the relevant checks, then
 return to this directory and run `./tools/export.sh`. Do not edit generated patches

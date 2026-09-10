@@ -57,7 +57,14 @@ class StablePatchExportTest(unittest.TestCase):
         (self.repository / "feature.txt").write_text(
             "zero\none\ntwo\nthree\nalpha\nVESPER\ngamma\nseven\neight\nnine\n"
         )
-        run("git", "commit", "-qam", "feat: add Vesper behaviour", cwd=self.repository)
+        run(
+            "git",
+            "commit",
+            "-qam",
+            "feat: add Vesper behaviour",
+            "--date=2026-01-09T12:34:56+0000",
+            cwd=self.repository,
+        )
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
