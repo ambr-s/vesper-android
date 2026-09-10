@@ -1,0 +1,106 @@
+# Copyright 2026 Vesper contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+
+name: Build Vesper PR
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vesper-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Signal pinned PR build
+    # Blacksmith is reserved for trusted, same-repository PR code only.
+    if: github.repository == 'ambr-s/vesper-android' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out Vesper patchset
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate patch tooling
+        run: |
+          python3 tools/test_export_patches.py -v
+          python3 -m py_compile tools/export_patches.py tools/test_export_patches.py
+          bash -n tools/export.sh tools/materialize.sh
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Materialise pinned Vesper build
+        run: |
+          set -euo pipefail
+          ./tools/materialize.sh --tag "$(sed -n 's/^signal=//p' upstream.pin)"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Install declared Android toolchain
+        run: |
+          set -euo pipefail
+          compile_sdk="$(sed -n 's/^compileSdk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          build_tools="$(sed -n 's/^buildTools = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          ndk="$(sed -n 's/^ndk = "\(.*\)"/\1/p' work/gradle/libs.versions.toml)"
+          sdkmanager="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+
+          # Resolve the declared API level against the repository rather than
+          # assuming a directory/package spelling.
+          mapfile -t platform_packages < <(
+            "$sdkmanager" --list | sed -n "s/^[[:space:]]*\(platforms;android-${compile_sdk}\(\.0\)\?\)[[:space:]].*/\1/p" | sort -u
+          )
+          if [[ "${#platform_packages[@]}" -ne 1 ]]; then
+            printf 'Could not resolve exactly one Android platform package for compileSdk %s. Found: %s\n' \
+              "$compile_sdk" "${platform_packages[*]:-(none)}" >&2
+            exit 1
+          fi
+
+          echo "y" | "$sdkmanager" --install \
+            "${platform_packages[0]}" \
+            "build-tools;$build_tools" \
+            "ndk;$ndk"
+
+      - name: Build unsigned universal APK
+        working-directory: work
+        run: ./gradlew :Signal-Android:assembleWebsiteProdRelease --stacktrace
+
+      - name: Locate unsigned universal APK
+        id: apk
+        run: |
+          set -euo pipefail
+          output_dir="work/app/build/outputs/apk/websiteProd/release"
+          mapfile -t apks < <(
+            find "$output_dir" \
+              -maxdepth 1 -type f -iname '*universal*.apk' |
+              sort
+          )
+          if [[ "${#apks[@]}" -ne 1 ]]; then
+            printf 'Expected one universal APK, found %s:\n' "${#apks[@]}" >&2
+            find "$output_dir" -maxdepth 1 -type f -name '*.apk' \
+              -printf '  %p\n' |
+              sort >&2
+            exit 1
+          fi
+          echo "path=${apks[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload unsigned universal APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Vesper-pr-${{ github.event.pull_request.number }}-unsigned-universal
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
