@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import subprocess
 import tempfile
 import unittest
+from datetime import timedelta
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 
@@ -89,6 +92,45 @@ class StablePatchExportTest(unittest.TestCase):
         exporter.export_patch_series(self.repository, self.output, rebased_base, [])
 
         self.assertEqual(original_bytes, next(self.output.glob("*.patch")).read_bytes())
+
+    def test_matches_provenance_ignores_rfc_date_padding(self) -> None:
+        exporter = load_exporter()
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+        patch = next(self.output.glob("*.patch"))
+        content = patch.read_bytes()
+        date = parsedate_to_datetime(exporter.patch_mail(content)[1])
+        unpadded_date = f"Date: {date:%a}, {date.day} {date:%b} {date:%Y} {date:%H:%M:%S} {date:%z}".encode()
+        equivalent_content = re.sub(rb"^Date: .*?$", unpadded_date, content, count=1, flags=re.MULTILINE)
+
+        self.assertTrue(exporter.matches_commit_provenance(content, self.repository, "HEAD"))
+        self.assertTrue(
+            exporter.matches_commit_provenance(equivalent_content, self.repository, "HEAD")
+        )
+
+    def test_matches_provenance_rejects_invalid_or_different_dates(self) -> None:
+        exporter = load_exporter()
+        exporter.export_patch_series(self.repository, self.output, self.base, [])
+        patch = next(self.output.glob("*.patch"))
+        content = patch.read_bytes()
+        date = parsedate_to_datetime(exporter.patch_mail(content)[1])
+        different_date = date + timedelta(seconds=1)
+        different_content = re.sub(
+            rb"^Date: .*?$",
+            f"Date: {different_date:%a}, {different_date.day} {different_date:%b} {different_date:%Y} {different_date:%H:%M:%S} {different_date:%z}".encode(),
+            content,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        invalid_content = re.sub(
+            rb"^Date: .*?$", b"Date: not-a-date", content, count=1, flags=re.MULTILINE
+        )
+
+        self.assertFalse(
+            exporter.matches_commit_provenance(different_content, self.repository, "HEAD")
+        )
+        self.assertFalse(
+            exporter.matches_commit_provenance(invalid_content, self.repository, "HEAD")
+        )
 
     def test_regenerates_patch_when_feature_effect_changes(self) -> None:
         exporter = load_exporter()
