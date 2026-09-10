@@ -22,7 +22,7 @@ import tempfile
 from collections import defaultdict, deque
 from email import policy
 from email.parser import BytesParser
-from email.utils import parseaddr
+from email.utils import parsedate_to_datetime, parseaddr
 from pathlib import Path
 from typing import Iterable
 
@@ -109,9 +109,15 @@ def matches_commit_provenance(content: bytes, repository: Path, commit: str) -> 
     if expected_prefix:
         expected_prefix += b"\n"
     expected_prefix += b"---\n"
+    try:
+        dates_match = parsedate_to_datetime(patch_date) == parsedate_to_datetime(
+            date.decode()
+        )
+    except (TypeError, ValueError, OverflowError):
+        dates_match = False
     return (
         author == f"{name.decode()} <{email.decode()}>"
-        and patch_date == date.decode()
+        and dates_match
         and patch_subject(content) == subject.decode()
         and patch_payload(content).startswith(expected_prefix)
     )
