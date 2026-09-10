@@ -19,10 +19,10 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  create mode 100644 app/src/main/res/values/vesper_features.xml
 
 diff --git a/app/build.gradle.kts b/app/build.gradle.kts
-index 4d0bfeedc0..58d040dcc3 100644
+index 32d806fdcd..9e4d5090b0 100644
 --- a/app/build.gradle.kts
 +++ b/app/build.gradle.kts
-@@ -213,7 +213,8 @@ android {
+@@ -214,7 +214,8 @@ android {
      jniLibs {
        excludes += setOf(
          "**/*.dylib",
@@ -32,7 +32,7 @@ index 4d0bfeedc0..58d040dcc3 100644
        )
      }
      resources {
-@@ -309,6 +310,7 @@ android {
+@@ -310,6 +311,7 @@ android {
      buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"pk_live_6cmGZopuTsV8novGgJJW9JpC00vLIgtQ1D\"")
      buildConfigField("boolean", "TRACING_ENABLED", "false")
      buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
@@ -40,7 +40,7 @@ index 4d0bfeedc0..58d040dcc3 100644
  
      ndk {
        abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-@@ -567,12 +569,6 @@ androidComponents {
+@@ -568,12 +570,6 @@ androidComponents {
        variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
      }
  
@@ -54,10 +54,10 @@ index 4d0bfeedc0..58d040dcc3 100644
      if (variant.name.contains("nightly", ignoreCase = true)) {
        var tag = getNightlyTagForCurrentCommit()
 diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
-index 6534be85a9..97215ec9da 100644
+index 52e78490a2..d4ae913673 100644
 --- a/app/src/main/AndroidManifest.xml
 +++ b/app/src/main/AndroidManifest.xml
-@@ -793,6 +793,7 @@
+@@ -784,6 +784,7 @@
          <activity
              android:name=".payments.preferences.PaymentsActivity"
              android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"
@@ -88,10 +88,10 @@ index 1c4ce2306e..e557442b2b 100644
        actionButton.setVisibility(VISIBLE);
        actionButton.setOnClickListener(v -> {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index c789dcdbcf..9037c03ce8 100644
+index 946f331f86..d0df724431 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -139,6 +139,7 @@ import org.signal.donations.InAppPaymentType
+@@ -143,6 +143,7 @@ import org.signal.donations.InAppPaymentType
  import org.signal.emoji.EmojiEventListener
  import org.signal.ringrtc.CallLinkRootKey
  import org.thoughtcrime.securesms.BlockUnblockDialog
@@ -99,7 +99,7 @@ index c789dcdbcf..9037c03ce8 100644
  import org.thoughtcrime.securesms.MainActivity
  import org.thoughtcrime.securesms.MuteDialog
  import org.thoughtcrime.securesms.R
-@@ -3117,6 +3118,15 @@ class ConversationFragment :
+@@ -3166,6 +3167,15 @@ class ConversationFragment :
    }
  
    private fun handleViewPaymentDetails(conversationMessage: ConversationMessage) {
@@ -188,7 +188,7 @@ index 0742995fc2..f4706ec031 100644
        return
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index 6217226412..50206723ce 100644
+index 4c711b010d..7cfc53eec4 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 @@ -17,6 +17,7 @@ import org.signal.core.util.toOptional
@@ -199,7 +199,7 @@ index 6217226412..50206723ce 100644
  import org.thoughtcrime.securesms.attachments.Attachment
  import org.thoughtcrime.securesms.attachments.LocalStickerAttachment
  import org.thoughtcrime.securesms.attachments.PointerAttachment
-@@ -663,6 +664,11 @@ object DataMessageProcessor {
+@@ -667,6 +668,11 @@ object DataMessageProcessor {
    ): InsertResult? {
      log(envelope.clientTimestamp!!, "Payment message.")
  
@@ -212,7 +212,7 @@ index 6217226412..50206723ce 100644
        warn(envelope.clientTimestamp!!, "Ignoring payment message without notification")
        return null
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
-index 9f2d9c0561..47e02d1b2d 100644
+index aac51167e7..56ae240222 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/SyncMessageProcessor.kt
 @@ -26,6 +26,7 @@ import org.signal.libsignal.protocol.state.SignedPreKeyRecord
@@ -223,7 +223,7 @@ index 9f2d9c0561..47e02d1b2d 100644
  import org.thoughtcrime.securesms.attachments.Attachment
  import org.thoughtcrime.securesms.attachments.DatabaseAttachment
  import org.thoughtcrime.securesms.attachments.TombstoneAttachment
-@@ -1269,6 +1270,11 @@ object SyncMessageProcessor {
+@@ -1275,6 +1276,11 @@ object SyncMessageProcessor {
    private fun handleSynchronizeOutgoingPayment(outgoingPayment: SyncMessage.OutgoingPayment, envelopeTimestamp: Long) {
      log(envelopeTimestamp, "Synchronize outgoing payment.")
  

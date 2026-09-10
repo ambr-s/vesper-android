@@ -72,7 +72,7 @@ index 99a298f2a2..3cdff548d6 100644
  
  import android.app.Application
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
-index 1cb91bef76..81c2bb989f 100644
+index e2a968c576..09bcee5005 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/labs/LabsSettingsFragment.kt
 @@ -81,7 +81,7 @@ private fun LabsSettingsContent(
@@ -107,10 +107,10 @@ index 93da6ff198..da0a980982 100644
  
      SignalStore.apkUpdate.lastSuccessfulCheck = System.currentTimeMillis()
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-index 50206723ce..3aeca9b087 100644
+index 7cfc53eec4..c325f8b6b4 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/messages/DataMessageProcessor.kt
-@@ -589,7 +589,7 @@ object DataMessageProcessor {
+@@ -593,7 +593,7 @@ object DataMessageProcessor {
      return if (targetMessage != null && MessageConstraintsUtil.isValidRemoteDeleteReceive(targetMessage, senderRecipientId, envelope.serverTimestamp!!)) {
        val isSelfDelete = senderRecipientId == Recipient.self().id
        if (!isSelfDelete && SignalStore.settings.isIgnoreRemoteDeleteEnabled) {
@@ -198,10 +198,10 @@ index 24bd3c580e..712f5e23f3 100644
  
  import org.junit.Assert.assertFalse
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index 81bd06a888..0a01038c5b 100644
+index d44a03f1ab..d284847ea6 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-@@ -229,9 +229,8 @@ fun SignalTheme(
+@@ -233,9 +233,8 @@ fun SignalTheme(
    val maySupportDynamicColor = Build.VERSION.SDK_INT >= 31
    val dynamicColors = maySupportDynamicColor && (useDynamicColors ?: isThemeUsingDynamicColors(context))
  

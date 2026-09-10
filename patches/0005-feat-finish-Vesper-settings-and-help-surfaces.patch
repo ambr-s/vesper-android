@@ -29,7 +29,7 @@ Signed-off-by: amber <amber@flourish.ch>
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/jobs/ApkUpdateJobTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index f706929155..d4faf54f04 100644
+index d482026211..eb9efe35b9 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 @@ -69,6 +69,7 @@ import org.thoughtcrime.securesms.gcm.FcmFetchManager;
@@ -40,7 +40,7 @@ index f706929155..d4faf54f04 100644
  import org.thoughtcrime.securesms.jobs.BackupRefreshJob;
  import org.thoughtcrime.securesms.jobs.BackupSubscriptionCheckJob;
  import org.thoughtcrime.securesms.jobs.BuildExpirationConfirmationJob;
-@@ -282,6 +283,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -283,6 +284,10 @@ public class ApplicationContext extends Application implements AppForegroundObse
        BackupRefreshJob.enqueueIfNecessary();
        InAppPaymentAuthCheckJob.enqueueIfNeeded();
        RemoteConfig.refreshIfNecessary();
@@ -51,7 +51,7 @@ index f706929155..d4faf54f04 100644
        RetrieveProfileJob.enqueueRoutineFetchIfNecessary();
        executePendingContactSync();
        KeyCachingService.onAppForegrounded(this);
-@@ -366,6 +371,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -367,6 +372,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
    @VisibleForTesting
    protected void initializeLogging() {
      Log.initialize(RemoteConfig::internalUser, AndroidLogger.INSTANCE, PersistentLogger.getInstance(this));
@@ -598,7 +598,7 @@ index fa6a52f214..e5eefc491e 100644
     * High-water mark of the most recently consumed share payload, as set by
     * [org.thoughtcrime.securesms.conversation.ConversationArgs.shareDataTimestamp]. Any share whose timestamp is at or
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 154cc6e27c..5c4ee67e42 100644
+index e1122d5cca..508e9a391e 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -91,9 +91,14 @@ object RemoteConfig {
@@ -677,10 +677,10 @@ index 8cf26a497e..4435845403 100644
 \ No newline at end of file
 +</merge>
 diff --git a/app/src/main/res/values/strings.xml b/app/src/main/res/values/strings.xml
-index 73397c00b2..c9ae652181 100644
+index 7b8434bb58..ab332e2214 100644
 --- a/app/src/main/res/values/strings.xml
 +++ b/app/src/main/res/values/strings.xml
-@@ -4413,6 +4413,8 @@
+@@ -4417,6 +4417,8 @@
  
      <!-- Internal only preferences -->
      <string name="preferences__internal_preferences" translatable="false">Internal Preferences</string>
@@ -689,7 +689,7 @@ index 73397c00b2..c9ae652181 100644
      <string name="preferences__internal_details" translatable="false">Internal Details</string>
      <string name="preferences__internal_stories_dialog_launcher" translatable="false">Stories dialog launcher</string>
  
-@@ -6043,6 +6045,9 @@
+@@ -6049,6 +6051,9 @@
      <string name="HelpFragment__licenced_under_the_agplv3">Licensed under the GNU AGPLv3</string>
      <!-- Non-English translations should use "Signal is a nonprofit." instead, dropping the 501c3 reference. -->
      <string name="HelpSettingsFragment__signal_is_a_501c3">Signal is a 501c3 nonprofit</string>

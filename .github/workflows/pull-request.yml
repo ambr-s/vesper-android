@@ -16,6 +16,7 @@ concurrency:
 jobs:
   build:
     name: Signal pinned release
+    if: github.repository == 'ambr-s/vesper-android' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 120
 
@@ -54,6 +55,9 @@ jobs:
       - name: Materialise Vesper
         run: ./tools/materialize.sh --tag "${{ steps.version.outputs.tag }}"
 
+      - name: Validate materialised theme hooks
+        run: python3 tools/test_materialised_theme.py -v
+
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
 
@@ -81,3 +85,23 @@ jobs:
       - name: Build release APKs
         working-directory: work
         run: ./gradlew :Signal-Android:assembleWebsiteProdRelease --stacktrace
+
+      - name: Locate unsigned universal APK
+        id: apk
+        run: |
+          output_dir="work/app/build/outputs/apk/websiteProd/release"
+          mapfile -t apks < <(
+            find "$output_dir" -maxdepth 1 -type f -iname '*universal*.apk' | sort
+          )
+          if [[ "${#apks[@]}" -ne 1 ]]; then
+            printf 'Expected one universal APK, found %s\n' "${#apks[@]}" >&2
+            exit 1
+          fi
+          echo "path=${apks[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload unsigned universal APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Vesper-pr-${{ github.event.pull_request.number }}-unsigned-universal
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
