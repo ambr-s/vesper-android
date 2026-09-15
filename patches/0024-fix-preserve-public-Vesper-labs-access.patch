@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Fri, 21 Aug 2026 14:29:19 +0000
-Subject: [PATCH 24/24] fix: preserve public Vesper labs access
+Subject: [PATCH 24/25] fix: preserve public Vesper labs access
 
 Signed-off-by: amber <amber@flourish.ch>
 ---

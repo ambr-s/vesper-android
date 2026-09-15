@@ -115,6 +115,14 @@ jobs:
             "build-tools;$build_tools" \
             "ndk;$ndk"
 
+      - name: Test Vesper settings and theme lifecycle
+        working-directory: work
+        run: >-
+          ./gradlew :Signal-Android:testWebsiteProdReleaseUnitTest
+          --tests 'org.thoughtcrime.securesms.keyvalue.VesperSettingsValuesTest'
+          --tests 'org.thoughtcrime.securesms.profiles.manage.EditProfileActivityThemeLifecycleTest'
+          --stacktrace
+
       - name: Build release APKs
         working-directory: work
         run: ./gradlew :Signal-Android:assembleWebsiteProdRelease --stacktrace

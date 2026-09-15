@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
-Subject: [PATCH 11/24] feat: complete Vesper theme controls
+Subject: [PATCH 11/25] feat: complete Vesper theme controls
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
@@ -12,7 +12,7 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  .../app/privacy/PrivacySettingsState.kt       |   1 -
  .../app/privacy/PrivacySettingsViewModel.kt   |   6 -
  .../conversation/colors/ChatColorsPalette.kt  |   2 +-
- .../securesms/keyvalue/SettingsValues.java    |  11 +
+ .../securesms/keyvalue/SettingsValues.kt      |   9 +
  .../DynamicConversationSettingsTheme.java     |   5 +
  .../util/DynamicDarkActionBarTheme.java       |   5 +
  .../util/DynamicDarkToolbarTheme.java         |   5 +
@@ -38,7 +38,7 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  .../res/values/signal_original_themes.xml     | 474 ++++++++++++++++++
  app/src/main/res/values/themes.xml            |   6 +-
  .../core/ui/compose/theme/SignalTheme.kt      |  90 +++-
- 33 files changed, 709 insertions(+), 147 deletions(-)
+ 33 files changed, 707 insertions(+), 147 deletions(-)
  create mode 100644 app/src/main/res/values/signal_original_themes.xml
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
@@ -350,42 +350,40 @@ index b61464abe2..6f62d279c1 100644
      )
  
      // endregion
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-index f57d6f1724..dbf8127ffb 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-+++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-@@ -42,6 +42,7 @@ public final class SettingsValues extends SignalStoreValues {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
+index 55e740629d..50e1d87961 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
+@@ -36,6 +36,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+     const val THREAD_TRIM_ENABLED = "pref_trim_threads"
  
-   public static final  String THEME                                   = "settings.theme";
-   public static final  String DYNAMIC_COLORS_ENABLED                  = "settings.dynamicColors";
-+  public static final  String VESPER_THEME_ENABLED                    = "settings.vesperTheme";
-   public static final  String MESSAGE_FONT_SIZE                       = "settings.message.font.size";
-   public static final  String LANGUAGE                                = "settings.language";
-   public static final  String PREFER_SYSTEM_EMOJI                     = "settings.use.system.emoji";
-@@ -139,6 +140,7 @@ public final class SettingsValues extends SignalStoreValues {
-                          LANGUAGE,
-                          THEME,
-                          DYNAMIC_COLORS_ENABLED,
-+                         VESPER_THEME_ENABLED,
-                          MESSAGE_FONT_SIZE,
-                          PREFER_SYSTEM_EMOJI,
-                          ENTER_KEY_SENDS,
-@@ -267,6 +269,15 @@ public final class SettingsValues extends SignalStoreValues {
-     return getBoolean(DYNAMIC_COLORS_ENABLED, true);
-   }
+     const val DYNAMIC_COLORS_ENABLED = "settings.dynamicColors"
++    const val VESPER_THEME_ENABLED = "settings.vesperTheme"
+     private const val IGNORE_REMOTE_DELETE = "settings.ignore.remote.delete"
+     const val THEME = "settings.theme"
+     const val MESSAGE_FONT_SIZE = "settings.message.font.size"
+@@ -118,6 +119,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+     LANGUAGE,
+     THEME,
+     DYNAMIC_COLORS_ENABLED,
++    VESPER_THEME_ENABLED,
+     IGNORE_REMOTE_DELETE,
+     MESSAGE_FONT_SIZE,
+     PREFER_SYSTEM_EMOJI,
+@@ -211,6 +213,13 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+   val isDynamicColorsEnabled: Boolean
+     get() = getBoolean(DYNAMIC_COLORS_ENABLED, true)
  
-+  public boolean isVesperThemeEnabled() {
-+    return getBoolean(VESPER_THEME_ENABLED, true);
-+  }
++  var isVesperThemeEnabled: Boolean
++    get() = getBoolean(VESPER_THEME_ENABLED, true)
++    set(value) {
++      putBoolean(VESPER_THEME_ENABLED, value)
++      configurationSettingChanged.postValue(THEME)
++    }
 +
-+  public void setVesperThemeEnabled(boolean enabled) {
-+    putBoolean(VESPER_THEME_ENABLED, enabled);
-+    onConfigurationSettingChanged.postValue(THEME);
-+  }
-+
-   public int getMessageFontSize() {
-     return getInteger(MESSAGE_FONT_SIZE, TextSecurePreferences.getMessageBodyTextSize(AppDependencies.getApplication()));
-   }
+   val isIgnoreRemoteDeleteEnabled: Boolean
+     get() = getBoolean(IGNORE_REMOTE_DELETE, false)
+ 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java b/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
 index 25a4de392a..78a7dbde46 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/DynamicConversationSettingsTheme.java
@@ -694,7 +692,7 @@ index d58facf745..fd13072f77 100644
 \ No newline at end of file
 +</shape>
 diff --git a/app/src/main/res/layout/v2_conversation_fragment.xml b/app/src/main/res/layout/v2_conversation_fragment.xml
-index 100be3be57..e923326045 100644
+index a09ad5b378..bc1ec771cf 100644
 --- a/app/src/main/res/layout/v2_conversation_fragment.xml
 +++ b/app/src/main/res/layout/v2_conversation_fragment.xml
 @@ -104,13 +104,13 @@
@@ -1344,10 +1342,10 @@ index bbe42c1f7c..4b698938a3 100644
          <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
          <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index d284847ea6..183e031e82 100644
+index 38cc3755ee..ba48f6801d 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-@@ -222,6 +222,71 @@ private val darkColorScheme = darkColorScheme(
+@@ -226,6 +226,71 @@ private val darkColorScheme = darkColorScheme(
    outline = Color(0xFF5D5D66)
  )
  
@@ -1419,7 +1417,7 @@ index d284847ea6..183e031e82 100644
  @Composable
  fun SignalTheme(
    isDarkMode: Boolean = LocalConfiguration.current.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
-@@ -231,7 +296,8 @@ fun SignalTheme(
+@@ -235,7 +300,8 @@ fun SignalTheme(
  ) {
    val context = LocalContext.current
    val maySupportDynamicColor = Build.VERSION.SDK_INT >= 31
@@ -1429,7 +1427,7 @@ index d284847ea6..183e031e82 100644
  
    // API 31-33's Compose fallback is more saturated than the platform resource
    // palette. Use the same resources for XML and Compose.
-@@ -243,10 +309,12 @@ fun SignalTheme(
+@@ -247,10 +313,12 @@ fun SignalTheme(
          if (isDarkMode) systemAlignedDarkColorScheme() else systemAlignedLightColorScheme()
        }
      }
@@ -1445,7 +1443,7 @@ index d284847ea6..183e031e82 100644
    val snackbarColors = snackbarColors(colorScheme)
  
    ProvideIncognitoKeyboard(enabled = incognitoKeyboardEnabled) {
-@@ -355,7 +423,13 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
+@@ -359,7 +427,13 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
      typedValue.data != 0
  }
  
@@ -1460,7 +1458,7 @@ index d284847ea6..183e031e82 100644
    return when {
      isDynamic -> lightExtendedColors.copy(
        colorSurface1 = colorScheme.surfaceContainerLow,
-@@ -364,8 +438,10 @@ private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDyna
+@@ -368,8 +442,10 @@ private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDyna
        colorSurface4 = colorScheme.surfaceContainerHighest,
        colorSurface5 = if (isDarkMode) colorScheme.surfaceBright else colorScheme.surfaceDim
      )
