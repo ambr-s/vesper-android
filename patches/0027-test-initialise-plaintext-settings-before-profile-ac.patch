@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Wed, 16 Sep 2026 13:00:08 +0000
+Subject: [PATCH 27/27] test: initialise plaintext settings before profile
+ activity
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../profiles/manage/EditProfileActivityThemeLifecycleTest.kt   | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+index 10927f5b86..8a0da50215 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+@@ -14,8 +14,10 @@ import org.junit.rules.RuleChain
+ import org.junit.runner.RunWith
+ import org.robolectric.Robolectric
+ import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
+ import org.robolectric.annotation.Config
+ import org.signal.core.ui.R
++import org.thoughtcrime.securesms.keyvalue.PlainTextKeyValueStore
+ import org.thoughtcrime.securesms.keyvalue.SettingsValues
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+ import org.thoughtcrime.securesms.testutil.MockAppDependenciesRule
+@@ -32,6 +34,7 @@ class EditProfileActivityThemeLifecycleTest {
+ 
+   @Test
+   fun `dynamic theme is applied from the pre-create lifecycle hook`() {
++    PlainTextKeyValueStore.init(RuntimeEnvironment.getApplication())
+     SignalStore.settings.setTheme(SettingsValues.Theme.LIGHT, true)
+     val activity = Robolectric.buildActivity(EditProfileActivity::class.java).create().get()
+ 

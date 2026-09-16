@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
-Subject: [PATCH 11/25] feat: complete Vesper theme controls
+Subject: [PATCH 11/27] feat: complete Vesper theme controls
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
@@ -23,8 +23,6 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  .../util/DynamicRegistrationTheme.java        |   5 +
  .../securesms/util/DynamicTheme.java          |  23 +-
  .../wallpaper/crop/WallpaperCropActivity.java |   6 +
- .../camera_send_button_background.xml         |   2 +-
- .../camera_send_button_background.xml         |   4 +-
  .../main/res/drawable/compose_background.xml  |   4 +-
  .../drawable/exo_icon_play_ultramarine.xml    |   2 +-
  .../image_editor_hud_clear_all_background.xml |   4 +-
@@ -38,7 +36,7 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  .../res/values/signal_original_themes.xml     | 474 ++++++++++++++++++
  app/src/main/res/values/themes.xml            |   6 +-
  .../core/ui/compose/theme/SignalTheme.kt      |  90 +++-
- 33 files changed, 707 insertions(+), 147 deletions(-)
+ 31 files changed, 704 insertions(+), 144 deletions(-)
  create mode 100644 app/src/main/res/values/signal_original_themes.xml
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
@@ -103,10 +101,10 @@ index d65ba284d3..1e5aff2866 100644
    val messageFontSize: Int,
    val language: String,
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
-index e7fb539d5c..dac3ee2c57 100644
+index 131b3f3426..fd74f0a97b 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
-@@ -26,6 +26,11 @@ class AppearanceSettingsViewModel : ViewModel() {
+@@ -27,6 +27,11 @@ class AppearanceSettingsViewModel : ViewModel() {
      SplashScreenUtil.setSplashScreenThemeIfNecessary(activity, theme)
    }
  
@@ -117,15 +115,15 @@ index e7fb539d5c..dac3ee2c57 100644
 +
    fun setLanguage(language: String) {
      store.update { it.copy(language = language) }
-     SignalStore.settings.language = language
-@@ -41,6 +46,7 @@ class AppearanceSettingsViewModel : ViewModel() {
+     PlainTextKeyValueStore.language = language
+@@ -42,6 +47,7 @@ class AppearanceSettingsViewModel : ViewModel() {
    private fun getState(): AppearanceSettingsState {
      return AppearanceSettingsState(
        SignalStore.settings.theme,
 +      SignalStore.settings.isVesperThemeEnabled,
        SignalStore.settings.isDynamicColorsEnabled,
        SignalStore.settings.messageFontSize,
-       SignalStore.settings.language,
+       PlainTextKeyValueStore.language,
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
 index 0f84457801..f2c088ebe6 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
@@ -351,7 +349,7 @@ index b61464abe2..6f62d279c1 100644
  
      // endregion
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
-index 55e740629d..50e1d87961 100644
+index f63a089142..9ec5ec4be3 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
 @@ -36,6 +36,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
@@ -362,15 +360,15 @@ index 55e740629d..50e1d87961 100644
      private const val IGNORE_REMOTE_DELETE = "settings.ignore.remote.delete"
      const val THEME = "settings.theme"
      const val MESSAGE_FONT_SIZE = "settings.message.font.size"
-@@ -118,6 +119,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
-     LANGUAGE,
+@@ -116,6 +117,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+     THREAD_TRIM_ENABLED,
      THEME,
      DYNAMIC_COLORS_ENABLED,
 +    VESPER_THEME_ENABLED,
      IGNORE_REMOTE_DELETE,
      MESSAGE_FONT_SIZE,
      PREFER_SYSTEM_EMOJI,
-@@ -211,6 +213,13 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+@@ -209,6 +211,13 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
    val isDynamicColorsEnabled: Boolean
      get() = getBoolean(DYNAMIC_COLORS_ENABLED, true)
  
@@ -576,31 +574,6 @@ index 13d64fe03e..4d4e9b99d6 100644
 +    }
    }
  }
-diff --git a/app/src/main/res/drawable-v21/camera_send_button_background.xml b/app/src/main/res/drawable-v21/camera_send_button_background.xml
-index df91cfd220..54b6abcff6 100644
---- a/app/src/main/res/drawable-v21/camera_send_button_background.xml
-+++ b/app/src/main/res/drawable-v21/camera_send_button_background.xml
-@@ -11,7 +11,7 @@
- 
-     <item>
-         <shape android:shape="oval" >
--            <solid android:color="@color/core_ultramarine"/>
-+            <solid android:color="?attr/colorPrimary"/>
-         </shape>
-     </item>
- </ripple>
-diff --git a/app/src/main/res/drawable/camera_send_button_background.xml b/app/src/main/res/drawable/camera_send_button_background.xml
-index 7bcb1e9d44..d42c4edfbb 100644
---- a/app/src/main/res/drawable/camera_send_button_background.xml
-+++ b/app/src/main/res/drawable/camera_send_button_background.xml
-@@ -1,4 +1,4 @@
- <?xml version="1.0" encoding="utf-8"?>
- <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval" >
--    <solid android:color="@color/core_ultramarine"/>
--</shape>
-\ No newline at end of file
-+    <solid android:color="?attr/colorPrimary"/>
-+</shape>
 diff --git a/app/src/main/res/drawable/compose_background.xml b/app/src/main/res/drawable/compose_background.xml
 index 583b389025..64f21f4ded 100644
 --- a/app/src/main/res/drawable/compose_background.xml

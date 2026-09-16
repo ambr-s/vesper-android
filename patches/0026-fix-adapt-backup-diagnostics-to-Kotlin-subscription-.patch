@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Wed, 16 Sep 2026 12:49:14 +0000
+Subject: [PATCH 26/27] fix: adapt backup diagnostics to Kotlin subscription
+ response
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../subscription/BackupSubscriptionDiagnosticsViewModel.kt      | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
+index e89ec386ca..60ed0b087a 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/internal/backup/subscription/BackupSubscriptionDiagnosticsViewModel.kt
+@@ -125,7 +125,7 @@ class BackupSubscriptionDiagnosticsViewModel : ViewModel() {
+             serverSubscriptionActive = response.isActive,
+             serverSubscriptionStatus = subscription?.let { ActiveSubscription.Status.getStatus(it.status).name } ?: "None",
+             serverRenewalEpochSeconds = subscription?.endOfCurrentPeriod,
+-            serverWillCancel = response.willCancelAtPeriodEnd(),
++            serverWillCancel = response.willCancelAtPeriodEnd,
+             actionMessage = current.actionMessage
+           )
+         }
