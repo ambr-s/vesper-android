@@ -15,6 +15,20 @@ SOURCE = Path(__file__).resolve().parents[1] / "work/app/src/main/java/org/thoug
 
 
 class MaterialisedThemeContractTest(unittest.TestCase):
+    def test_kotlin_settings_preserve_dynamic_theme_contract(self) -> None:
+        source = (SOURCE / "keyvalue/SettingsValues.kt").read_text()
+        self.assertIn('const val DYNAMIC_COLORS_ENABLED = "settings.dynamicColors"', source)
+        self.assertIn('fun setTheme(theme: Theme, useDynamicColors: Boolean)', source)
+        self.assertIn('putBoolean(DYNAMIC_COLORS_ENABLED, useDynamicColors)', source)
+        self.assertIn('setTheme(value, isDynamicColorsEnabled)', source)
+        self.assertIn('configurationSettingChanged.postValue(THEME)', source)
+
+    def test_extended_colors_retain_upstream_neutral_fill(self) -> None:
+        source = (Path(__file__).resolve().parents[1] / "work/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt").read_text()
+        dark = source.split('private val darkExtendedColors = ExtendedColors(', 1)[1].split('\n)', 1)[0]
+        self.assertIn('neutralFill = Color(0x33FFFFFF)', dark)
+        self.assertIn('colorOnCustomVariant = Color(0xB3FFFFFF)', dark)
+
     def test_media_theme_is_applied_before_activity_creation(self) -> None:
         source = (SOURCE / "mediasend/v3/MediaSendV3Activity.kt").read_text()
         self.assertRegex(

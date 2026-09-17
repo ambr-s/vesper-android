@@ -1,13 +1,13 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Sat, 15 Aug 2026 08:32:16 +0000
-Subject: [PATCH 08/24] fix: refine Vesper conversation appearance
+Subject: [PATCH 08/27] fix: refine Vesper conversation appearance
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../settings/app/help/HelpSettingsFragment.kt | 30 +---------------
  .../V2ConversationItemTextOnlyViewHolder.kt   |  5 +--
- .../securesms/keyvalue/SettingsValues.java    |  2 +-
+ .../securesms/keyvalue/SettingsValues.kt      |  2 +-
  .../reactions/ReactionsConversationView.java  | 35 +++++++++++++++++--
  4 files changed, 38 insertions(+), 34 deletions(-)
 
@@ -120,19 +120,19 @@ index 24cc490730..a21a43e16b 100644
            conversationContext.clickListener.onItemClick(getMultiselectPartForLatestTouch())
          }
        }
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-index bc085dd4a3..f57d6f1724 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-+++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.java
-@@ -264,7 +264,7 @@ public final class SettingsValues extends SignalStoreValues {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
+index abf3e450c0..55e740629d 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
+@@ -209,7 +209,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
    }
  
-   public boolean isDynamicColorsEnabled() {
--    return getBoolean(DYNAMIC_COLORS_ENABLED, false);
-+    return getBoolean(DYNAMIC_COLORS_ENABLED, true);
-   }
+   val isDynamicColorsEnabled: Boolean
+-    get() = getBoolean(DYNAMIC_COLORS_ENABLED, false)
++    get() = getBoolean(DYNAMIC_COLORS_ENABLED, true)
  
-   public int getMessageFontSize() {
+   val isIgnoreRemoteDeleteEnabled: Boolean
+     get() = getBoolean(IGNORE_REMOTE_DELETE, false)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java b/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java
 index f984e9acd3..7378fbc511 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/reactions/ReactionsConversationView.java

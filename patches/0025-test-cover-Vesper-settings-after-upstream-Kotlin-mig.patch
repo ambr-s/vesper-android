@@ -1,0 +1,74 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Tue, 15 Sep 2026 15:51:40 +0000
+Subject: [PATCH 25/27] test: cover Vesper settings after upstream Kotlin
+ migration
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../keyvalue/VesperSettingsValuesTest.kt      | 56 +++++++++++++++++++
+ 1 file changed, 56 insertions(+)
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
+
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
+new file mode 100644
+index 0000000000..4525a7d150
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
+@@ -0,0 +1,56 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++package org.thoughtcrime.securesms.keyvalue
++
++import android.app.Application
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Rule
++import org.junit.Test
++import org.junit.rules.RuleChain
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.annotation.Config
++import org.thoughtcrime.securesms.testutil.MockAppDependenciesRule
++import org.thoughtcrime.securesms.testutil.SignalStoreRule
++
++@RunWith(RobolectricTestRunner::class)
++@Config(application = Application::class, sdk = [34])
++class VesperSettingsValuesTest {
++  @get:Rule
++  val rules: RuleChain = RuleChain.outerRule(MockAppDependenciesRule()).around(SignalStoreRule())
++
++  @Test
++  fun `theme setter preserves an explicit dynamic color opt out`() {
++    val settings = SignalStore.settings
++    assertTrue(settings.isDynamicColorsEnabled)
++    settings.setTheme(SettingsValues.Theme.LIGHT, false)
++    settings.theme = SettingsValues.Theme.DARK
++    assertEquals(SettingsValues.Theme.DARK, settings.theme)
++    assertFalse(settings.isDynamicColorsEnabled)
++    settings.setTheme(SettingsValues.Theme.SYSTEM, true)
++    assertTrue(settings.isDynamicColorsEnabled)
++  }
++
++  @Test
++  fun `Vesper and remote delete controls retain their defaults and stored values`() {
++    val settings = SignalStore.settings
++    assertTrue(settings.isVesperThemeEnabled)
++    assertFalse(settings.isIgnoreRemoteDeleteEnabled)
++    settings.isVesperThemeEnabled = false
++    settings.setIgnoreRemoteDelete(true)
++    assertFalse(settings.isVesperThemeEnabled)
++    assertTrue(settings.isIgnoreRemoteDeleteEnabled)
++  }
++
++  @Test
++  fun `downstream settings retain stable backup keys`() {
++    val keys = SignalStore.settings.getKeysToIncludeInBackup()
++    assertTrue(keys.contains("settings.dynamicColors"))
++    assertTrue(keys.contains("settings.vesperTheme"))
++    assertTrue(keys.contains("settings.ignore.remote.delete"))
++  }
++}

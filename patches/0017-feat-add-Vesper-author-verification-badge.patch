@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
-Subject: [PATCH 17/24] feat: add Vesper author verification badge
+Subject: [PATCH 17/27] feat: add Vesper author verification badge
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
@@ -44,7 +44,7 @@ index 2443b290f1..928dfb5149 100644
            val drawable = context.requireDrawable(CoreUiR.drawable.symbol_person_circle_24).apply {
              setTint(ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnSurface))
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
-index a09b62ef1c..36a02fc7fa 100644
+index 208ddc1f0c..504d6a204d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationHeaderView.kt
 @@ -112,6 +112,7 @@ class ConversationHeaderView : AbstractComposeView {
@@ -53,9 +53,9 @@ index a09b62ef1c..36a02fc7fa 100644
      val isOfficialAccount = recipient.showVerified
 +    val showVerifiedBadge = recipient.showVerifiedBadge
  
-     val showUnverifiedName = if (recipient.isGroup) {
-       !info.groupInfo.nameVerified
-@@ -132,7 +133,7 @@ class ConversationHeaderView : AbstractComposeView {
+     val hasUsernameOrSharedName = recipient.hasUsernameOrSharedName
+ 
+@@ -134,7 +135,7 @@ class ConversationHeaderView : AbstractComposeView {
        ConversationHeaderContent(
          recipientId = recipient.id,
          displayName = displayName,
@@ -78,10 +78,10 @@ index 455a82e044..2812e6b6d1 100644
      }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-index c4f053968f..9205cd95a4 100644
+index 4822091569..1882cd4c9d 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/Recipient.kt
-@@ -335,6 +335,12 @@ class Recipient(
+@@ -340,6 +340,12 @@ class Recipient(
    /** Whether or not to show a special verified badge, indicating this is a special conversation (like release notes or note to self). */
    val showVerified: Boolean = isReleaseNotes || isSelf
  
@@ -94,7 +94,7 @@ index c4f053968f..9205cd95a4 100644
    /** The notification channel, if both set and supported by the system. Otherwise null. */
    val notificationChannel: String? = if (!NotificationChannels.supported()) null else notificationChannelValue
  
-@@ -692,7 +698,7 @@ class Recipient(
+@@ -718,7 +724,7 @@ class Recipient(
      return buildSpannedString {
        append(name)
  

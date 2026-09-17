@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Tue, 11 Aug 2026 11:21:16 +0000
-Subject: [PATCH 22/24] fix: isolate backup diagnostics actions
+Subject: [PATCH 22/27] fix: isolate backup diagnostics actions
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
@@ -54,13 +54,13 @@ index aa8edb8ef7..e89ec386ca 100644
    }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt
-index 4501ee809e..fe54f98fd8 100644
+index 4291e0ad03..f169cdc289 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/subscription/RecurringInAppPaymentRepository.kt
 @@ -96,7 +96,11 @@ object RecurringInAppPaymentRepository {
      response.result.ifPresent { result ->
        val lastEndOfPeriod = SignalDatabase.inAppPayments.getByLatestEndOfPeriod(type.inAppPaymentType)?.endOfPeriodSeconds ?: 0L
-       if (result.isActive && result.activeSubscription.endOfCurrentPeriod > lastEndOfPeriod) {
+       if (result.isActive && result.activeSubscription!!.endOfCurrentPeriod > lastEndOfPeriod) {
 -        InAppPaymentKeepAliveJob.enqueueAndTrackTime(System.currentTimeMillis().milliseconds)
 +        if (type == InAppPaymentSubscriberRecord.Type.BACKUP) {
 +          InAppPaymentKeepAliveJob.enqueueBackup()
@@ -71,10 +71,10 @@ index 4501ee809e..fe54f98fd8 100644
      }
  
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
-index 5d3bb61c46..d4e94ec4d5 100644
+index 5037078ea1..bc7ed0b8a3 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/BackupMessagesJob.kt
-@@ -110,12 +110,17 @@ class BackupMessagesJob private constructor(
+@@ -120,12 +120,17 @@ class BackupMessagesJob private constructor(
      }
  
      fun enqueue() {
@@ -94,10 +94,10 @@ index 5d3bb61c46..d4e94ec4d5 100644
  
      fun cancel() {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt b/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
-index 9d7317945c..36f997e117 100644
+index 7fd1aabf60..09ce1058fe 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJob.kt
-@@ -89,14 +89,24 @@ class InAppPaymentKeepAliveJob private constructor(
+@@ -90,14 +90,24 @@ class InAppPaymentKeepAliveJob private constructor(
      }
  
      @JvmStatic
@@ -167,7 +167,7 @@ index 1e9fb58b2c..9947b2c4bf 100644
  
    @Test
 diff --git a/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt b/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
-index 3b0f22b4fb..f3ff9359e8 100644
+index fad009be4b..00a9386f3d 100644
 --- a/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
 +++ b/app/src/test/java/org/thoughtcrime/securesms/jobs/InAppPaymentKeepAliveJobTest.kt
 @@ -7,6 +7,7 @@ package org.thoughtcrime.securesms.jobs
@@ -178,7 +178,7 @@ index 3b0f22b4fb..f3ff9359e8 100644
  import assertk.assertions.isTrue
  import io.mockk.every
  import io.mockk.verify
-@@ -29,7 +30,6 @@ import org.whispersystems.signalservice.api.subscriptions.ActiveSubscription.Cha
+@@ -30,7 +31,6 @@ import org.whispersystems.signalservice.api.subscriptions.ActiveSubscription.Cha
  import org.whispersystems.signalservice.api.subscriptions.SubscriberId
  import org.whispersystems.signalservice.internal.EmptyResponse
  import org.whispersystems.signalservice.internal.ServiceResponse
@@ -186,7 +186,7 @@ index 3b0f22b4fb..f3ff9359e8 100644
  
  @RunWith(RobolectricTestRunner::class)
  @Config(manifest = Config.NONE, application = Application::class)
-@@ -63,16 +63,16 @@ class InAppPaymentKeepAliveJobTest {
+@@ -64,16 +64,16 @@ class InAppPaymentKeepAliveJobTest {
        iapSubscriptionId = null
      )
      every { InAppPaymentsRepository.getSubscriber(InAppPaymentSubscriberRecord.Type.DONATION) } returns subscriber
@@ -207,7 +207,7 @@ index 3b0f22b4fb..f3ff9359e8 100644
      verify(exactly = 1) {
        AppDependencies.jobManager.add(
          match { job ->
-@@ -87,7 +87,27 @@ class InAppPaymentKeepAliveJobTest {
+@@ -88,7 +88,27 @@ class InAppPaymentKeepAliveJobTest {
          }
        )
      }
