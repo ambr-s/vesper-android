@@ -123,10 +123,10 @@ index 4982c2605f..22721e75df 100644
  
      WindowUtil.clearLightStatusBar(getWindow());
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
-index 168554abe4..fbad2c63c5 100644
+index e3a9873d79..dab325a7f2 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/MainActivity.kt
-@@ -56,7 +56,6 @@ import androidx.compose.ui.Modifier
+@@ -53,7 +53,6 @@ import androidx.compose.ui.Modifier
  import androidx.compose.ui.draw.clip
  import androidx.compose.ui.graphics.Color
  import androidx.compose.ui.graphics.toArgb
@@ -134,18 +134,16 @@ index 168554abe4..fbad2c63c5 100644
  import androidx.compose.ui.platform.LocalFocusManager
  import androidx.compose.ui.platform.LocalResources
  import androidx.compose.ui.unit.Dp
-@@ -90,9 +89,9 @@ import org.signal.core.ui.compose.split.PaneAnchor
- import org.signal.core.ui.compose.split.rememberListDetailPaneLayout
- import org.signal.core.ui.compose.split.rememberListDetailPaneMetrics
+@@ -91,7 +90,7 @@ import org.signal.core.ui.compose.systemBarsCompat
  import org.signal.core.ui.compose.theme.SignalTheme
-+import org.signal.core.ui.compose.theme.colorAttribute
  import org.signal.core.ui.permissions.Permissions
  import org.signal.core.ui.rememberIsSplitPane
 -import org.signal.core.ui.util.ThemeUtil
++import org.signal.core.ui.compose.theme.colorAttribute
  import org.signal.core.util.AppForegroundObserver
  import org.signal.core.util.Util
  import org.signal.core.util.concurrent.LifecycleDisposable
-@@ -418,12 +417,11 @@ class MainActivity :
+@@ -417,12 +416,11 @@ class MainActivity :
          val detailLocation by mainNavigationViewModel.detailLocation.collectAsStateWithLifecycle()
          val isConversationFullscreen = !isSplitPane && detailLocation is MainDetailRoute.Conversation
  
@@ -159,7 +157,7 @@ index 168554abe4..fbad2c63c5 100644
          }
  
          LaunchedEffect(isDarkTheme, navBarColor) {
-@@ -438,6 +436,10 @@ class MainActivity :
+@@ -437,6 +435,10 @@ class MainActivity :
            } else {
              enableEdgeToEdge()
            }
@@ -170,7 +168,7 @@ index 168554abe4..fbad2c63c5 100644
          }
  
          val convoTransitionState = ConversationTransitionState.remember(isSplitPane)
-@@ -621,7 +623,7 @@ class MainActivity :
+@@ -620,7 +622,7 @@ class MainActivity :
            Column(
              modifier = Modifier
                .clip(contentLayoutData.navigationBarShape)
@@ -299,7 +297,7 @@ index 6acd230877..7f9e0cacb5 100644
    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
-index 0f4a96bc8e..520d835dca 100644
+index 7a05730b65..2b9b5c2441 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/InputPanel.java
 @@ -1,7 +1,5 @@
@@ -714,7 +712,7 @@ index 051afd67c5..2443b290f1 100644
          }
        )
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
-index 1c6e4ae2c5..bce9bf3063 100644
+index 899fd99b7f..cc2f8de532 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationItem.java
 @@ -129,6 +129,7 @@ import org.thoughtcrime.securesms.linkpreview.LinkPreview;
@@ -725,7 +723,7 @@ index 1c6e4ae2c5..bce9bf3063 100644
  import org.thoughtcrime.securesms.mms.ImageSlide;
  import org.thoughtcrime.securesms.mms.PartAuthority;
  import org.thoughtcrime.securesms.mms.Slide;
-@@ -1402,8 +1403,8 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
+@@ -1406,8 +1407,8 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
        CallLinkRootKey callLinkRootKey = CallLinks.isCallLink(linkPreview.getUrl()) ? CallLinks.parseUrl(linkPreview.getUrl()) : null;
        if (callLinkRootKey != null) {
          joinCallLinkStub.setVisibility(View.VISIBLE);
@@ -736,7 +734,7 @@ index 1c6e4ae2c5..bce9bf3063 100644
          joinCallLinkStub.get().setOnClickListener(v -> {
            if (eventListener != null) {
              eventListener.onJoinCallLink(callLinkRootKey);
-@@ -1825,7 +1826,7 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
+@@ -1829,7 +1830,7 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
          int end   = messageBody.getSpanEnd(placeholder);
          URLSpan span = new InterceptableLongClickCopyLinkSpan(placeholder.getValue(),
                                                                urlClickListener,
@@ -745,7 +743,7 @@ index 1c6e4ae2c5..bce9bf3063 100644
                                                                isReleaseNotes);
  
          messageBody.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-@@ -1998,11 +1999,15 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
+@@ -2002,11 +2003,15 @@ public final class ConversationItem extends RelativeLayout implements BindableCo
    private void setReactionsWithWidth(@NonNull MessageRecord current, int width) {
      reactionsView.setReactions(current.getReactions());
      reactionsView.setBubbleWidth(width);
@@ -766,7 +764,7 @@ index 1c6e4ae2c5..bce9bf3063 100644
  
    private void setFooter(@NonNull MessageRecord current, @NonNull Optional<MessageRecord> next, @NonNull Locale locale, boolean isGroupThread, boolean hasWallpaper) {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
-index 2fc122fe05..1c4ce2306e 100644
+index af7845c763..d6d9e1cd9a 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/ConversationUpdateItem.java
 @@ -855,11 +855,11 @@ public final class ConversationUpdateItem extends FrameLayout
@@ -849,7 +847,7 @@ index 5b58874ee0..10a6aab945 100644
        )
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index ff87ff9097..46e5ad71b4 100644
+index b6b238a8cb..e78ecb65cb 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 @@ -410,6 +410,7 @@ import java.util.Optional

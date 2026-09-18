@@ -15,10 +15,14 @@ concurrency:
 
 jobs:
   build:
-    name: Signal pinned release
+    name: Signal ${{ matrix.signal == 'pinned' && 'pinned release' || matrix.signal }}
     if: github.repository == 'ambr-s/vesper-android' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        signal: [pinned, v8.28.2]
 
     steps:
       - name: Check out Vesper patchset
@@ -35,8 +39,13 @@ jobs:
 
       - name: Resolve Signal tag
         id: version
+        env:
+          SIGNAL_TARGET: ${{ matrix.signal }}
         run: |
-          tag="$(sed -n 's/^signal=//p' upstream.pin)"
+          tag="$SIGNAL_TARGET"
+          if [[ "$tag" == pinned ]]; then
+            tag="$(sed -n 's/^signal=//p' upstream.pin)"
+          fi
           if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid Signal tag: $tag" >&2
             exit 1
@@ -110,6 +119,6 @@ jobs:
       - name: Upload unsigned universal APK
         uses: actions/upload-artifact@v7
         with:
-          name: Vesper-pr-${{ github.event.pull_request.number }}-unsigned-universal
+          name: Vesper-pr-${{ github.event.pull_request.number }}-${{ matrix.signal }}-unsigned-universal
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
