@@ -40,6 +40,11 @@ class MaterialisedThemeContractTest(unittest.TestCase):
         self.assertEqual(source.count("override fun onResume()"), 1)
         self.assertRegex(source, r"override fun onResume\(\)\s*\{\s*super\.onResume\(\)\s*theme\.onResume\(this\)")
 
+    def test_main_activity_imports_dynamic_color_resolver(self) -> None:
+        source = (SOURCE / "MainActivity.kt").read_text()
+        self.assertIn('import org.signal.core.ui.compose.theme.colorAttribute\n', source)
+        self.assertNotIn('import org.signal.core.ui.util.ThemeUtil\n', source)
+
     def test_navigation_inset_uses_the_navigation_container_surface(self) -> None:
         source = (SOURCE / "MainActivity.kt").read_text()
         self.assertRegex(
