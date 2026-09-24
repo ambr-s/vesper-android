@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.28.2]
+        signal: [pinned, v8.29.0]
 
     steps:
       - name: Check out Vesper patchset
@@ -97,6 +97,8 @@ jobs:
           ./gradlew :Signal-Android:testWebsiteProdReleaseUnitTest
           --tests 'org.thoughtcrime.securesms.keyvalue.VesperSettingsValuesTest'
           --tests 'org.thoughtcrime.securesms.profiles.manage.EditProfileActivityThemeLifecycleTest'
+          --tests 'org.thoughtcrime.securesms.util.RemoteConfig*Test*'
+          --tests 'org.thoughtcrime.securesms.util.VesperConfigTest'
           --stacktrace
 
       - name: Build release APKs

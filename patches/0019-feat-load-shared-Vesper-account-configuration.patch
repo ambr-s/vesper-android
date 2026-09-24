@@ -10,20 +10,20 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  .../securesms/keyvalue/VesperConfigValues.kt  |  27 ++
  .../recipients/VesperVerifiedRecipients.kt    |   9 +-
  .../recipients/ui/about/AboutSheet.kt         |  20 +-
- .../securesms/util/RemoteConfig.kt            |  11 +-
+ .../securesms/util/RemoteConfig.kt            |  10 +-
  .../securesms/util/VesperConfig.kt            | 237 ++++++++++++++++++
  .../VesperVerifiedRecipientsTest.kt           |  28 ++-
  .../securesms/util/VesperConfigTest.kt        | 107 ++++++++
- 9 files changed, 440 insertions(+), 10 deletions(-)
+ 9 files changed, 440 insertions(+), 9 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index d4faf54f04..af969a842f 100644
+index 857ad28..a19de6c 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-@@ -133,6 +133,7 @@ import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
+@@ -135,6 +135,7 @@ import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
  import org.thoughtcrime.securesms.util.SqlCipherLogTarget;
  import org.thoughtcrime.securesms.util.TextSecurePreferences;
  import org.thoughtcrime.securesms.util.VersionTracker;
@@ -31,7 +31,7 @@ index d4faf54f04..af969a842f 100644
  import org.thoughtcrime.securesms.util.dynamiclanguage.DynamicLanguageContextWrapper;
  import org.whispersystems.signalservice.api.websocket.SignalWebSocket;
  
-@@ -209,6 +210,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -211,6 +212,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
                  }
                })
                .addBlocking("blob-provider", this::initializeBlobProvider)
@@ -39,7 +39,7 @@ index d4faf54f04..af969a842f 100644
                .addBlocking("remote-config", RemoteConfig::init)
                .addBlocking("ring-rtc", this::initializeRingRtc)
                .addBlocking("glide", () -> SignalGlideModule.setRegisterGlideComponents(new SignalGlideComponents()))
-@@ -229,6 +231,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
+@@ -231,6 +233,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
                .addNonBlocking(StorageSyncHelper::scheduleRoutineSync)
                .addNonBlocking(this::beginJobLoop)
                .addNonBlocking(EmojiSource::refresh)
@@ -48,7 +48,7 @@ index d4faf54f04..af969a842f 100644
                .addNonBlocking(AppDependencies::getBillingApi)
                .addNonBlocking(this::ensureProfileUploaded)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
-index f638c859a4..e23b655766 100644
+index 15d1e05..420764e 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
 @@ -15,6 +15,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
@@ -59,7 +59,7 @@ index f638c859a4..e23b655766 100644
    val storageServiceValues = StorageServiceValues(store)
    val uiHintValues = UiHintValues(store)
    val tooltipValues = TooltipValues(store)
-@@ -64,6 +65,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
+@@ -62,6 +63,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
        registration.onFirstEverAppLaunch()
        pin.onFirstEverAppLaunch()
        remoteConfig.onFirstEverAppLaunch()
@@ -67,7 +67,7 @@ index f638c859a4..e23b655766 100644
        storageService.onFirstEverAppLaunch()
        uiHints.onFirstEverAppLaunch()
        tooltips.onFirstEverAppLaunch()
-@@ -98,6 +100,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
+@@ -96,6 +98,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
            registration.keysToIncludeInBackup +
            pin.keysToIncludeInBackup +
            remoteConfig.keysToIncludeInBackup +
@@ -75,7 +75,7 @@ index f638c859a4..e23b655766 100644
            storageService.keysToIncludeInBackup +
            uiHints.keysToIncludeInBackup +
            tooltips.keysToIncludeInBackup +
-@@ -174,6 +177,11 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
+@@ -172,6 +175,11 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
      val remoteConfig: RemoteConfigValues
        get() = instance!!.remoteConfigValues
  
@@ -89,7 +89,7 @@ index f638c859a4..e23b655766 100644
      val storageService: StorageServiceValues
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
 new file mode 100644
-index 0000000000..a1a8581f66
+index 0000000..a1a8581
 --- /dev/null
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
 @@ -0,0 +1,27 @@
@@ -121,7 +121,7 @@ index 0000000000..a1a8581f66
 +  var lastFetchTime: Long by longValue(LAST_FETCH_TIME, 0)
 +}
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
-index ebaf08f5ee..d7d6e08ed1 100644
+index ebaf08f..d7d6e08 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
 @@ -6,6 +6,8 @@
@@ -148,10 +148,10 @@ index ebaf08f5ee..d7d6e08ed1 100644
    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
-index 4a55ea1a80..b201b542d4 100644
+index 034290c..65c081a 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
-@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
+@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
  import androidx.compose.ui.Alignment
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.draw.clip
@@ -159,7 +159,7 @@ index 4a55ea1a80..b201b542d4 100644
  import androidx.compose.ui.graphics.toArgb
  import androidx.compose.ui.graphics.vector.ImageVector
  import androidx.compose.ui.res.pluralStringResource
-@@ -123,7 +124,8 @@ class AboutSheet : ComposeBottomSheetDialogFragment() {
+@@ -125,7 +126,8 @@ class AboutSheet : ComposeBottomSheetDialogFragment() {
          groupsInCommon = state.groupsInCommonCount,
          note = recipient.note ?: "",
          memberLabel = state.memberLabel,
@@ -169,7 +169,7 @@ index 4a55ea1a80..b201b542d4 100644
        ),
        onClickSignalConnections = this::openSignalConnectionsSheet,
        onAvatarClicked = this::openProfilePhotoViewer,
-@@ -181,7 +183,8 @@ private data class AboutModel(
+@@ -193,7 +195,8 @@ private data class AboutModel(
    val groupsInCommon: Int,
    val note: String,
    val memberLabel: MemberLabel? = null,
@@ -179,7 +179,7 @@ index 4a55ea1a80..b201b542d4 100644
  )
  
  @Composable
-@@ -238,6 +241,15 @@ private fun Content(
+@@ -250,6 +253,15 @@ private fun Content(
        modifier = Modifier.fillMaxWidth()
      )
  
@@ -195,7 +195,7 @@ index 4a55ea1a80..b201b542d4 100644
      if (!model.isSelf && !model.profileSharing && !model.systemContact) {
        AboutRow(
          startIcon = ImageVector.vectorResource(id = R.drawable.symbol_person_question_24),
-@@ -416,6 +428,7 @@ private fun AboutRow(
+@@ -428,6 +440,7 @@ private fun AboutRow(
    text: String,
    modifier: Modifier = Modifier,
    endIcon: ImageVector? = null,
@@ -203,7 +203,7 @@ index 4a55ea1a80..b201b542d4 100644
    onClick: (() -> Unit)? = null
  ) {
    AboutRow(
-@@ -431,6 +444,7 @@ private fun AboutRow(
+@@ -443,6 +456,7 @@ private fun AboutRow(
      },
      modifier = modifier,
      endIcon = endIcon,
@@ -211,7 +211,7 @@ index 4a55ea1a80..b201b542d4 100644
      onClick = onClick
    )
  }
-@@ -441,6 +455,7 @@ private fun AboutRow(
+@@ -453,6 +467,7 @@ private fun AboutRow(
    text: @Composable RowScope.() -> Unit,
    modifier: Modifier = Modifier,
    endIcon: ImageVector? = null,
@@ -219,7 +219,7 @@ index 4a55ea1a80..b201b542d4 100644
    onClick: (() -> Unit)? = null
  ) {
    val padHorizontal = if (onClick != null) 19.dp else 32.dp
-@@ -465,6 +480,7 @@ private fun AboutRow(
+@@ -477,6 +492,7 @@ private fun AboutRow(
      Icon(
        imageVector = startIcon,
        contentDescription = null,
@@ -228,10 +228,10 @@ index 4a55ea1a80..b201b542d4 100644
          .padding(end = 16.dp)
          .size(20.dp)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 8b68940790..63bbbced50 100644
+index 2b1a3e8..44ceed5 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-@@ -74,7 +74,7 @@ object RemoteConfig {
+@@ -80,7 +80,7 @@ object RemoteConfig {
            }
          }
        }
@@ -240,25 +240,24 @@ index 8b68940790..63bbbced50 100644
      }
  
    @GuardedBy("initLock")
-@@ -450,7 +450,14 @@ object RemoteConfig {
-         }
-       }
- 
--      return transformer(REMOTE_VALUES[key])
-+      val value = VesperConfig.valueWithOverride(key, REMOTE_VALUES[key])
-+      return transformer(
-+        if (value is Number) {
-+          value.toString()
-+        } else {
-+          value
-+        }
-+      )
-     }
-   }
- 
+@@ -514,6 +514,14 @@ object RemoteConfig {
+     val transformer: (Any?) -> T
+   ) {
+     operator fun getValue(thisRef: Any?, property: KProperty<*>): T {
++      // Keep the upstream raw-value resolver, then apply Vesper's account policy.
++      // Scope this adapter to delegated reads: internal diagnostic/default reads
++      // must retain their upstream semantics.
++      val transformer: (Any?) -> T = { rawValue ->
++        val value = VesperConfig.valueWithOverride(key, rawValue)
++        this.transformer(if (value is Number) value.toString() else value)
++      }
++
+       if (!initialized) {
+         Log.w(TAG, "Tried to read $key before initialization. Initializing now.")
+         initLock.withLock {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
 new file mode 100644
-index 0000000000..b992683286
+index 0000000..b992683
 --- /dev/null
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
 @@ -0,0 +1,237 @@
@@ -500,7 +499,7 @@ index 0000000000..b992683286
 +  }
 +}
 diff --git a/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
-index cabe8990a8..00c8acd6c3 100644
+index cabe899..00c8acd 100644
 --- a/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
 +++ b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
 @@ -7,17 +7,35 @@ package org.thoughtcrime.securesms.recipients
@@ -546,7 +545,7 @@ index cabe8990a8..00c8acd6c3 100644
    @Test
 diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 new file mode 100644
-index 0000000000..e5ca6ea4dd
+index 0000000..e5ca6ea
 --- /dev/null
 +++ b/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 @@ -0,0 +1,107 @@
