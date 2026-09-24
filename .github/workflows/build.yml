@@ -121,6 +121,8 @@ jobs:
           ./gradlew :Signal-Android:testWebsiteProdReleaseUnitTest
           --tests 'org.thoughtcrime.securesms.keyvalue.VesperSettingsValuesTest'
           --tests 'org.thoughtcrime.securesms.profiles.manage.EditProfileActivityThemeLifecycleTest'
+          --tests 'org.thoughtcrime.securesms.util.RemoteConfig*Test*'
+          --tests 'org.thoughtcrime.securesms.util.VesperConfigTest'
           --stacktrace
 
       - name: Build release APKs

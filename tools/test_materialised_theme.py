@@ -15,6 +15,21 @@ SOURCE = Path(__file__).resolve().parents[1] / "work/app/src/main/java/org/thoug
 
 
 class MaterialisedThemeContractTest(unittest.TestCase):
+    def test_remote_config_keeps_vesper_override_after_upstream_resolution(self) -> None:
+        source = (SOURCE / "util/RemoteConfig.kt").read_text()
+        delegate = source.split('operator fun getValue(thisRef: Any?, property: KProperty<*>): T {', 1)[1].split('// endregion', 1)[0]
+        self.assertIn('VesperConfig.valueWithOverride(key, rawValue)', delegate)
+        self.assertIn('this.transformer(', delegate)
+        self.assertIn('value is Number', delegate)
+        self.assertIn('value.toString()', delegate)
+        # The new upstream internal-override resolver must not be bypassed.
+        if 'private fun effectiveRawValue(' in source:
+            self.assertIn('return transformer(effectiveRawValue(key))', delegate)
+            self.assertIn('internal fun resolve(): T = transformer(effectiveRawValue(key))', delegate)
+            self.assertIn('internal fun resolveDefault(): T = transformer(null)', delegate)
+        else:
+            self.assertIn('return transformer(REMOTE_VALUES[key])', delegate)
+
     def test_kotlin_settings_preserve_dynamic_theme_contract(self) -> None:
         source = (SOURCE / "keyvalue/SettingsValues.kt").read_text()
         self.assertIn('const val DYNAMIC_COLORS_ENABLED = "settings.dynamicColors"', source)
