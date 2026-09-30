@@ -15,6 +15,18 @@ SOURCE = Path(__file__).resolve().parents[1] / "work/app/src/main/java/org/thoug
 
 
 class MaterialisedThemeContractTest(unittest.TestCase):
+    def test_conversation_retains_material_and_upstream_compose_colors(self) -> None:
+        source = (SOURCE / "conversation/v2/ConversationFragment.kt").read_text()
+        self.assertEqual(source.count('import com.google.android.material.R as MaterialR\n'), 1)
+        self.assertIn('MaterialR.attr.colorOnSurfaceVariant', source)
+        self.assertIn('MaterialR.attr.colorOnSurface', source)
+        self.assertIn('MaterialR.attr.colorSurface', source)
+        # Signal v8.29.2 introduces this alias for sticker confirmation. Do not
+        # drop it just to restore the old patch's import-block context.
+        if 'stickerConfirmation.sendColor' in source:
+            self.assertEqual(source.count('import androidx.compose.ui.graphics.Color as ComposeColor\n'), 1)
+            self.assertIn('stickerConfirmation.sendColor = ComposeColor(chatColors.asSingleColor())', source)
+
     def test_remote_config_keeps_vesper_override_after_upstream_resolution(self) -> None:
         source = (SOURCE / "util/RemoteConfig.kt").read_text()
         delegate = source.split('operator fun getValue(thisRef: Any?, property: KProperty<*>): T {', 1)[1].split('// endregion', 1)[0]
