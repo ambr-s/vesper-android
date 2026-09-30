@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.29.0]
+        signal: [pinned, v8.29.2]
 
     steps:
       - name: Check out Vesper patchset
@@ -34,6 +34,7 @@ jobs:
       - name: Validate patch tooling
         run: |
           python3 tools/test_export_patches.py -v
+          python3 tools/test_conversation_patch.py -v
           python3 -m py_compile tools/export_patches.py tools/test_export_patches.py
           bash -n tools/export.sh tools/materialize.sh
 

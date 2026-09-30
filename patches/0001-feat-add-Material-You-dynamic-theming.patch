@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sat, 25 Jul 2026 18:30:41 +0100
-Subject: [PATCH 01/27] feat: add Material You dynamic theming
+Subject: [PATCH 01/28] feat: add Material You dynamic theming
 
 Adapted from Molly work by Oscar Mira and other Molly contributors.
 
@@ -847,17 +847,13 @@ index 5b58874..10a6aab 100644
        )
      }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-index 71c3962..82a3a64 100644
+index f38ce40..66a0e85 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/conversation/v2/ConversationFragment.kt
-@@ -418,6 +418,7 @@ import java.util.Optional
- import java.util.concurrent.ExecutionException
- import kotlin.time.Duration.Companion.days
- import kotlin.time.Duration.Companion.milliseconds
-+import com.google.android.material.R as MaterialR
+@@ -427,2 +427,3 @@ import androidx.compose.ui.graphics.Color as ComposeColor
  import org.signal.core.ui.R as CoreUiR
++import com.google.android.material.R as MaterialR
  
- /**
 @@ -2081,9 +2082,9 @@ class ConversationFragment :
      if (!resources.isSplitPane() || isFullScreenPane) {
        binding.toolbar.setNavigationIcon(CoreUiR.drawable.symbol_arrow_start_24)
