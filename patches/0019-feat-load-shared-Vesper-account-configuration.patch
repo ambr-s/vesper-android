@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:12 +0000
-Subject: [PATCH 19/28] feat: load shared Vesper account configuration
+Subject: [PATCH 19/29] feat: load shared Vesper account configuration
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
@@ -20,64 +20,38 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-index 857ad28..a19de6c 100644
+index d83547e67c..7c6c946ce0 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
 +++ b/app/src/main/java/org/thoughtcrime/securesms/ApplicationContext.java
-@@ -135,6 +135,7 @@ import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
- import org.thoughtcrime.securesms.util.SqlCipherLogTarget;
- import org.thoughtcrime.securesms.util.TextSecurePreferences;
+@@ -136,2 +136,3 @@ import org.thoughtcrime.securesms.util.SqlCipherLogTarget;
  import org.thoughtcrime.securesms.util.VersionTracker;
 +import org.thoughtcrime.securesms.util.VesperConfig;
  import org.thoughtcrime.securesms.util.dynamiclanguage.DynamicLanguageContextWrapper;
- import org.whispersystems.signalservice.api.websocket.SignalWebSocket;
- 
-@@ -211,6 +212,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
-                 }
-               })
+@@ -212,2 +213,3 @@ public class ApplicationContext extends Application implements AppForegroundObse
                .addBlocking("blob-provider", this::initializeBlobProvider)
 +              .addBlocking("vesper-config", VesperConfig::init)
                .addBlocking("remote-config", RemoteConfig::init)
-               .addBlocking("ring-rtc", this::initializeRingRtc)
-               .addBlocking("glide", () -> SignalGlideModule.setRegisterGlideComponents(new SignalGlideComponents()))
-@@ -231,6 +233,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
-               .addNonBlocking(StorageSyncHelper::scheduleRoutineSync)
-               .addNonBlocking(this::beginJobLoop)
+@@ -232,2 +234,3 @@ public class ApplicationContext extends Application implements AppForegroundObse
                .addNonBlocking(EmojiSource::refresh)
 +              .addNonBlocking(() -> VesperConfig.refreshIfNecessary(RemoteConfig.internalUser()))
                .addNonBlocking(() -> AppDependencies.getGiphyMp4Cache().onAppStart(this))
-               .addNonBlocking(AppDependencies::getBillingApi)
-               .addNonBlocking(this::ensureProfileUploaded)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
-index 15d1e05..420764e 100644
+index 210825d157..f9ff47eba5 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SignalStore.kt
-@@ -15,6 +15,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
-   val registrationValues = RegistrationValues(store)
-   val pinValues = PinValues(store)
+@@ -17,2 +17,3 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
    val remoteConfigValues = RemoteConfigValues(store)
 +  val vesperConfigValues = VesperConfigValues(store)
    val storageServiceValues = StorageServiceValues(store)
-   val uiHintValues = UiHintValues(store)
-   val tooltipValues = TooltipValues(store)
-@@ -62,6 +63,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
-       registration.onFirstEverAppLaunch()
-       pin.onFirstEverAppLaunch()
+@@ -64,2 +65,3 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
        remoteConfig.onFirstEverAppLaunch()
 +      vesperConfig.onFirstEverAppLaunch()
        storageService.onFirstEverAppLaunch()
-       uiHints.onFirstEverAppLaunch()
-       tooltips.onFirstEverAppLaunch()
-@@ -96,6 +98,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
-           registration.keysToIncludeInBackup +
-           pin.keysToIncludeInBackup +
+@@ -98,2 +100,3 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
            remoteConfig.keysToIncludeInBackup +
 +          vesperConfig.keysToIncludeInBackup +
            storageService.keysToIncludeInBackup +
-           uiHints.keysToIncludeInBackup +
-           tooltips.keysToIncludeInBackup +
-@@ -172,6 +175,11 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
-     val remoteConfig: RemoteConfigValues
-       get() = instance!!.remoteConfigValues
+@@ -175,2 +178,7 @@ class SignalStore(context: Application, private val store: KeyValueStore) {
  
 +    @JvmStatic
 +    @get:JvmName("vesperConfig")
@@ -85,11 +59,9 @@ index 15d1e05..420764e 100644
 +      get() = instance!!.vesperConfigValues
 +
      @JvmStatic
-     @get:JvmName("storageService")
-     val storageService: StorageServiceValues
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
 new file mode 100644
-index 0000000..a1a8581
+index 0000000000..a1a8581f66
 --- /dev/null
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
 @@ -0,0 +1,27 @@
@@ -121,7 +93,7 @@ index 0000000..a1a8581
 +  var lastFetchTime: Long by longValue(LAST_FETCH_TIME, 0)
 +}
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
-index ebaf08f..d7d6e08 100644
+index ebaf08f5ee..d7d6e08ed1 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipients.kt
 @@ -6,6 +6,8 @@
@@ -148,7 +120,7 @@ index ebaf08f..d7d6e08 100644
    }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
-index 034290c..65c081a 100644
+index 034290c64c..65c081a5f4 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/recipients/ui/about/AboutSheet.kt
 @@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
@@ -228,7 +200,7 @@ index 034290c..65c081a 100644
          .padding(end = 16.dp)
          .size(20.dp)
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
-index 2b1a3e8..44ceed5 100644
+index 2b1a3e85b1..44ceed51b5 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/RemoteConfig.kt
 @@ -80,7 +80,7 @@ object RemoteConfig {
@@ -257,7 +229,7 @@ index 2b1a3e8..44ceed5 100644
          initLock.withLock {
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt b/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
 new file mode 100644
-index 0000000..b992683
+index 0000000000..b992683286
 --- /dev/null
 +++ b/app/src/main/java/org/thoughtcrime/securesms/util/VesperConfig.kt
 @@ -0,0 +1,237 @@
@@ -499,7 +471,7 @@ index 0000000..b992683
 +  }
 +}
 diff --git a/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
-index cabe899..00c8acd 100644
+index cabe8990a8..00c8acd6c3 100644
 --- a/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
 +++ b/app/src/test/java/org/thoughtcrime/securesms/recipients/VesperVerifiedRecipientsTest.kt
 @@ -7,17 +7,35 @@ package org.thoughtcrime.securesms.recipients
@@ -545,7 +517,7 @@ index cabe899..00c8acd 100644
    @Test
 diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 new file mode 100644
-index 0000000..e5ca6ea
+index 0000000000..e5ca6ea4dd
 --- /dev/null
 +++ b/app/src/test/java/org/thoughtcrime/securesms/util/VesperConfigTest.kt
 @@ -0,0 +1,107 @@

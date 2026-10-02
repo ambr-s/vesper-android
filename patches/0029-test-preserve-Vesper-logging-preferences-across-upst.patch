@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Fri, 2 Oct 2026 06:44:02 +0000
+Subject: [PATCH 29/29] test: preserve Vesper logging preferences across
+ upstream migration
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../util/VesperLogPreferencesTest.kt          | 43 +++++++++++++++++++
+ 1 file changed, 43 insertions(+)
+ create mode 100644 app/src/test/java/org/thoughtcrime/securesms/util/VesperLogPreferencesTest.kt
+
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/VesperLogPreferencesTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/VesperLogPreferencesTest.kt
+new file mode 100644
+index 0000000..5e38b91
+--- /dev/null
++++ b/app/src/test/java/org/thoughtcrime/securesms/util/VesperLogPreferencesTest.kt
+@@ -0,0 +1,43 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++package org.thoughtcrime.securesms.util
++
++import android.app.Application
++import androidx.preference.PreferenceManager
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertTrue
++import org.junit.Before
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.RuntimeEnvironment
++import org.robolectric.annotation.Config
++
++@RunWith(RobolectricTestRunner::class)
++@Config(application = Application::class, sdk = [34])
++class VesperLogPreferencesTest {
++  private val application: Application get() = RuntimeEnvironment.getApplication()
++
++  @Before
++  fun clearPreferences() {
++    PreferenceManager.getDefaultSharedPreferences(application).edit().clear().commit()
++  }
++
++  @Test
++  fun `logging remains disabled by default`() {
++    assertFalse(VesperLogPreferences.isLogEnabled(application))
++  }
++
++  @Test
++  fun `existing logging preference survives the upstream preferences removal`() {
++    val preferences = PreferenceManager.getDefaultSharedPreferences(application)
++    preferences.edit().putBoolean("pref_log_enabled", true).commit()
++    assertTrue(VesperLogPreferences.isLogEnabled(application))
++    VesperLogPreferences.setLogEnabled(application, false)
++    assertFalse(preferences.getBoolean("pref_log_enabled", true))
++    VesperLogPreferences.setLogEnabled(application, true)
++    assertTrue(preferences.getBoolean("pref_log_enabled", false))
++  }
++}

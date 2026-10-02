@@ -1,14 +1,14 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:45:11 +0000
-Subject: [PATCH 11/28] feat: complete Vesper theme controls
+Subject: [PATCH 11/29] feat: complete Vesper theme controls
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../appearance/AppearanceSettingsFragment.kt  |  17 +-
  .../app/appearance/AppearanceSettingsState.kt |   1 +
  .../appearance/AppearanceSettingsViewModel.kt |   6 +
- .../app/privacy/PrivacySettingsFragment.kt    | 102 ----
+ .../app/privacy/PrivacySettingsFragment.kt    | 101 ----
  .../app/privacy/PrivacySettingsState.kt       |   1 -
  .../app/privacy/PrivacySettingsViewModel.kt   |   6 -
  .../conversation/colors/ChatColorsPalette.kt  |   2 +-
@@ -36,7 +36,7 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  .../res/values/signal_original_themes.xml     | 474 ++++++++++++++++++
  app/src/main/res/values/themes.xml            |   6 +-
  .../core/ui/compose/theme/SignalTheme.kt      |  90 +++-
- 31 files changed, 704 insertions(+), 144 deletions(-)
+ 31 files changed, 704 insertions(+), 143 deletions(-)
  create mode 100644 app/src/main/res/values/signal_original_themes.xml
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsFragment.kt
@@ -125,11 +125,10 @@ index 131b3f3426..fd74f0a97b 100644
        SignalStore.settings.messageFontSize,
        PlainTextKeyValueStore.language,
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
-index 0f84457801..f2c088ebe6 100644
+index 7cd6967831..762b4091db 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
-@@ -1,31 +1,20 @@
- package org.thoughtcrime.securesms.components.settings.app.privacy
+@@ -2,7 +2,3 @@ package org.thoughtcrime.securesms.components.settings.app.privacy
  
 -import android.content.ActivityNotFoundException
  import android.content.Intent
@@ -137,41 +136,24 @@ index 0f84457801..f2c088ebe6 100644
 -import android.os.Bundle
 -import android.provider.Settings
  import android.text.SpannableStringBuilder
- import android.view.View
- import android.view.WindowManager
- import android.widget.TextView
+@@ -12,6 +8,2 @@ import android.widget.TextView
  import android.widget.Toast
 -import androidx.activity.result.ActivityResultLauncher
 -import androidx.biometric.BiometricManager
 -import androidx.biometric.BiometricPrompt
 -import androidx.biometric.BiometricPrompt.PromptInfo
  import androidx.lifecycle.ViewModelProvider
- import androidx.navigation.Navigation
- import androidx.navigation.fragment.NavHostFragment
--import androidx.navigation.fragment.navArgs
- import androidx.preference.PreferenceManager
- import com.google.android.material.dialog.MaterialAlertDialogBuilder
- import com.google.android.material.snackbar.Snackbar
- import org.signal.core.ui.util.ThemeUtil
- import org.signal.core.util.ServiceUtil
+@@ -25,4 +17,2 @@ import org.signal.core.util.ServiceUtil
  import org.signal.core.util.logging.Log
 -import org.thoughtcrime.securesms.BiometricDeviceAuthentication
 -import org.thoughtcrime.securesms.BiometricDeviceLockContract
  import org.thoughtcrime.securesms.PassphraseChangeActivity
- import org.thoughtcrime.securesms.R
- import org.thoughtcrime.securesms.components.TimeDurationPickerDialog
-@@ -56,8 +45,6 @@ private val TAG = Log.tag(PrivacySettingsFragment::class.java)
- class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privacy) {
- 
+@@ -56,4 +46,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
    private lateinit var viewModel: PrivacySettingsViewModel
 -  private lateinit var biometricAuth: BiometricDeviceAuthentication
 -  private lateinit var biometricDeviceLockLauncher: ActivityResultLauncher<String>
  
-   private val incognitoSummary: CharSequence by lazy {
-     SpannableStringBuilder(getString(R.string.preferences__this_setting_is_not_a_guarantee))
-@@ -69,35 +56,11 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
-       )
-   }
+@@ -69,21 +57,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
  
 -  override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 -    super.onViewCreated(view, savedInstanceState)
@@ -193,9 +175,7 @@ index 0f84457801..f2c088ebe6 100644
 -  }
 -
    override fun onResume() {
-     super.onResume()
-     viewModel.refreshBlockedCount()
-   }
+@@ -93,7 +62,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
  
 -  override fun onPause() {
 -    super.onPause()
@@ -203,27 +183,19 @@ index 0f84457801..f2c088ebe6 100644
 -  }
 -
    override fun bindAdapter(adapter: MappingAdapter) {
-     adapter.registerFactory(ValueClickPreference::class.java, LayoutFactory(::ValueClickPreferenceViewHolder, R.layout.value_click_preference_item))
- 
-@@ -105,15 +68,9 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
-     val repository = PrivacySettingsRepository()
-     val factory = PrivacySettingsViewModel.Factory(sharedPreferences, repository)
+@@ -104,4 +68,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
      viewModel = ViewModelProvider(this, factory)[PrivacySettingsViewModel::class.java]
 -    val args: PrivacySettingsFragmentArgs by navArgs()
 -    var showPaymentLock = true
  
-     viewModel.state.observe(viewLifecycleOwner) { state ->
+@@ -109,6 +71,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
        adapter.submitList(getConfiguration(state).toMappingModelList())
 -      if (args.showPaymentLock && showPaymentLock) {
 -        showPaymentLock = false
 -        recyclerView?.scrollToPosition(adapter.itemCount - 1)
 -      }
      }
-   }
- 
-@@ -313,25 +270,6 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
- 
-       dividerPref()
+@@ -314,21 +272,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
  
 -      sectionHeaderPref(R.string.preferences_app_protection__payments)
 -
@@ -245,11 +217,7 @@ index 0f84457801..f2c088ebe6 100644
 -      dividerPref()
 -
        clickPref(
-         title = DSLSettingsText.from(R.string.preferences__advanced),
-         summary = DSLSettingsText.from(R.string.PrivacySettingsFragment__signal_message_and_calls),
-@@ -353,29 +291,6 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
-       .show()
-   }
+@@ -354,25 +293,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
  
 -  private fun showGoToPhoneSettings() {
 -    MaterialAlertDialogBuilder(requireContext()).apply {
@@ -275,11 +243,7 @@ index 0f84457801..f2c088ebe6 100644
 -  }
 -
    private fun getScreenLockInactivityTimeoutSummary(enabledScreenLock: Boolean, timeoutSeconds: Long): String {
-     return if (!enabledScreenLock) {
-       getString(R.string.ScreenLockSettingsFragment__off)
-@@ -415,21 +330,4 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
-       valueText.contentDescription = model.contentDescription.resolve(context)
-     }
+@@ -416,19 +332,2 @@ class PrivacySettingsFragment : DSLSettingsFragment(R.string.preferences__privac
    }
 -
 -  inner class BiometricAuthenticationListener : BiometricPrompt.AuthenticationCallback() {
@@ -300,10 +264,10 @@ index 0f84457801..f2c088ebe6 100644
 -  }
  }
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
-index 5af9ac70d4..3c4e4ed366 100644
+index 4ef6643fb0..549f0f7423 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsState.kt
-@@ -9,7 +9,6 @@ data class PrivacySettingsState(
+@@ -10,7 +10,6 @@ data class PrivacySettingsState(
    val screenLockActivityTimeout: Long,
    val screenSecurity: Boolean,
    val incognitoKeyboard: Boolean,
@@ -312,12 +276,10 @@ index 5af9ac70d4..3c4e4ed366 100644
    val isObsoletePasswordTimeoutEnabled: Boolean,
    val obsoletePasswordTimeout: Int,
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
-index 23ac7d4a24..bd9d7b1d5a 100644
+index ad5ceeafd3..bbb78a3b30 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModel.kt
-@@ -52,11 +52,6 @@ class PrivacySettingsViewModel(
-     refresh()
-   }
+@@ -45,7 +45,2 @@ class PrivacySettingsViewModel(
  
 -  fun togglePaymentLock(enable: Boolean) {
 -    SignalStore.payments.paymentLock = enable
@@ -325,16 +287,9 @@ index 23ac7d4a24..bd9d7b1d5a 100644
 -  }
 -
    fun setObsoletePasswordTimeoutEnabled(enabled: Boolean) {
-     SignalStore.settings.passphraseTimeoutEnabled = enabled
-     refresh()
-@@ -81,7 +76,6 @@ class PrivacySettingsViewModel(
-       screenLockActivityTimeout = SignalStore.settings.screenLockTimeout,
-       screenSecurity = TextSecurePreferences.isScreenSecurityEnabled(AppDependencies.application),
-       incognitoKeyboard = TextSecurePreferences.isIncognitoKeyboardEnabled(AppDependencies.application),
+@@ -81,2 +76,1 @@ class PrivacySettingsViewModel(
 -      paymentLock = SignalStore.payments.paymentLock,
        isObsoletePasswordEnabled = !SignalStore.settings.passphraseDisabled,
-       isObsoletePasswordTimeoutEnabled = SignalStore.settings.passphraseTimeoutEnabled,
-       obsoletePasswordTimeout = SignalStore.settings.passphraseTimeout,
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ChatColorsPalette.kt b/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ChatColorsPalette.kt
 index b61464abe2..6f62d279c1 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/conversation/colors/ChatColorsPalette.kt
@@ -349,10 +304,10 @@ index b61464abe2..6f62d279c1 100644
  
      // endregion
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
-index f63a089142..9ec5ec4be3 100644
+index d6441d2d1c..8b95bd1b3f 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
-@@ -36,6 +36,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+@@ -39,6 +39,7 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
      const val THREAD_TRIM_ENABLED = "pref_trim_threads"
  
      const val DYNAMIC_COLORS_ENABLED = "settings.dynamicColors"
@@ -360,7 +315,7 @@ index f63a089142..9ec5ec4be3 100644
      private const val IGNORE_REMOTE_DELETE = "settings.ignore.remote.delete"
      const val THEME = "settings.theme"
      const val MESSAGE_FONT_SIZE = "settings.message.font.size"
-@@ -116,6 +117,7 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+@@ -138,6 +139,7 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
      THREAD_TRIM_ENABLED,
      THEME,
      DYNAMIC_COLORS_ENABLED,
@@ -368,7 +323,7 @@ index f63a089142..9ec5ec4be3 100644
      IGNORE_REMOTE_DELETE,
      MESSAGE_FONT_SIZE,
      PREFER_SYSTEM_EMOJI,
-@@ -209,6 +211,13 @@ class SettingsValues internal constructor(store: KeyValueStore, context: Context
+@@ -235,6 +237,13 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
    val isDynamicColorsEnabled: Boolean
      get() = getBoolean(DYNAMIC_COLORS_ENABLED, true)
  
@@ -665,7 +620,7 @@ index d58facf745..fd13072f77 100644
 \ No newline at end of file
 +</shape>
 diff --git a/app/src/main/res/layout/v2_conversation_fragment.xml b/app/src/main/res/layout/v2_conversation_fragment.xml
-index a09ad5b378..bc1ec771cf 100644
+index 5e57c2c90c..99c1ec1259 100644
 --- a/app/src/main/res/layout/v2_conversation_fragment.xml
 +++ b/app/src/main/res/layout/v2_conversation_fragment.xml
 @@ -104,13 +104,13 @@
