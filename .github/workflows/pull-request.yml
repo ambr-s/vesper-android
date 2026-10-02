@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.29.2]
+        signal: [pinned, v8.30.0]
 
     steps:
       - name: Check out Vesper patchset
@@ -35,6 +35,7 @@ jobs:
         run: |
           python3 tools/test_export_patches.py -v
           python3 tools/test_conversation_patch.py -v
+          python3 tools/test_signal_830_patch.py -v
           python3 -m py_compile tools/export_patches.py tools/test_export_patches.py
           bash -n tools/export.sh tools/materialize.sh
 
@@ -100,6 +101,7 @@ jobs:
           --tests 'org.thoughtcrime.securesms.profiles.manage.EditProfileActivityThemeLifecycleTest'
           --tests 'org.thoughtcrime.securesms.util.RemoteConfig*Test*'
           --tests 'org.thoughtcrime.securesms.util.VesperConfigTest'
+          --tests 'org.thoughtcrime.securesms.util.VesperLogPreferencesTest'
           --stacktrace
 
       - name: Build release APKs

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Wed, 30 Sep 2026 06:10:26 +0000
-Subject: [PATCH 28/28] test: isolate shared Vesper account configuration
+Subject: [PATCH 28/29] test: isolate shared Vesper account configuration
 
 Reset process-wide configuration after each test as well as before it. Otherwise the cached-override test can leave android.internalUser forced true for the upstream static-value checks. Exercise the actual JUnit lifecycle to make the regression independent of test ordering.
 

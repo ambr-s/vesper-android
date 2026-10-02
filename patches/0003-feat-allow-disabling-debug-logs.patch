@@ -1,15 +1,16 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 Date: Thu, 6 Aug 2026 07:44:38 +0000
-Subject: [PATCH 03/28] feat: allow disabling debug logs
+Subject: [PATCH 03/29] feat: allow disabling debug logs
 
 Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
 ---
  .../settings/app/help/HelpSettingsState.kt    |  5 ++++
- .../securesms/util/TextSecurePreferences.java |  9 +++++++
+ .../securesms/util/VesperLogPreferences.kt    | 23 ++++++++++++++++
  .../java/org/signal/core/util/logging/Log.kt  | 27 ++++++++++++-------
- 3 files changed, 31 insertions(+), 10 deletions(-)
+ 3 files changed, 45 insertions(+), 10 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
+ create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/VesperLogPreferences.kt
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsState.kt
 new file mode 100644
@@ -22,33 +23,35 @@ index 0000000000..3033c7e651
 +data class HelpSettingsState(
 +  val logEnabled: Boolean
 +)
-diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java b/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java
-index 2b04af571f..8b16e49eb7 100644
---- a/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java
-+++ b/app/src/main/java/org/thoughtcrime/securesms/util/TextSecurePreferences.java
-@@ -122,6 +122,7 @@ public class TextSecurePreferences {
-   private static final String LAST_FULL_CONTACT_SYNC_TIME = "pref_last_full_contact_sync_time";
-   private static final String NEEDS_FULL_CONTACT_SYNC     = "pref_needs_full_contact_sync";
- 
-+  public  static final String LOG_ENABLED            = "pref_log_enabled";
-   private static final String LOG_ENCRYPTED_SECRET   = "pref_log_encrypted_secret";
-   private static final String LOG_UNENCRYPTED_SECRET = "pref_log_unencrypted_secret";
- 
-@@ -719,6 +720,14 @@ public class TextSecurePreferences {
-     setBooleanPreference(context, NEEDS_FULL_CONTACT_SYNC, needsSync);
-   }
- 
-+  public static void setLogEnabled(Context context, boolean enabled) {
-+    setBooleanPreference(context, LOG_ENABLED, enabled);
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/VesperLogPreferences.kt b/app/src/main/java/org/thoughtcrime/securesms/util/VesperLogPreferences.kt
+new file mode 100644
+index 0000000000..4d1109feb9
+--- /dev/null
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/VesperLogPreferences.kt
+@@ -0,0 +1,23 @@
++/*
++ * Copyright 2026 Vesper contributors
++ * SPDX-License-Identifier: AGPL-3.0-only
++ */
++package org.thoughtcrime.securesms.util
++
++import android.content.Context
++import androidx.preference.PreferenceManager
++
++/** Retains the preference used by Vesper before Signal removed TextSecurePreferences. */
++object VesperLogPreferences {
++  private const val LOG_ENABLED = "pref_log_enabled"
++
++  @JvmStatic
++  fun setLogEnabled(context: Context, enabled: Boolean) {
++    PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean(LOG_ENABLED, enabled).apply()
 +  }
 +
-+  public static boolean isLogEnabled(Context context) {
-+    return getBooleanPreference(context, LOG_ENABLED, false);
++  @JvmStatic
++  fun isLogEnabled(context: Context): Boolean {
++    return PreferenceManager.getDefaultSharedPreferences(context).getBoolean(LOG_ENABLED, false)
 +  }
-+
-   public static void setLogEncryptedSecret(Context context, String base64Secret) {
-     setStringPreference(context, LOG_ENCRYPTED_SECRET, base64Secret);
-   }
++}
 diff --git a/core/util-jvm/src/main/java/org/signal/core/util/logging/Log.kt b/core/util-jvm/src/main/java/org/signal/core/util/logging/Log.kt
 index 1748be82ee..752f830e8a 100644
 --- a/core/util-jvm/src/main/java/org/signal/core/util/logging/Log.kt
