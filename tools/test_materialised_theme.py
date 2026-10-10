@@ -70,7 +70,29 @@ class MaterialisedThemeContractTest(unittest.TestCase):
     def test_main_activity_imports_dynamic_color_resolver(self) -> None:
         source = (SOURCE / "MainActivity.kt").read_text()
         self.assertIn('import org.signal.core.ui.compose.theme.colorAttribute\n', source)
-        self.assertNotIn('import org.signal.core.ui.util.ThemeUtil\n', source)
+        # An unused upstream import may remain for cross-version patch context;
+        # dynamic surfaces must call the Compose resolver, not the View helper.
+        self.assertNotIn('ThemeUtil.getThemedColor(', source)
+
+    def test_link_preview_actions_keep_incoming_dynamic_colors(self) -> None:
+        source = (SOURCE / "conversation/ConversationItem.java").read_text()
+        self.assertIn('messageRecord.isOutgoing() ? ContextCompat.getColor(context, org.signal.core.ui.R.color.signal_light_colorOnPrimary) : ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnPrimaryContainer)', source)
+        self.assertIn('messageRecord.isOutgoing() ? ContextCompat.getColor(context, org.signal.core.ui.R.color.signal_light_colorTransparent2) : ThemeUtil.getThemedColor(context, com.google.android.material.R.attr.colorOnPrimary)', source)
+        if 'presentLinkPreviewAction(' in source:
+            self.assertIn('presentLinkPreviewAction(R.string.ConversationItem__view_pack', source)
+            self.assertIn('eventListener.onViewStickerPackLink(', source)
+            self.assertIn('presentLinkPreviewAction(R.string.ConversationItem__join_call', source)
+        self.assertIn('eventListener.onJoinCallLink(callLinkRootKey)', source)
+
+    def test_privacy_does_not_expose_mobilecoin_payment_lock(self) -> None:
+        source = (SOURCE / "components/settings/app/privacy/PrivacySettingsFragment.kt").read_text()
+        self.assertNotIn('sectionHeaderPref(R.string.preferences_app_protection__payments)', source)
+        self.assertNotIn('title = DSLSettingsText.from(R.string.preferences__payment_lock)', source)
+        self.assertNotIn('biometricAuth.authenticate(', source)
+        # Keep upstream setup, cancellation and callbacks together even though
+        # Vesper does not expose the payments preference that invokes them.
+        self.assertIn('biometricAuth.cancelAuthentication()', source)
+        self.assertIn('inner class BiometricAuthenticationListener', source)
 
     def test_navigation_inset_uses_the_navigation_container_surface(self) -> None:
         source = (SOURCE / "MainActivity.kt").read_text()
