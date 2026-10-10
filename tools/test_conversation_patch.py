@@ -22,31 +22,37 @@ class ConversationPatchTest(unittest.TestCase):
     def test_material_import_preserves_upstream_compose_alias(self):
         patch = (ROOT / "patches/0001-feat-add-Material-You-dynamic-theming.patch").read_text()
         section = patch.split(f"diff --git a/{TARGET} b/{TARGET}\n", 1)[1].split("\ndiff --git ", 1)[0]
-        # Reconstruct only the import hunk from the actual exported patch.
-        # One line of context after CoreUiR deliberately avoids depending on
-        # the preceding alias, which changed when upstream added ComposeColor.
+        # Reconstruct the real import hunk; package context is stable even when
+        # upstream inserts or reorders aliases at the end of the imports.
         chunks = re.split(r"(?m)(?=^@@ -)", section)
         imports = [chunk for chunk in chunks[1:] if "+import com.google.android.material.R as MaterialR" in chunk]
         self.assertEqual(len(imports), 1)
         import_patch = f"diff --git a/{TARGET} b/{TARGET}\n{chunks[0]}{imports[0]}"
-        for version, compose_alias in [("v8.29.1", ""), ("v8.29.2", "import androidx.compose.ui.graphics.Color as ComposeColor\n")]:
+        for version, compose_alias, trailing_alias in [
+            ("v8.30.2", "import androidx.compose.ui.graphics.Color as ComposeColor\n", ""),
+            ("v8.31.1", "import androidx.compose.ui.graphics.Color as ComposeColor\nimport org.signal.appsettings.R as AppSettingsR\n", "import org.signal.core.util.R as CoreUtilsR\n"),
+        ]:
             with self.subTest(version=version), tempfile.TemporaryDirectory() as tmp:
                 path = Path(tmp) / TARGET
                 path.parent.mkdir(parents=True)
                 upstream = (
+                    " */\n\npackage org.thoughtcrime.securesms.conversation.v2\n\n"
+                    "import android.Manifest\nimport android.animation.ValueAnimator\n"
                     "import java.util.Optional\n"
                     "import java.util.concurrent.ExecutionException\n"
                     "import kotlin.time.Duration.Companion.days\n"
                     "import kotlin.time.Duration.Companion.milliseconds\n"
                     + compose_alias
-                    + "import org.signal.core.ui.R as CoreUiR\n\n/**\n * Conversation.\n */\n"
+                    + "import org.signal.core.ui.R as CoreUiR\n"
+                    + trailing_alias
+                    + "\n/**\n * Conversation.\n */\n"
                 )
                 path.write_text(upstream)
                 result = subprocess.run(["git", "apply", "-"], input=import_patch, text=True, cwd=tmp, capture_output=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 source = path.read_text()
                 self.assertEqual(source.count("import com.google.android.material.R as MaterialR\n"), 1)
-                self.assertEqual(source.replace("import com.google.android.material.R as MaterialR\n", ""), upstream)
+                self.assertEqual(source.replace("\nimport com.google.android.material.R as MaterialR\n", ""), upstream)
 
 
 if __name__ == "__main__":

@@ -595,6 +595,16 @@ SOURCE_COLOR_REFERENCE = (
     r"(?:CoreUiR|org\.signal\.core\.ui\.R|R)"
     r"\.color\.(?P<resource>[A-Za-z0-9_]+)"
 )
+# Split ternary resource lookups before the ordinary single-resource transform.
+# Keep fixed outgoing colours as resources; only mapped semantic colours become
+# theme attributes. This is receiver-independent (call links and sticker packs).
+TERNARY_CONTEXT_COLOR_PATTERN = re.compile(
+    r"ContextCompat\.getColor\(\s*(?P<context>[^,\n]+?)\s*,\s*"
+    r"(?P<condition>[^?;\n]+?)\s*\?\s*"
+    r"(?P<yes>(?:CoreUiR|org\.signal\.core\.ui\.R|R)\.color\.[A-Za-z0-9_]+)"
+    r"\s*:\s*"
+    r"(?P<no>(?:CoreUiR|org\.signal\.core\.ui\.R|R)\.color\.[A-Za-z0-9_]+)\s*\)"
+)
 CONTEXT_COMPAT_COLOR_PATTERN = re.compile(
     r"ContextCompat\.getColor\(\s*"
     r"(?P<context>[^,\n]+?)\s*,\s*"
@@ -713,7 +723,23 @@ def transform_source_theme_colors(checkout: Path) -> int:
         except UnicodeDecodeError:
             continue
 
-        updated = RESOURCES_COLOR_PATTERN.sub(replace_context_call, original)
+        def split_ternary(match: re.Match[str]) -> str:
+            # The call/sticker action has a fixed outgoing colour and a themed
+            # incoming colour. Leave other ternaries to their feature patches.
+            pair = (match.group("yes").rsplit(".", 1)[-1],
+                    match.group("no").rsplit(".", 1)[-1])
+            if pair not in {
+                ("signal_light_colorOnPrimary", "signal_colorOnPrimaryContainer"),
+                ("signal_light_colorTransparent2", "signal_colorOnPrimary"),
+            }:
+                return match.group(0)
+            context = match.group("context").strip()
+            return (f"{match.group('condition').strip()} ? "
+                    f"ContextCompat.getColor({context}, {match.group('yes')}) : "
+                    f"ContextCompat.getColor({context}, {match.group('no')})")
+
+        updated = TERNARY_CONTEXT_COLOR_PATTERN.sub(split_ternary, original)
+        updated = RESOURCES_COLOR_PATTERN.sub(replace_context_call, updated)
         updated = CONTEXT_COMPAT_COLOR_PATTERN.sub(replace_context_call, updated)
         uses_theme_util = updated != original
 
