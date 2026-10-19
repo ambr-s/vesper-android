@@ -54,6 +54,7 @@ jobs:
 
       - name: Validate patch tooling
         run: |
+          python3 tools/test_activity_theme.py -v
           python3 tools/test_export_patches.py -v
           python3 tools/test_conversation_patch.py -v
           python3 tools/test_signal_830_patch.py -v
