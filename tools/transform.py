@@ -784,6 +784,8 @@ def main() -> int:
     manifest = load_string_manifest(STRING_MANIFEST_PATH)
     mappings = load_color_mappings(COLORS_PATH)
 
+    from activity_theme import transform_activity_themes
+    transform_activity_themes(checkout)
     transform_gradle(checkout, config)
     string_files, missing_strings = transform_strings(checkout, config, manifest)
     themed_resource_files = transform_theme_color_references(checkout)

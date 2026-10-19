@@ -15,6 +15,34 @@ SOURCE = Path(__file__).resolve().parents[1] / "work/app/src/main/java/org/thoug
 
 
 class MaterialisedThemeContractTest(unittest.TestCase):
+    def test_settings_host_theme_precedes_inflation(self) -> None:
+        paths = [SOURCE / "components/settings/DSLSettingsActivity.kt", SOURCE / "components/NavGraphHostActivity.kt"]
+        sources = [path.read_text() for path in paths if path.exists()]
+        self.assertEqual(len(sources), 1)
+        source = sources[0]
+        self.assertEqual(source.count("dynamicTheme.onCreate(this)"), 1)
+        self.assertLess(source.index("dynamicTheme.onCreate(this)"), source.index("setContentView("))
+        self.assertIn("super.onPreCreate()", source)
+        self.assertIn("check(themeAppliedBeforeInflation)", source)
+        self.assertIn("val navGraphId = resolveNavGraphId()", source)
+
+    def test_sticker_picker_retains_theme_and_upstream_security(self) -> None:
+        legacy = SOURCE / "scribbles/ImageEditorStickerSelectActivity.java"
+        modern = SOURCE / "stickers/search/StickerSearchActivity.kt"
+        self.assertNotEqual(legacy.exists(), modern.exists())
+        source = (legacy if legacy.exists() else modern).read_text()
+        self.assertEqual(source.count("dynamicTheme.onCreate(this)"), 1)
+        self.assertEqual(source.count("dynamicTheme.onResume(this)"), 1)
+        if modern.exists():
+            self.assertIn("StickerSearchActivity : PassphraseRequiredActivity()", source)
+            self.assertIn("DynamicMediaPreviewTheme()", source)
+            self.assertIn("SignalTheme(isDarkMode = true)", source)
+            self.assertIn("ImageEditorStickerSearch(onResult = ::finishWithResult)", source)
+            self.assertLess(source.index("dynamicTheme.onCreate(this)"), source.index("setContent {"))
+        else:
+            self.assertIn("new DynamicNoActionBarTheme()", source)
+            self.assertLess(source.index("dynamicTheme.onCreate(this)"), source.index("super.onCreate(savedInstanceState)"))
+
     def test_conversation_retains_material_and_upstream_compose_colors(self) -> None:
         source = (SOURCE / "conversation/v2/ConversationFragment.kt").read_text()
         self.assertEqual(source.count('import com.google.android.material.R as MaterialR\n'), 1)

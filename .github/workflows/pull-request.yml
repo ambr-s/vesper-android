@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.31.1]
+        signal: [pinned, v8.32.1]
 
     steps:
       - name: Check out Vesper patchset
@@ -33,6 +33,7 @@ jobs:
 
       - name: Validate patch tooling
         run: |
+          python3 tools/test_activity_theme.py -v
           python3 tools/test_export_patches.py -v
           python3 tools/test_conversation_patch.py -v
           python3 tools/test_signal_830_patch.py -v
