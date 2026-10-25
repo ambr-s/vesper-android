@@ -70,6 +70,11 @@ jobs:
       - name: Materialise Vesper
         run: ./tools/materialize.sh --tag "${{ steps.version.outputs.tag }}"
 
+      - name: Verify exact-tree patch replay and stable export
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: python3 tools/verify_roundtrip.py
+
       - name: Validate materialised theme hooks
         run: |
           python3 tools/test_materialised_theme.py -v
