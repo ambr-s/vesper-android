@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sun, 25 Oct 2026 14:47:00 +0000
+Subject: [PATCH 31/31] fix: declare dynamic span attribute in its owning UI
+ module
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ core/ui/src/main/res/values/vesper_span_attrs.xml | 6 ++++++
+ 1 file changed, 6 insertions(+)
+ create mode 100644 core/ui/src/main/res/values/vesper_span_attrs.xml
+
+diff --git a/core/ui/src/main/res/values/vesper_span_attrs.xml b/core/ui/src/main/res/values/vesper_span_attrs.xml
+new file mode 100644
+index 0000000000..e2a98b31e7
+--- /dev/null
++++ b/core/ui/src/main/res/values/vesper_span_attrs.xml
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- Copyright 2026 Vesper contributors; SPDX-License-Identifier: AGPL-3.0-only -->
++<resources>
++    <!-- SpanUtil moved here in Signal 8.33; non-transitive R needs this declaration. -->
++    <attr name="signal_accent_primary" format="color" />
++</resources>

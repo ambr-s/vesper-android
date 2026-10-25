@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Fri, 2 Oct 2026 06:44:02 +0000
-Subject: [PATCH 29/30] test: preserve Vesper logging preferences across
+Subject: [PATCH 29/31] test: preserve Vesper logging preferences across
  upstream migration
 
 Signed-off-by: amber <amber@flourish.ch>
