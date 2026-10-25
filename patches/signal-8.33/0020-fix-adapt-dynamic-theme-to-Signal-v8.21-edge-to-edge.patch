@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:12 +0000
+Subject: [PATCH 20/30] fix: adapt dynamic theme to Signal v8.21 edge-to-edge
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../thoughtcrime/securesms/util/Material3OnScrollHelper.kt  | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt b/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
+index b634764cd4..4346f5f72e 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/util/Material3OnScrollHelper.kt
+@@ -23,8 +23,10 @@ import com.google.android.material.R as MaterialR
+ open class Material3OnScrollHelper(
+   private val activity: FragmentActivity,
+   private val setChatFolderColor: (Int) -> Unit = {},
+-  private val setStatusBarColor: (Int) -> Unit = { WindowUtil.setStatusBarColor(activity.window, it) },
+-  private val getStatusBarColor: () -> Int = { WindowUtil.getStatusBarColor(activity.window) },
++  // Signal v8.21 manages edge-to-edge status bars itself. Preserve the dynamic
++  // toolbar/chat-folder transitions without fighting that window policy.
++  private val setStatusBarColor: (Int) -> Unit = {},
++  private val getStatusBarColor: () -> Int = { 0 },
+   private val onSetToolbarColor: (Int) -> Unit = {},
+   private val views: List<View> = emptyList(),
+   private val viewStubs: List<Stub<out View>> = emptyList(),
