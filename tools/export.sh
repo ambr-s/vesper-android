@@ -62,7 +62,9 @@ while IFS= read -r -d '' overlay_file; do
   OVERLAY_EXCLUDES+=("$relative_path")
 done < <(find "$ROOT/overlay" -type f -print0)
 
-mkdir -p "$ROOT/patches"
+TAG="$(git -C "$WORK" describe --tags --exact-match "$BRANDING_COMMIT^")"
+PATCH_DIRECTORY="$(python3 "$ROOT/tools/patch_series.py" "$ROOT" "$TAG")"
+mkdir -p "$PATCH_DIRECTORY"
 
 echo "Exporting overlay files and feature commits."
 echo "Overlay files live in overlay/. Patches come from commits after the two"
@@ -70,7 +72,7 @@ echo "materialisation commits."
 echo
 EXPORT_ARGS=(
   --work "$WORK"
-  --output "$ROOT/patches"
+  --output "$PATCH_DIRECTORY"
   --base "$OVERLAY_COMMIT"
   --require-author-signoff
 )

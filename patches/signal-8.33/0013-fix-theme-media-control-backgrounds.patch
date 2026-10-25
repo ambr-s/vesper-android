@@ -1,0 +1,60 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:11 +0000
+Subject: [PATCH 13/32] fix: theme media control backgrounds
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../res/drawable/image_editor_hud_clear_all_background.xml    | 2 +-
+ app/src/main/res/drawable/image_editor_hud_undo.xml           | 2 +-
+ app/src/main/res/layout/v2_media_image_editor_hud.xml         | 4 ++--
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml b/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
+index 69f61a5b82..3d9a70fc79 100644
+--- a/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
++++ b/app/src/main/res/drawable/image_editor_hud_clear_all_background.xml
+@@ -2,7 +2,7 @@
+ <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+     <item>
+         <shape android:shape="rectangle">
+-            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++            <solid android:color="?attr/colorSecondaryContainer" />
+             <corners android:radius="50dp" />
+         </shape>
+     </item>
+diff --git a/app/src/main/res/drawable/image_editor_hud_undo.xml b/app/src/main/res/drawable/image_editor_hud_undo.xml
+index ef06a0b699..ba4b3e82c4 100644
+--- a/app/src/main/res/drawable/image_editor_hud_undo.xml
++++ b/app/src/main/res/drawable/image_editor_hud_undo.xml
+@@ -3,7 +3,7 @@
+     <item>
+         <shape android:shape="oval">
+             <size android:width="@dimen/image_editor_hud_tool_filled_circle_padding" android:height="@dimen/image_editor_hud_tool_filled_circle_padding" />
+-            <solid android:color="?attr/filled_tonal_icon_button_container_color" />
++            <solid android:color="?attr/colorSecondaryContainer" />
+             <padding android:bottom="@dimen/image_editor_hud_tool_filled_circle_padding" android:left="@dimen/image_editor_hud_tool_filled_circle_padding" android:right="@dimen/image_editor_hud_tool_filled_circle_padding" android:top="@dimen/image_editor_hud_tool_filled_circle_padding" />
+         </shape>
+     </item>
+diff --git a/app/src/main/res/layout/v2_media_image_editor_hud.xml b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+index 77493bf33f..ec747668ba 100644
+--- a/app/src/main/res/layout/v2_media_image_editor_hud.xml
++++ b/app/src/main/res/layout/v2_media_image_editor_hud.xml
+@@ -66,7 +66,7 @@
+             android:layout_marginBottom="10dp"
+             android:alpha="0"
+             android:background="@drawable/circle_tintable"
+-            android:backgroundTint="?attr/filled_tonal_icon_button_container_color"
++            android:backgroundTint="?attr/colorSecondaryContainer"
+             android:contentDescription="@string/ImageEditorHud__cancel"
+             android:padding="6dp"
+             android:translationY="56dp"
+@@ -164,7 +164,7 @@
+             android:layout_marginBottom="10dp"
+             android:alpha="0"
+             android:background="@drawable/circle_tintable"
+-            android:backgroundTint="?attr/filled_tonal_icon_button_container_color"
++            android:backgroundTint="?attr/colorSecondaryContainer"
+             android:contentDescription="@string/ImageEditorHud__done_editing"
+             android:padding="6dp"
+             android:translationY="56dp"

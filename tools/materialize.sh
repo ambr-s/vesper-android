@@ -104,7 +104,9 @@ if [[ -n "$(find "$ROOT/overlay" -type f -print -quit)" ]]; then
 fi
 
 shopt -s nullglob
-PATCHES=("$ROOT"/patches/*.patch)
+PATCH_DIRECTORY="$(python3 "$ROOT/tools/patch_series.py" "$ROOT" "$TAG")"
+PATCHES=("$PATCH_DIRECTORY"/*.patch)
+((${#PATCHES[@]})) || { echo "No patches for $TAG in $PATCH_DIRECTORY" >&2; exit 1; }
 if ((${#PATCHES[@]})); then
   # Stable exports deliberately retain an older patch byte-for-byte only when
   # it still applies directly and reproduces the rebased commit exactly.

@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sun, 25 Oct 2026 14:49:02 +0000
+Subject: [PATCH 32/32] fix: retain updater call gate on Signal event bus
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt    | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt b/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt
+index 090d3d5ce2..d523473a47 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt
+@@ -11,7 +11,7 @@ import android.content.Context
+ import android.content.Intent
+ import android.content.pm.PackageInstaller
+ import android.os.Build
+-import org.greenrobot.eventbus.EventBus
++import org.signal.core.util.eventbus.EventBus
+ import org.signal.core.util.AppForegroundObserver
+ import org.signal.core.util.PendingIntentFlags
+ import org.signal.core.util.StreamUtil
+@@ -188,7 +188,7 @@ object ApkUpdateInstaller {
+   }
+ 
+   private fun shouldAutoUpdate(): Boolean {
+-    val webRtcViewModel = EventBus.getDefault().getStickyEvent(WebRtcViewModel::class.java)
++    val webRtcViewModel = EventBus.default.getStickyEvent(WebRtcViewModel::class.java)
+     val isCallActive = webRtcViewModel != null && webRtcViewModel.state != WebRtcViewModel.State.IDLE
+ 
+     return Build.VERSION.SDK_INT >= 31 &&

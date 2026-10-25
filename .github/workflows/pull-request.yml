@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.32.1]
+        signal: [pinned, v8.33.1]
 
     steps:
       - name: Check out Vesper patchset
@@ -33,6 +33,7 @@ jobs:
 
       - name: Validate patch tooling
         run: |
+          python3 tools/test_patch_series.py -v
           python3 tools/test_activity_theme.py -v
           python3 tools/test_export_patches.py -v
           python3 tools/test_conversation_patch.py -v
@@ -69,8 +70,15 @@ jobs:
       - name: Materialise Vesper
         run: ./tools/materialize.sh --tag "${{ steps.version.outputs.tag }}"
 
+      - name: Verify exact-tree patch replay and stable export
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: python3 tools/verify_roundtrip.py
+
       - name: Validate materialised theme hooks
-        run: python3 tools/test_materialised_theme.py -v
+        run: |
+          python3 tools/test_materialised_theme.py -v
+          python3 tools/test_signal_833_patch.py -v
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
@@ -105,6 +113,14 @@ jobs:
           --tests 'org.thoughtcrime.securesms.util.RemoteConfig*Test*'
           --tests 'org.thoughtcrime.securesms.util.VesperConfigTest'
           --tests 'org.thoughtcrime.securesms.util.VesperLogPreferencesTest'
+          --stacktrace
+
+      - name: Test extracted appearance settings
+        if: matrix.signal != 'pinned'
+        working-directory: work
+        run: >-
+          ./gradlew :Signal-Android:testWebsiteProdReleaseUnitTest
+          --tests 'org.thoughtcrime.securesms.components.settings.app.appearance.AppearanceSettingsViewModelTest'
           --stacktrace
 
       - name: Build release APKs

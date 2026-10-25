@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 07:45:11 +0000
+Subject: [PATCH 14/32] feat: integrate Vesper logo and wordmark
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../java/org/thoughtcrime/securesms/main/MainToolbar.kt   | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
+index 773532e291..dcf75b2de6 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/main/MainToolbar.kt
+@@ -56,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
+ import androidx.compose.ui.focus.focusRequester
+ import androidx.compose.ui.geometry.Offset
+ import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.ColorFilter
+ import androidx.compose.ui.graphics.vector.ImageVector
+ import androidx.compose.ui.layout.onPlaced
+ import androidx.compose.ui.layout.positionInWindow
+@@ -434,8 +435,11 @@ private fun PrimaryToolbar(
+       }
+     },
+     title = {
+-      Text(
+-        text = stringResource(R.string.app_name)
++      Image(
++        painter = painterResource(R.drawable.vesper_wordmark),
++        contentDescription = stringResource(R.string.app_name),
++        colorFilter = ColorFilter.tint(LocalContentColor.current),
++        modifier = Modifier.size(width = 83.dp, height = 28.dp)
+       )
+     },
+     actions = {

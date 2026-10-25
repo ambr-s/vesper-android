@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+Date: Fri, 21 Aug 2026 14:14:19 +0000
+Subject: [PATCH 02/32] fix: adapt dynamic theme to inline media send
+
+Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com>
+---
+ .../securesms/mediasend/v3/MediaSendV3Activity.kt             | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v3/MediaSendV3Activity.kt b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v3/MediaSendV3Activity.kt
+index 4ad0e548c1..5e37693bb5 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/mediasend/v3/MediaSendV3Activity.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/mediasend/v3/MediaSendV3Activity.kt
+@@ -103,9 +103,11 @@ class MediaSendV3Activity :
+   override val textStoryDraftText: CharSequence?
+     get() = if (contractArgs.asTextStory) contractArgs.initialMessage else null
+ 
+-  override fun onCreate(savedInstanceState: Bundle?, ready: Boolean) {
++  override fun onPreCreate() {
+     theme.onCreate(this)
++  }
+ 
++  override fun onCreate(savedInstanceState: Bundle?, ready: Boolean) {
+     if (resources.getWindowBreakpoint() !is WindowBreakpoint.Small) {
+       requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+     }

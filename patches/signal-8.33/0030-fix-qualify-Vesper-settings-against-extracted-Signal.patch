@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Sun, 25 Oct 2026 14:24:08 +0000
+Subject: [PATCH 30/32] fix: qualify Vesper settings against extracted Signal
+ modules
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../messages/PreservedRemoteDelete.kt         |  2 +-
+ .../AppearanceSettingsViewModelTest.kt        | 41 +++++++++++++++++++
+ 2 files changed, 42 insertions(+), 1 deletion(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt b/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
+index 2e79256cab..96c7666340 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt
+@@ -6,7 +6,7 @@
+ package org.thoughtcrime.securesms.messages
+ 
+ import org.thoughtcrime.securesms.database.model.ReactionRecord
+-import org.thoughtcrime.securesms.recipients.RecipientId
++import org.signal.core.models.recipients.RecipientId
+ 
+ /**
+  * Marks a message when Vesper ignores its remote deletion request.
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModelTest.kt b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModelTest.kt
+index 75d33f5d36..d8a7251365 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModelTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModelTest.kt
+@@ -52,6 +52,11 @@ class AppearanceSettingsViewModelTest {
+ 
+     every { AppearanceSettingsRepository.getLanguage() } returns "zz"
+     every { AppearanceSettingsRepository.getTheme() } returns Theme.SYSTEM
++    every { AppearanceSettingsRepository.isDynamicColorsEnabled() } returns true
++    every { AppearanceSettingsRepository.isVesperThemeEnabled() } returns true
++    every { AppearanceSettingsRepository.isDynamicColorsAvailable() } returns false
++    every { AppearanceSettingsRepository.setDynamicColors(any()) } just Runs
++    every { AppearanceSettingsRepository.setVesperTheme(any()) } just Runs
+     every { AppearanceSettingsRepository.getMessageFontSize() } returns 16
+     every { AppearanceSettingsRepository.isCompactNavigationBar() } returns false
+     every { AppearanceSettingsRepository.isSystemThemeAvailable() } returns true
+@@ -208,6 +213,42 @@ class AppearanceSettingsViewModelTest {
+     assertThat(viewModel.state.value.isCompactNavigationBar).isTrue()
+   }
+ 
++  @Test
++  fun `Vesper theme changes persist both toggle directions without resetting dynamic colors`() = runTest(testDispatcher) {
++    val viewModel = AppearanceSettingsViewModel()
++    for (enabled in listOf(false, true)) {
++      viewModel.onEvent(AppearanceSettingsEvent.VesperThemeChanged(enabled))
++      verify { AppearanceSettingsRepository.setVesperTheme(enabled) }
++      assertThat(viewModel.state.value.vesperTheme).isEqualTo(enabled)
++      assertThat(viewModel.state.value.dynamicColors).isTrue()
++    }
++    verify(exactly = 0) { AppearanceSettingsRepository.setDynamicColors(any()) }
++  }
++
++  @Test
++  fun `dynamic color changes persist both toggle directions without changing the selected theme`() = runTest(testDispatcher) {
++    every { AppearanceSettingsRepository.getTheme() } returns Theme.DARK
++    val viewModel = AppearanceSettingsViewModel()
++    for (enabled in listOf(false, true)) {
++      viewModel.onEvent(AppearanceSettingsEvent.DynamicColorsChanged(enabled))
++      verify { AppearanceSettingsRepository.setDynamicColors(enabled) }
++      assertThat(viewModel.state.value.dynamicColors).isEqualTo(enabled)
++      assertThat(viewModel.state.value.theme).isEqualTo(Theme.DARK)
++    }
++    verify(exactly = 0) { AppearanceSettingsRepository.setTheme(any()) }
++  }
++
++  @Test
++  fun `persisted Vesper preferences are read at startup`() = runTest(testDispatcher) {
++    every { AppearanceSettingsRepository.isDynamicColorsEnabled() } returns false
++    every { AppearanceSettingsRepository.isVesperThemeEnabled() } returns false
++    every { AppearanceSettingsRepository.isDynamicColorsAvailable() } returns true
++    val state = AppearanceSettingsViewModel().state.value
++    assertThat(state.dynamicColors).isFalse()
++    assertThat(state.vesperTheme).isFalse()
++    assertThat(state.isDynamicColorsAvailable).isTrue()
++  }
++
+   private fun TestScope.collectActions(actions: Flow<AppearanceSettingsAction>): List<AppearanceSettingsAction> {
+     val collected = mutableListOf<AppearanceSettingsAction>()
+     backgroundScope.launch { actions.toList(collected) }
