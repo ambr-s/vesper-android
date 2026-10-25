@@ -22,6 +22,12 @@ class AppearanceMigrationTest(unittest.TestCase):
             self.assertIn(event, events)
         self.assertIn('state.vesperTheme && state.isDynamicColorsAvailable', screen)
 
+    def test_updater_retains_call_gate_with_upstream_event_bus(self):
+        source = (WORK / 'app/src/main/java/org/thoughtcrime/securesms/apkupdate/ApkUpdateInstaller.kt').read_text()
+        self.assertIn('import org.signal.core.util.eventbus.EventBus', source)
+        self.assertIn('EventBus.default.getStickyEvent', source)
+        self.assertNotIn('org.greenrobot', source)
+
     def test_preserved_delete_uses_core_recipient_id(self):
         source = (WORK / 'app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt').read_text()
         self.assertIn('import org.signal.core.models.recipients.RecipientId\n', source)

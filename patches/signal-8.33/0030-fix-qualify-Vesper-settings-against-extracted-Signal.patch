@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sun, 25 Oct 2026 14:24:08 +0000
-Subject: [PATCH 30/31] fix: qualify Vesper settings against extracted Signal
+Subject: [PATCH 30/32] fix: qualify Vesper settings against extracted Signal
  modules
 
 Signed-off-by: amber <amber@flourish.ch>
