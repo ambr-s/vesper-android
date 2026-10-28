@@ -28,8 +28,8 @@ jobs:
       - name: Compare latest release with known-good pin
         id: signal
         run: |
-          candidate="$(./tools/latest-signal-tag.sh)"
           pinned="$(sed -n 's/^signal=//p' upstream.pin)"
+          candidate="$(./tools/latest-signal-tag.sh "$pinned")"
           echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
           if [[ "$candidate" == "$pinned" ]]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"

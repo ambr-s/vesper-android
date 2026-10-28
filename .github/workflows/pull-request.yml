@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.33.1]
+        signal: [pinned, v8.32.3]
 
     steps:
       - name: Check out Vesper patchset
@@ -33,6 +33,7 @@ jobs:
 
       - name: Validate patch tooling
         run: |
+          python3 tools/test_stable_release.py -v
           python3 tools/test_patch_series.py -v
           python3 tools/test_activity_theme.py -v
           python3 tools/test_export_patches.py -v
@@ -115,8 +116,10 @@ jobs:
           --tests 'org.thoughtcrime.securesms.util.VesperLogPreferencesTest'
           --stacktrace
 
+      # This ViewModel and its regression tests were introduced by the 8.33
+      # extraction. The stable 8.32.3 series retains the pre-extraction screen.
       - name: Test extracted appearance settings
-        if: matrix.signal != 'pinned'
+        if: matrix.signal == 'pinned'
         working-directory: work
         run: >-
           ./gradlew :Signal-Android:testWebsiteProdReleaseUnitTest
