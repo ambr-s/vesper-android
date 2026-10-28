@@ -116,7 +116,10 @@ jobs:
           --tests 'org.thoughtcrime.securesms.util.VesperLogPreferencesTest'
           --stacktrace
 
-      - name: Test appearance settings
+      # This ViewModel and its regression tests were introduced by the 8.33
+      # extraction. The stable 8.32.3 series retains the pre-extraction screen.
+      - name: Test extracted appearance settings
+        if: matrix.signal == 'pinned'
         working-directory: work
         run: >-
           ./gradlew :Signal-Android:testWebsiteProdReleaseUnitTest
