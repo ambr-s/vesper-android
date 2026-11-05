@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Thu, 5 Nov 2026 08:45:31 +0000
+Subject: [PATCH 33/33] test: preserve remote deletion controls after privacy
+ extraction
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../privacy/PrivacySettingsViewModelTest.kt   | 31 +++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModelTest.kt b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModelTest.kt
+index 2dacc31574..674ac33a21 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModelTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsViewModelTest.kt
+@@ -53,6 +53,7 @@ class PrivacySettingsViewModelTest {
+   @get:Rule
+   val dispatcherRule = CoroutineDispatcherRule(testDispatcher)
+ 
++  private var ignoreRemoteDelete = false
+   private var readReceipts = false
+   private var typingIndicators = false
+   private var screenSecurity = false
+@@ -69,6 +70,8 @@ class PrivacySettingsViewModelTest {
+   fun setUp() {
+     Dispatchers.setMain(testDispatcher)
+     mockkObject(PrivacySettingsRepository)
++    every { PrivacySettingsRepository.isIgnoreRemoteDeleteEnabled() } answers { ignoreRemoteDelete }
++    every { PrivacySettingsRepository.setIgnoreRemoteDeleteEnabled(any()) } answers { ignoreRemoteDelete = firstArg() }
+ 
+     coEvery { PrivacySettingsRepository.getBlockedCount() } returns 4
+     every { PrivacySettingsRepository.hasPhoneNumber() } returns true
+@@ -95,6 +98,34 @@ class PrivacySettingsViewModelTest {
+     every { PrivacySettingsRepository.setObsoletePassphraseTimeout(any()) } just Runs
+   }
+ 
++  @Test
++  fun `preserving remote deletes requires confirmation and can be disabled directly`() = runTest(testDispatcher) {
++    val viewModel = createViewModel()
++    viewModel.onEvent(PrivacySettingsEvent.IgnoreRemoteDeleteConfirmed)
++    verify(exactly = 0) { PrivacySettingsRepository.setIgnoreRemoteDeleteEnabled(any()) }
++    viewModel.onEvent(PrivacySettingsEvent.IgnoreRemoteDeleteToggled(true))
++    assertThat(viewModel.state.value.dialog).isEqualTo(Dialog.ConfirmIgnoreRemoteDelete)
++    assertThat(viewModel.state.value.ignoreRemoteDelete).isFalse()
++    viewModel.onEvent(PrivacySettingsEvent.DialogDismissed)
++    viewModel.onEvent(PrivacySettingsEvent.IgnoreRemoteDeleteConfirmed)
++    assertThat(ignoreRemoteDelete).isFalse()
++    viewModel.onEvent(PrivacySettingsEvent.IgnoreRemoteDeleteToggled(true))
++    viewModel.onEvent(PrivacySettingsEvent.IgnoreRemoteDeleteConfirmed)
++    assertThat(viewModel.state.value.ignoreRemoteDelete).isTrue()
++    assertThat(viewModel.state.value.dialog).isEqualTo(Dialog.None)
++    viewModel.onEvent(PrivacySettingsEvent.IgnoreRemoteDeleteToggled(false))
++    assertThat(viewModel.state.value.ignoreRemoteDelete).isFalse()
++  }
++
++  @Test
++  fun `persisted remote deletion preference survives refresh`() = runTest(testDispatcher) {
++    ignoreRemoteDelete = true
++    val viewModel = createViewModel()
++    assertThat(viewModel.state.value.ignoreRemoteDelete).isTrue()
++    viewModel.onEvent(PrivacySettingsEvent.ScreenResumed)
++    assertThat(viewModel.state.value.ignoreRemoteDelete).isTrue()
++  }
++
+   @After
+   fun tearDown() {
+     Dispatchers.resetMain()
