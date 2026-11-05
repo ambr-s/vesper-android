@@ -28,6 +28,14 @@ class AppearanceMigrationTest(unittest.TestCase):
         self.assertIn('EventBus.default.getStickyEvent', source)
         self.assertNotIn('org.greenrobot', source)
 
+    def test_extracted_home_uses_core_accent_attribute(self):
+        path = WORK / 'feature/app-settings/src/main/java/org/signal/appsettings/home/AppSettingsScreen.kt'
+        if not path.exists():
+            self.skipTest('requires materialised Signal 8.34+')
+        source = path.read_text()
+        self.assertIn('colorAttribute(CoreUiR.attr.signal_accent_primary)', source)
+        self.assertNotIn('colorAttribute(R.attr.signal_accent_primary)', source)
+
     def test_preserved_delete_uses_core_recipient_id(self):
         source = (WORK / 'app/src/main/java/org/thoughtcrime/securesms/messages/PreservedRemoteDelete.kt').read_text()
         self.assertIn('import org.signal.core.models.recipients.RecipientId\n', source)

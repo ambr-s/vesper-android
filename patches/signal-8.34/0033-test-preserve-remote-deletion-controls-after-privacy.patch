@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Thu, 5 Nov 2026 08:45:31 +0000
-Subject: [PATCH 33/33] test: preserve remote deletion controls after privacy
+Subject: [PATCH 33/34] test: preserve remote deletion controls after privacy
  extraction
 
 Signed-off-by: amber <amber@flourish.ch>
