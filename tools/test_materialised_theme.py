@@ -119,8 +119,15 @@ class MaterialisedThemeContractTest(unittest.TestCase):
         self.assertNotIn('biometricAuth.authenticate(', source)
         # Keep upstream setup, cancellation and callbacks together even though
         # Vesper does not expose the payments preference that invokes them.
-        self.assertIn('biometricAuth.cancelAuthentication()', source)
-        self.assertIn('inner class BiometricAuthenticationListener', source)
+        screen = Path(__file__).resolve().parents[1] / 'work/feature/app-settings/src/main/java/org/signal/appsettings/privacy/PrivacySettingsScreen.kt'
+        if screen.exists():
+            compose = screen.read_text()
+            self.assertNotIn('PaymentLockRow(state = state, onEvent = onEvent)', compose)
+            self.assertIn('disableBiometrics.cancelAuthentication()', compose)
+            self.assertIn('scrollToPaymentLock = false', source)
+        else:
+            self.assertIn('biometricAuth.cancelAuthentication()', source)
+            self.assertIn('inner class BiometricAuthenticationListener', source)
 
     def test_navigation_inset_uses_the_navigation_container_surface(self) -> None:
         source = (SOURCE / "MainActivity.kt").read_text()
