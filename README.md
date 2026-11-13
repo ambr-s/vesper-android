@@ -29,6 +29,13 @@ Trusted same-repository pull requests run these gates and upload an unsigned
 universal APK without signing credentials or publishing updates. The existing
 main-branch workflow signs and publishes builds after merge.
 
+The candidate Signal v8.35.2 uses `patches/signal-8.35` for the extracted storage
+and remote-configuration modules. The published v8.34.2 pin and its
+`patches/signal-8.34` series remain unchanged. PR validation builds both releases
+from the exact PR head, including clean replay and byte-stable export. Retire the
+older compatibility series separately after a successful candidate publication,
+not as part of this qualification repair.
+
 The materialised-theme checks protect source-level hooks that can be lost during
 an upstream rebase: applying the media-send theme before activity creation and
 using the navbar surface for its gesture-navigation inset. They supplement the

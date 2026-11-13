@@ -22,12 +22,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.34.2]
+        signal: [pinned, v8.35.2]
 
     steps:
       - name: Check out Vesper patchset
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -114,6 +115,9 @@ jobs:
           --tests 'org.thoughtcrime.securesms.util.RemoteConfig*Test*'
           --tests 'org.thoughtcrime.securesms.util.VesperConfigTest'
           --tests 'org.thoughtcrime.securesms.util.VesperLogPreferencesTest'
+          --tests 'org.thoughtcrime.securesms.util.VesperBackupSubscriptionPolicyTest'
+          --tests 'org.thoughtcrime.securesms.jobs.InAppPaymentKeepAliveJobTest'
+          --tests 'org.thoughtcrime.securesms.components.settings.app.internal.backup.subscription.BackupSubscriptionDiagnosticsStateTest'
           --stacktrace
 
       # Both supported releases use the extracted appearance settings.
@@ -125,13 +129,17 @@ jobs:
           --stacktrace
 
       - name: Test extracted privacy and settings navigation
-        if: matrix.signal == 'v8.34.2'
         working-directory: work
         run: >-
           ./gradlew :Signal-Android:testWebsiteProdReleaseUnitTest
           --tests 'org.thoughtcrime.securesms.components.settings.app.privacy.PrivacySettingsViewModelTest'
           --tests 'org.thoughtcrime.securesms.components.settings.app.AppSettingsViewModelTest'
           --stacktrace
+
+      - name: Test extracted remote configuration
+        if: matrix.signal == 'v8.35.2'
+        working-directory: work
+        run: ./gradlew :lib:remote-config:testReleaseUnitTest --stacktrace
 
       - name: Build release APKs
         working-directory: work

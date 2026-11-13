@@ -56,7 +56,20 @@ class MaterialisedThemeContractTest(unittest.TestCase):
             self.assertIn('stickerConfirmation.sendColor = ComposeColor(chatColors.asSingleColor())', source)
 
     def test_remote_config_keeps_vesper_override_after_upstream_resolution(self) -> None:
-        source = (SOURCE / "util/RemoteConfig.kt").read_text()
+        legacy = SOURCE / "util/RemoteConfig.kt"
+        if not legacy.exists():
+            root = Path(__file__).resolve().parents[1] / 'work'
+            source = (root / 'lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfig.kt').read_text()
+            app = (SOURCE / 'dependencies/AppRemoteConfigDependencies.kt').read_text()
+            self.assertIn('VesperConfig.valueWithOverride(key, value)', app)
+            self.assertIn('VesperConfig.applyOverrides(values)', app)
+            self.assertIn('computeLibsignalConfigs(dependencies.applyOverrides(REMOTE_VALUES))', source)
+            self.assertIn('dependencies.valueWithOverride(key, effectiveRawValue(key))', source)
+            self.assertIn('return transformer(if (value is Number) value.toString() else value)', source)
+            self.assertIn('fun resolve(): T = transformer(effectiveRawValue(key))', source)
+            self.assertIn('fun resolveDefault(): T = transformer(null)', source)
+            return
+        source = legacy.read_text()
         delegate = source.split('operator fun getValue(thisRef: Any?, property: KProperty<*>): T {', 1)[1].split('// endregion', 1)[0]
         self.assertIn('VesperConfig.valueWithOverride(key, rawValue)', delegate)
         self.assertIn('this.transformer(', delegate)

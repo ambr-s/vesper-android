@@ -1,0 +1,102 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Fri, 13 Nov 2026 08:50:19 +0000
+Subject: [PATCH 36/36] fix: retain persisted developer mode through extracted
+ configuration
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../AppRemoteConfigDependencies.kt             |  4 ++++
+ .../securesms/util/RemoteConfigOverrideTest.kt | 18 ++++++++++++++++++
+ .../org/signal/remoteconfig/RemoteConfig.kt    |  8 ++++++++
+ .../remoteconfig/RemoteConfigDependencies.kt   |  5 +++++
+ 4 files changed, 35 insertions(+)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt b/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt
+index 92b9cf2cba..df0844b1ab 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt
+@@ -35,6 +35,10 @@ object AppRemoteConfigDependencies : RemoteConfigDependencies {
+   override val remoteConfigApi: RemoteConfigApi
+     get() = SignalNetwork.remoteConfigApi
+ 
++  override var internalUserOverride: Boolean?
++    get() = SignalStore.misc.vesperInternalUserOverride
++    set(value) { SignalStore.misc.vesperInternalUserOverride = value }
++
+   override fun valueWithOverride(key: String, value: Any?): Any? =
+     org.thoughtcrime.securesms.util.VesperConfig.valueWithOverride(key, value)
+ 
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
+index 1c2c211904..18a98be5df 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
+@@ -130,6 +130,24 @@ class RemoteConfigOverrideTest {
+     assertThat(SignalStore.remoteConfig.overrides).isEqualTo(overrides)
+   }
+ 
++  @Test
++  fun `developer mode preference survives reinitialisation in both directions`() {
++    setServiceValues(INTERNAL_USER to false)
++    RemoteConfig.init()
++    RemoteConfig.setInternalUserOverride(true)
++    assertThat(SignalStore.misc.vesperInternalUserOverride).isEqualTo(true)
++    assertThat(RemoteConfig.internalUser).isTrue()
++    RemoteConfig.initialized = false
++    RemoteConfig.init()
++    assertThat(RemoteConfig.internalUser).isTrue()
++    RemoteConfig.setInternalUserOverride(false)
++    assertThat(SignalStore.misc.vesperInternalUserOverride).isEqualTo(false)
++    assertThat(RemoteConfig.internalUser).isFalse()
++    RemoteConfig.initialized = false
++    RemoteConfig.init()
++    assertThat(RemoteConfig.internalUser).isFalse()
++  }
++
+   @Test
+   fun `Vesper policy follows upstream resolution without changing diagnostic reads`() {
+     setServiceValues(INTERNAL_USER to true, INT_FLAG to 4)
+diff --git a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfig.kt b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfig.kt
+index a604a97cbc..b1c3403c49 100644
+--- a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfig.kt
++++ b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfig.kt
+@@ -734,6 +734,12 @@ object RemoteConfig {
+     max(32, remote)
+   }
+ 
++  @JvmStatic
++  fun setInternalUserOverride(enabled: Boolean) {
++    dependencies.internalUserOverride = enabled
++    internalUserDisabled = false
++  }
++
+   /** Whether or not the user is an 'internal' one, which activates certain developer tools. */
+   @JvmStatic
+   @get:JvmName("internalUser")
+@@ -741,8 +747,10 @@ object RemoteConfig {
+     key = INTERNAL_USER_KEY,
+     hotSwappable = true
+   ) { value ->
++    val override = dependencies.internalUserOverride
+     when {
+       internalUserDisabled -> false
++      override != null -> override
+       underTest -> value.asBoolean(false)
+       dependencies.isInternalBuild -> true
+       else -> value.asBoolean(false)
+diff --git a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
+index 4bfc951f0b..eacacde7d7 100644
+--- a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
++++ b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
+@@ -23,6 +23,11 @@ interface RemoteConfigDependencies {
+ 
+   val remoteConfigApi: RemoteConfigApi
+ 
++  /** Persisted, user-selected Vesper developer-mode preference. */
++  var internalUserOverride: Boolean?
++    get() = null
++    set(value) = Unit
++
+   /** Applies downstream account policy only to delegated reads, not diagnostics. */
+   fun valueWithOverride(key: String, value: Any?): Any? = value
+ 

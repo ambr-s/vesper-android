@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Fri, 21 Aug 2026 14:29:19 +0000
+Subject: [PATCH 24/36] fix: preserve public Vesper labs access
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../java/org/signal/storage/keyvalue/LabsValues.kt     | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/lib/storage/src/main/java/org/signal/storage/keyvalue/LabsValues.kt b/lib/storage/src/main/java/org/signal/storage/keyvalue/LabsValues.kt
+index 1117c9729b..392269da32 100644
+--- a/lib/storage/src/main/java/org/signal/storage/keyvalue/LabsValues.kt
++++ b/lib/storage/src/main/java/org/signal/storage/keyvalue/LabsValues.kt
+@@ -16,15 +16,15 @@ class LabsValues(store: KeyValueStore, private val isInternalUser: () -> Boolean
+   override val keysToIncludeInBackup: List<String>
+     get() = emptyList()
+ 
+-  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true).falseForExternalUsers()
++  var individualChatPlaintextExport by booleanValue(INDIVIDUAL_CHAT_PLAINTEXT_EXPORT, true)
+ 
+-  var storyArchive by booleanValue(STORY_ARCHIVE, true).falseForExternalUsers()
++  var storyArchive by booleanValue(STORY_ARCHIVE, true)
+ 
+-  var incognito by booleanValue(INCOGNITO, true).falseForExternalUsers()
++  var incognito by booleanValue(INCOGNITO, true)
+ 
+-  var betterSearch by booleanValue(BETTER_SEARCH, true).falseForExternalUsers()
++  var betterSearch by booleanValue(BETTER_SEARCH, true)
+ 
+-  var starredMessages by booleanValue(STARRED_MESSAGES, true).falseForExternalUsers()
++  var starredMessages by booleanValue(STARRED_MESSAGES, true)
+ 
+   var improvedMessageDeletion by booleanValue(IMPROVED_MESSAGE_DELETION, true).falseForExternalUsers()
+ 
