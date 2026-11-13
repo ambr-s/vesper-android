@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Sun, 25 Oct 2026 14:49:02 +0000
-Subject: [PATCH 32/37] fix: retain updater call gate on Signal event bus
+Subject: [PATCH 32/38] fix: retain updater call gate on Signal event bus
 
 Signed-off-by: amber <amber@flourish.ch>
 ---

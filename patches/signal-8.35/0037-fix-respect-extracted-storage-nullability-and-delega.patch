@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Fri, 13 Nov 2026 09:01:06 +0000
-Subject: [PATCH 37/37] fix: respect extracted storage nullability and delegate
+Subject: [PATCH 37/38] fix: respect extracted storage nullability and delegate
  APIs
 
 Signed-off-by: amber <amber@flourish.ch>

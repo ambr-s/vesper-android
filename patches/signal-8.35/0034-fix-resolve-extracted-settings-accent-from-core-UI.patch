@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Thu, 5 Nov 2026 08:57:30 +0000
-Subject: [PATCH 34/37] fix: resolve extracted settings accent from core UI
+Subject: [PATCH 34/38] fix: resolve extracted settings accent from core UI
 
 Signed-off-by: amber <amber@flourish.ch>
 ---

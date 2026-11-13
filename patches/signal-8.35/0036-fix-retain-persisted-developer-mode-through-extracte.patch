@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: amber <amber@flourish.ch>
 Date: Fri, 13 Nov 2026 08:50:19 +0000
-Subject: [PATCH 36/37] fix: retain persisted developer mode through extracted
+Subject: [PATCH 36/38] fix: retain persisted developer mode through extracted
  configuration
 
 Signed-off-by: amber <amber@flourish.ch>
