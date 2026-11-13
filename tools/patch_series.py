@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2026 Vesper contributors
 # SPDX-License-Identifier: AGPL-3.0-only
-"""Keep the published pre-extraction patch series while qualifying Signal 8.33."""
+"""Select versioned series without changing patches for the published Signal pin."""
 import re
 import sys
 from pathlib import Path
@@ -12,6 +12,8 @@ def patch_directory(root: Path, tag: str) -> Path:
     if match is None:
         raise ValueError(f'Invalid Signal release tag: {tag!r}')
     version = tuple(map(int, match.groups()))
+    if version >= (8, 35, 0):
+        return root / 'patches/signal-8.35'
     if version >= (8, 34, 0):
         return root / 'patches/signal-8.34'
     return root / ('patches/signal-8.33' if version >= (8, 33, 0) else 'patches')
