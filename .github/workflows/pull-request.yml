@@ -139,7 +139,7 @@ jobs:
       - name: Test extracted remote configuration
         if: matrix.signal == 'v8.35.2'
         working-directory: work
-        run: ./gradlew :lib:remote-config:testReleaseUnitTest --stacktrace
+        run: ./gradlew :lib:remote-config:testDebugUnitTest --stacktrace
 
       - name: Build release APKs
         working-directory: work
