@@ -1,0 +1,87 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Fri, 13 Nov 2026 09:01:06 +0000
+Subject: [PATCH 37/37] fix: respect extracted storage nullability and delegate
+ APIs
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../dependencies/AppRemoteConfigDependencies.kt   |  2 +-
+ .../securesms/keyvalue/VesperConfigValues.kt      |  3 ++-
+ .../keyvalue/VesperSettingsValuesTest.kt          | 15 +++++++++++++++
+ .../remoteconfig/RemoteConfigDependencies.kt      |  2 +-
+ 4 files changed, 19 insertions(+), 3 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt b/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt
+index df0844b1ab..6489944f37 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/dependencies/AppRemoteConfigDependencies.kt
+@@ -42,7 +42,7 @@ object AppRemoteConfigDependencies : RemoteConfigDependencies {
+   override fun valueWithOverride(key: String, value: Any?): Any? =
+     org.thoughtcrime.securesms.util.VesperConfig.valueWithOverride(key, value)
+ 
+-  override fun applyOverrides(values: Map<String, Any?>): Map<String, Any?> =
++  override fun applyOverrides(values: Map<String, Any>): Map<String, Any?> =
+     org.thoughtcrime.securesms.util.VesperConfig.applyOverrides(values)
+ 
+   override fun enqueueRefresh() {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
+index 3016c82f78..6032da0f54 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
+@@ -7,6 +7,7 @@ package org.thoughtcrime.securesms.keyvalue
+ 
+ import org.signal.storage.keyvalue.KeyValueStore
+ import org.signal.storage.keyvalue.SignalStoreValues
++import org.signal.storage.keyvalue.longValue
+ 
+ class VesperConfigValues(store: KeyValueStore) : SignalStoreValues(store) {
+   companion object {
+@@ -24,7 +25,7 @@ class VesperConfigValues(store: KeyValueStore) : SignalStoreValues(store) {
+     set(value) = putString(CACHED_CONFIG, value)
+ 
+   var eTag: String
+-    get() = getString(ETAG, "")
++    get() = getString(ETAG, "") ?: ""
+     set(value) = putString(ETAG, value)
+ 
+   var lastFetchTime: Long by longValue(LAST_FETCH_TIME, 0)
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
+index 64dc08d83c..99da8ba752 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
+@@ -46,6 +46,21 @@ class VesperSettingsValuesTest {
+     assertTrue(settings.isIgnoreRemoteDeleteEnabled)
+   }
+ 
++  @Test
++  fun `account configuration store retains defaults and persisted values`() {
++    val values = SignalStore.vesperConfig
++    assertEquals("", values.eTag)
++    assertEquals(null, values.cachedConfig)
++    assertEquals(0L, values.lastFetchTime)
++    values.eTag = "cache-validator"
++    values.cachedConfig = "cached-response"
++    values.lastFetchTime = 42L
++    assertEquals("cache-validator", values.eTag)
++    assertEquals("cached-response", values.cachedConfig)
++    assertEquals(42L, values.lastFetchTime)
++    assertTrue(values.keysToIncludeInBackup.isEmpty())
++  }
++
+   @Test
+   fun `downstream settings retain stable backup keys`() {
+     val keys = SignalStore.settings.keysToIncludeInBackup
+diff --git a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
+index eacacde7d7..41104b4976 100644
+--- a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
++++ b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
+@@ -32,7 +32,7 @@ interface RemoteConfigDependencies {
+   fun valueWithOverride(key: String, value: Any?): Any? = value
+ 
+   /** Applies downstream account policy to libsignal configuration. */
+-  fun applyOverrides(values: Map<String, Any?>): Map<String, Any?> = values
++  fun applyOverrides(values: Map<String, Any>): Map<String, Any?> = values
+ 
+   /** Schedules a refresh of the config from the service in the background. */
+   fun enqueueRefresh()
