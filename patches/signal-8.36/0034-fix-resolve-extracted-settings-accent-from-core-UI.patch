@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Thu, 5 Nov 2026 08:57:30 +0000
+Subject: [PATCH 34/38] fix: resolve extracted settings accent from core UI
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../main/java/org/signal/appsettings/home/AppSettingsScreen.kt  | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/feature/app-settings/src/main/java/org/signal/appsettings/home/AppSettingsScreen.kt b/feature/app-settings/src/main/java/org/signal/appsettings/home/AppSettingsScreen.kt
+index 8d7de6e398..194488a7f4 100644
+--- a/feature/app-settings/src/main/java/org/signal/appsettings/home/AppSettingsScreen.kt
++++ b/feature/app-settings/src/main/java/org/signal/appsettings/home/AppSettingsScreen.kt
+@@ -191,7 +191,7 @@ fun AppSettingsScreen(
+               if (state.hasExpiredGiftBadge) {
+                 Icon(
+                   painter = painterResource(CoreUiR.drawable.symbol_info_fill_24),
+-                  tint = colorAttribute(R.attr.signal_accent_primary),
++                  tint = colorAttribute(CoreUiR.attr.signal_accent_primary),
+                   contentDescription = null
+                 )
+               }

@@ -1,0 +1,139 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Fri, 13 Nov 2026 08:46:31 +0000
+Subject: [PATCH 35/38] fix: integrate Vesper policy with extracted Signal
+ storage and configuration
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../app/help/HelpSettingsViewModel.kt         |  2 +-
+ .../securesms/keyvalue/VesperConfigValues.kt  |  6 ++++-
+ .../keyvalue/VesperSettingsValuesTest.kt      |  2 +-
+ .../EditProfileActivityThemeLifecycleTest.kt  |  2 +-
+ .../util/RemoteConfigOverrideTest.kt          | 23 +++++++++++++++++++
+ .../remoteconfig/RemoteConfigDependencies.kt  |  2 +-
+ 6 files changed, 32 insertions(+), 5 deletions(-)
+
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
+index fbf813c8ab..1f14f503c0 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/help/HelpSettingsViewModel.kt
+@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
+ import org.signal.core.util.logging.Log
+ import org.thoughtcrime.securesms.database.LogDatabase
+ import org.thoughtcrime.securesms.dependencies.AppDependencies
+-import org.thoughtcrime.securesms.util.RemoteConfig
++import org.signal.remoteconfig.RemoteConfig
+ import org.thoughtcrime.securesms.util.VesperLogPreferences
+ 
+ class HelpSettingsViewModel : ViewModel() {
+diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
+index a1a8581f66..3016c82f78 100644
+--- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
++++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/VesperConfigValues.kt
+@@ -5,6 +5,9 @@
+ 
+ package org.thoughtcrime.securesms.keyvalue
+ 
++import org.signal.storage.keyvalue.KeyValueStore
++import org.signal.storage.keyvalue.SignalStoreValues
++
+ class VesperConfigValues(store: KeyValueStore) : SignalStoreValues(store) {
+   companion object {
+     private const val CACHED_CONFIG = "vesper_config.cached"
+@@ -13,7 +16,8 @@ class VesperConfigValues(store: KeyValueStore) : SignalStoreValues(store) {
+   }
+ 
+   public override fun onFirstEverAppLaunch() = Unit
+-  public override fun getKeysToIncludeInBackup(): List<String> = emptyList()
++  override val keysToIncludeInBackup: List<String>
++    get() = emptyList()
+ 
+   var cachedConfig: String?
+     get() = getString(CACHED_CONFIG, null)
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
+index 4525a7d150..64dc08d83c 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/keyvalue/VesperSettingsValuesTest.kt
+@@ -48,7 +48,7 @@ class VesperSettingsValuesTest {
+ 
+   @Test
+   fun `downstream settings retain stable backup keys`() {
+-    val keys = SignalStore.settings.getKeysToIncludeInBackup()
++    val keys = SignalStore.settings.keysToIncludeInBackup
+     assertTrue(keys.contains("settings.dynamicColors"))
+     assertTrue(keys.contains("settings.vesperTheme"))
+     assertTrue(keys.contains("settings.ignore.remote.delete"))
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+index 8a0da50215..e72930743a 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+@@ -17,7 +17,7 @@ import org.robolectric.RobolectricTestRunner
+ import org.robolectric.RuntimeEnvironment
+ import org.robolectric.annotation.Config
+ import org.signal.core.ui.R
+-import org.thoughtcrime.securesms.keyvalue.PlainTextKeyValueStore
++import org.signal.storage.keyvalue.PlainTextKeyValueStore
+ import org.thoughtcrime.securesms.keyvalue.SettingsValues
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+ import org.thoughtcrime.securesms.testutil.MockAppDependenciesRule
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
+index a3f839c646..1c2c211904 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
+@@ -130,6 +130,28 @@ class RemoteConfigOverrideTest {
+     assertThat(SignalStore.remoteConfig.overrides).isEqualTo(overrides)
+   }
+ 
++  @Test
++  fun `Vesper policy follows upstream resolution without changing diagnostic reads`() {
++    setServiceValues(INTERNAL_USER to true, INT_FLAG to 4)
++    SignalStore.remoteConfig.overrides = mapOf(INT_FLAG to "9")
++    VesperConfig.activateForTest(VesperConfig.Response(emptySet(), mapOf(INT_FLAG to 12)))
++    RemoteConfig.init()
++
++    assertThat(RemoteConfig.pinnedChatLimit).isEqualTo(12)
++    assertThat(RemoteConfig.overridableConfigs.getValue(INT_FLAG).resolve()).isEqualTo(9)
++    assertThat(RemoteConfig.overridableConfigs.getValue(INT_FLAG).resolveDefault()).isEqualTo(4)
++  }
++
++  @Test
++  fun `Vesper libsignal overrides do not mutate upstream remote values`() {
++    setServiceValues("android.libsignal.test" to "service")
++    VesperConfig.activateForTest(VesperConfig.Response(emptySet(), mapOf("android.libsignal.test" to "vesper")))
++    RemoteConfig.init()
++
++    assertThat(RemoteConfig.libsignalConfigs["test"]).isEqualTo("vesper")
++    assertThat(RemoteConfig.REMOTE_VALUES["android.libsignal.test"]).isEqualTo("service")
++  }
++
+   private fun setServiceValues(vararg values: Pair<String, Any>) {
+     val json = JSONObject()
+     values.forEach { (key, value) -> json.put(key, value) }
+@@ -137,6 +159,7 @@ class RemoteConfigOverrideTest {
+   }
+ 
+   private fun reset() {
++    VesperConfig.resetForTest()
+     RemoteConfig.overrides = emptyMap()
+     RemoteConfig.REMOTE_VALUES.clear()
+     RemoteConfig.initialized = false
+diff --git a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
+index 35d13c95af..4bfc951f0b 100644
+--- a/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
++++ b/lib/remote-config/src/main/java/org/signal/remoteconfig/RemoteConfigDependencies.kt
+@@ -23,13 +23,13 @@ interface RemoteConfigDependencies {
+ 
+   val remoteConfigApi: RemoteConfigApi
+ 
+-  /** Schedules a refresh of the config from the service in the background. */
+   /** Applies downstream account policy only to delegated reads, not diagnostics. */
+   fun valueWithOverride(key: String, value: Any?): Any? = value
+ 
+   /** Applies downstream account policy to libsignal configuration. */
+   fun applyOverrides(values: Map<String, Any?>): Map<String, Any?> = values
+ 
++  /** Schedules a refresh of the config from the service in the background. */
+   fun enqueueRefresh()
+ 
+   fun onBackgroundMessageProcessIntervalChanged()

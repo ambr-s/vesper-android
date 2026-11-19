@@ -45,7 +45,7 @@ class PatchSeriesTest(unittest.TestCase):
             self.assertEqual(patch_directory(Path('/repo'), tag), Path('/repo/patches/signal-8.34'))
 
     def test_storage_and_remote_config_extraction_uses_835_series(self):
-        for tag in ['v8.35.0', 'v8.35.2', 'v9.0.0']:
+        for tag in ['v8.35.0', 'v8.35.2']:
             self.assertEqual(patch_directory(Path('/repo'), tag), Path('/repo/patches/signal-8.35'))
 
     def test_835_series_retains_834_mail_provenance(self):
@@ -61,6 +61,20 @@ class PatchSeriesTest(unittest.TestCase):
                 na, nd, _, nbody = patch_mail(new.read_bytes())
                 self.assertEqual((a, d, body), (na, nd, nbody))
                 self.assertEqual(patch_subject(old.read_bytes()), patch_subject(new.read_bytes()))
+
+    def test_help_entry_extraction_preserves_series_provenance(self):
+        from export_patches import patch_mail, patch_subject
+        root = Path(__file__).resolve().parents[1]
+        candidate = patch_directory(root, 'v8.36.3')
+        self.assertEqual(candidate, root / 'patches/signal-8.36')
+        previous = sorted(patch_directory(root, 'v8.35.2').glob('*.patch'))
+        self.assertEqual([p.name for p in previous], sorted(p.name for p in candidate.glob('*.patch')))
+        for original in previous:
+            with self.subTest(patch=original.name):
+                old, new = original.read_bytes(), (candidate / original.name).read_bytes()
+                self.assertEqual(patch_subject(old), patch_subject(new))
+                self.assertEqual(patch_mail(old)[:2], patch_mail(new)[:2])
+                self.assertEqual(patch_mail(old)[3], patch_mail(new)[3])
 
     def test_invalid_versions_fail_closed(self):
         for tag in ['8.33.1', 'v8.33.1-rc', '../patches', 'v8.33', 'v8.33.1\n']:
