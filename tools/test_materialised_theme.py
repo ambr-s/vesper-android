@@ -15,6 +15,24 @@ SOURCE = Path(__file__).resolve().parents[1] / "work/app/src/main/java/org/thoug
 
 
 class MaterialisedThemeContractTest(unittest.TestCase):
+    def test_help_controls_are_wired_at_the_shared_screen_host(self) -> None:
+        help_dir = SOURCE / 'components/settings/app/help'
+        entry = help_dir / 'HelpSettingsEntry.kt'
+        fragment = (help_dir / 'HelpSettingsFragment.kt').read_text()
+        if entry.exists():
+            self.assertIn('HelpSettingsEntry(parentEventEmitter = appSettingsRouter::onEvent)', fragment)
+            navigation = (help_dir / 'HelpSettingsNavigation.kt').read_text()
+            self.assertIn('HelpSettingsEntry(parentEventEmitter = parentEventEmitter)', navigation)
+        host = entry.read_text() if entry.exists() else fragment
+        self.assertIn('onEvent = viewModel::onEvent', host)
+        self.assertIn('logEnabled = vesperState.logEnabled', host)
+        self.assertEqual(host.count('vesperViewModel.setLogEnabled(false)'), 1)
+        self.assertRegex(host, r'setPositiveButton\(android.R.string.ok\).*?\{[^}]+vesperViewModel.setLogEnabled\(false\)')
+        self.assertIn('setNegativeButton(android.R.string.cancel, null)', host)
+        self.assertIn('INTERNAL_SETTINGS_TAP_COUNT = 7', host)
+        self.assertIn('vesperViewModel.toggleInternalUser()', host)
+        self.assertIn('R.string.vesper_website_url', host)
+
     def test_settings_host_theme_precedes_inflation(self) -> None:
         paths = [SOURCE / "components/settings/DSLSettingsActivity.kt", SOURCE / "components/NavGraphHostActivity.kt"]
         sources = [path.read_text() for path in paths if path.exists()]

@@ -29,9 +29,9 @@ Trusted same-repository pull requests run these gates and upload an unsigned
 universal APK without signing credentials or publishing updates. The existing
 main-branch workflow signs and publishes builds after merge.
 
-The candidate Signal v8.35.2 uses `patches/signal-8.35` for the extracted storage
-and remote-configuration modules. The published v8.34.2 pin and its
-`patches/signal-8.34` series remain unchanged. PR validation builds both releases
+The Signal v8.36.3 candidate uses `patches/signal-8.36` to apply Vesper’s help
+controls in the shared Compose entry. The published v8.35.2 pin and its
+`patches/signal-8.35` series remain unchanged. PR validation builds both releases
 from the exact PR head, including clean replay and byte-stable export. Retire the
 older compatibility series separately after a successful candidate publication,
 not as part of this qualification repair.

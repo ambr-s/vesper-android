@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.35.2]
+        signal: [pinned, v8.36.3]
 
     steps:
       - name: Check out Vesper patchset
@@ -137,7 +137,6 @@ jobs:
           --stacktrace
 
       - name: Test extracted remote configuration
-        if: matrix.signal == 'v8.35.2'
         working-directory: work
         run: ./gradlew :lib:remote-config:testDebugUnitTest --stacktrace
 
