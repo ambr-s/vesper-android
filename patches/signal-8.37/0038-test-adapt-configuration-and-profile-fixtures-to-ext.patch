@@ -6,20 +6,32 @@ Subject: [PATCH 38/38] test: adapt configuration and profile fixtures to
 
 Signed-off-by: amber <amber@flourish.ch>
 ---
- .../profiles/manage/EditProfileActivityThemeLifecycleTest.kt  | 2 +-
- .../thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt   | 4 ++--
- 2 files changed, 3 insertions(+), 3 deletions(-)
+ .../manage/EditProfileActivityThemeLifecycleTest.kt         | 6 +++++-
+ .../thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt | 4 ++--
+ 2 files changed, 7 insertions(+), 3 deletions(-)
 
 diff --git a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
-index e72930743a..d9c2afb03f 100644
+index e72930743a..5e3c324f80 100644
 --- a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
 +++ b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
-@@ -34,7 +34,7 @@ class EditProfileActivityThemeLifecycleTest {
+@@ -17,7 +17,9 @@ import org.robolectric.RobolectricTestRunner
+ import org.robolectric.RuntimeEnvironment
+ import org.robolectric.annotation.Config
+ import org.signal.core.ui.R
++import org.signal.locale.AppLocale
+ import org.signal.storage.keyvalue.PlainTextKeyValueStore
++import org.thoughtcrime.securesms.BuildConfig
+ import org.thoughtcrime.securesms.keyvalue.SettingsValues
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+ import org.thoughtcrime.securesms.testutil.MockAppDependenciesRule
+@@ -34,7 +36,9 @@ class EditProfileActivityThemeLifecycleTest {
  
    @Test
    fun `dynamic theme is applied from the pre-create lifecycle hook`() {
 -    PlainTextKeyValueStore.init(RuntimeEnvironment.getApplication())
-+    PlainTextKeyValueStore.init(RuntimeEnvironment.getApplication(), org.thoughtcrime.securesms.BuildConfig.VERSION_CODE)
++    val application = RuntimeEnvironment.getApplication()
++    PlainTextKeyValueStore.init(application, BuildConfig.VERSION_CODE)
++    AppLocale.initialize(application, BuildConfig.LANGUAGES, BuildConfig.LANGUAGE_SPLITS) { PlainTextKeyValueStore.language }
      SignalStore.settings.setTheme(SettingsValues.Theme.LIGHT, true)
      val activity = Robolectric.buildActivity(EditProfileActivity::class.java).create().get()
  
