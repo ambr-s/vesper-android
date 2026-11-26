@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: amber <amber@flourish.ch>
+Date: Fri, 13 Nov 2026 09:13:25 +0000
+Subject: [PATCH 38/38] test: adapt configuration and profile fixtures to
+ extracted APIs
+
+Signed-off-by: amber <amber@flourish.ch>
+---
+ .../manage/EditProfileActivityThemeLifecycleTest.kt         | 6 +++++-
+ .../thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt | 4 ++--
+ 2 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+index e72930743a..5e3c324f80 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/profiles/manage/EditProfileActivityThemeLifecycleTest.kt
+@@ -17,7 +17,9 @@ import org.robolectric.RobolectricTestRunner
+ import org.robolectric.RuntimeEnvironment
+ import org.robolectric.annotation.Config
+ import org.signal.core.ui.R
++import org.signal.locale.AppLocale
+ import org.signal.storage.keyvalue.PlainTextKeyValueStore
++import org.thoughtcrime.securesms.BuildConfig
+ import org.thoughtcrime.securesms.keyvalue.SettingsValues
+ import org.thoughtcrime.securesms.keyvalue.SignalStore
+ import org.thoughtcrime.securesms.testutil.MockAppDependenciesRule
+@@ -34,7 +36,9 @@ class EditProfileActivityThemeLifecycleTest {
+ 
+   @Test
+   fun `dynamic theme is applied from the pre-create lifecycle hook`() {
+-    PlainTextKeyValueStore.init(RuntimeEnvironment.getApplication())
++    val application = RuntimeEnvironment.getApplication()
++    PlainTextKeyValueStore.init(application, BuildConfig.VERSION_CODE)
++    AppLocale.initialize(application, BuildConfig.LANGUAGES, BuildConfig.LANGUAGE_SPLITS) { PlainTextKeyValueStore.language }
+     SignalStore.settings.setTheme(SettingsValues.Theme.LIGHT, true)
+     val activity = Robolectric.buildActivity(EditProfileActivity::class.java).create().get()
+ 
+diff --git a/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt b/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
+index 18a98be5df..7d3ede5260 100644
+--- a/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
++++ b/app/src/test/java/org/thoughtcrime/securesms/util/RemoteConfigOverrideTest.kt
+@@ -152,7 +152,7 @@ class RemoteConfigOverrideTest {
+   fun `Vesper policy follows upstream resolution without changing diagnostic reads`() {
+     setServiceValues(INTERNAL_USER to true, INT_FLAG to 4)
+     SignalStore.remoteConfig.overrides = mapOf(INT_FLAG to "9")
+-    VesperConfig.activateForTest(VesperConfig.Response(emptySet(), mapOf(INT_FLAG to 12)))
++    VesperConfig.activateForTest(VesperConfig.Response(1, emptySet(), mapOf(INT_FLAG to 12)))
+     RemoteConfig.init()
+ 
+     assertThat(RemoteConfig.pinnedChatLimit).isEqualTo(12)
+@@ -163,7 +163,7 @@ class RemoteConfigOverrideTest {
+   @Test
+   fun `Vesper libsignal overrides do not mutate upstream remote values`() {
+     setServiceValues("android.libsignal.test" to "service")
+-    VesperConfig.activateForTest(VesperConfig.Response(emptySet(), mapOf("android.libsignal.test" to "vesper")))
++    VesperConfig.activateForTest(VesperConfig.Response(1, emptySet(), mapOf("android.libsignal.test" to "vesper")))
+     RemoteConfig.init()
+ 
+     assertThat(RemoteConfig.libsignalConfigs["test"]).isEqualTo("vesper")

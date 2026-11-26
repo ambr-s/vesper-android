@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        signal: [pinned, v8.36.3]
+        signal: [pinned, v8.37.3]
 
     steps:
       - name: Check out Vesper patchset
