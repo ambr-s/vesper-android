@@ -76,6 +76,21 @@ class PatchSeriesTest(unittest.TestCase):
                 self.assertEqual(patch_mail(old)[:2], patch_mail(new)[:2])
                 self.assertEqual(patch_mail(old)[3], patch_mail(new)[3])
 
+    def test_837_preserves_published_feature_series_provenance(self):
+        from export_patches import patch_mail, patch_subject
+        root = Path(__file__).resolve().parents[1]
+        previous = patch_directory(root, 'v8.36.3')
+        candidate = patch_directory(root, 'v8.37.3')
+        self.assertEqual(candidate, root / 'patches/signal-8.37')
+        originals = sorted(previous.glob('*.patch'))
+        self.assertEqual([p.name for p in originals], sorted(p.name for p in candidate.glob('*.patch')))
+        for original in originals:
+            with self.subTest(patch=original.name):
+                old, new = original.read_bytes(), (candidate / original.name).read_bytes()
+                self.assertEqual(patch_subject(old), patch_subject(new))
+                self.assertEqual(patch_mail(old)[:2], patch_mail(new)[:2])
+                self.assertEqual(patch_mail(old)[3], patch_mail(new)[3])
+
     def test_invalid_versions_fail_closed(self):
         for tag in ['8.33.1', 'v8.33.1-rc', '../patches', 'v8.33', 'v8.33.1\n']:
             with self.assertRaises(ValueError):

@@ -12,6 +12,8 @@ def patch_directory(root: Path, tag: str) -> Path:
     if match is None:
         raise ValueError(f'Invalid Signal release tag: {tag!r}')
     version = tuple(map(int, match.groups()))
+    if version >= (8, 37, 0):
+        return root / 'patches/signal-8.37'
     if version >= (8, 36, 0):
         return root / 'patches/signal-8.36'
     if version >= (8, 35, 0):
