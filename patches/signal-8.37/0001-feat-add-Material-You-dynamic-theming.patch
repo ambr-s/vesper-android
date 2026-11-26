@@ -70,7 +70,7 @@ Signed-off-by: amber <amber@flourish.ch>
  app/src/main/res/values/signal_styles.xml     |  32 +-
  app/src/main/res/values/themes.xml            | 345 +++++++++++++++---
  .../org/signal/core/ui/compose/Buttons.kt     |  19 +-
- .../core/ui/compose/theme/SignalTheme.kt      | 208 +++++++++--
+ .../core/ui/compose/theme/SignalTheme.kt      | 209 +++++++++--
  .../org/signal/core/ui/fonts/SignalSymbols.kt |   9 +-
  .../org/signal/core/ui/util/SpanUtil.java     |   4 +-
  .../org/signal/core/ui/util/ThemeUtil.java    |  27 +-
@@ -78,7 +78,7 @@ Signed-off-by: amber <amber@flourish.ch>
  .../appearance/AppearanceSettingsScreen.kt    |  11 +
  .../appearance/AppearanceSettingsState.kt     |   2 +
  .../src/main/res/values/vesper_appearance.xml |   6 +
- 71 files changed, 985 insertions(+), 305 deletions(-)
+ 71 files changed, 986 insertions(+), 305 deletions(-)
  create mode 100644 app/src/main/java/org/thoughtcrime/securesms/util/DynamicMediaPreviewTheme.java
  create mode 100644 feature/app-settings/src/main/res/values/vesper_appearance.xml
 
@@ -2557,7 +2557,7 @@ index e45bd02565..3f9fc46dbf 100644
          content = imageContent
        )
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index 7c10ef3d47..9ce77da446 100644
+index 7c10ef3d47..fdbef2dc51 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 @@ -1,6 +1,16 @@
@@ -2706,7 +2706,7 @@ index 7c10ef3d47..9ce77da446 100644
          typography = typography,
          content = content
        )
-@@ -254,6 +297,123 @@ fun ForceLightColors(content: @Composable () -> Unit) {
+@@ -254,6 +297,124 @@ fun ForceLightColors(content: @Composable () -> Unit) {
    }
  }
  
@@ -2795,6 +2795,7 @@ index 7c10ef3d47..9ce77da446 100644
 +private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDynamic: Boolean): ExtendedColors {
 +  return when {
 +    isDynamic -> lightExtendedColors.copy(
++      colorSecondaryContainer1 = colorScheme.secondaryContainer,
 +      colorSurface1 = colorScheme.surfaceContainerLow,
 +      colorSurface2 = colorScheme.surfaceContainer,
 +      colorSurface3 = colorScheme.surfaceContainerHigh,

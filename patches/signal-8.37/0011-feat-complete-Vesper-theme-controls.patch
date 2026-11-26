@@ -42,10 +42,10 @@ Signed-off-by: Vesper Materializer <vesper-materializer@users.noreply.github.com
  create mode 100644 app/src/main/res/values/signal_original_themes.xml
 
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsRepository.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsRepository.kt
-index 108e140b48..9a0da06b30 100644
+index a8cb3a4ca9..57141a8ea7 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsRepository.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsRepository.kt
-@@ -35,6 +35,12 @@ object AppearanceSettingsRepository {
+@@ -48,6 +48,12 @@ object AppearanceSettingsRepository {
      SignalStore.settings.theme = theme.toSettingsTheme()
    }
  
@@ -59,10 +59,10 @@ index 108e140b48..9a0da06b30 100644
  
    fun isDynamicColorsAvailable(): Boolean = DynamicTheme.isDynamicColorsAvailable()
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
-index ab92df7998..5d3701d0d5 100644
+index c2a865e876..dc03fc1977 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/appearance/AppearanceSettingsViewModel.kt
-@@ -59,6 +59,11 @@ class AppearanceSettingsViewModel(
+@@ -99,6 +99,11 @@ class AppearanceSettingsViewModel(
          _actions.send(AppearanceSettingsAction.ApplySplashScreenTheme(event.theme))
        }
  
@@ -74,7 +74,7 @@ index ab92df7998..5d3701d0d5 100644
        is AppearanceSettingsEvent.DynamicColorsChanged -> {
          AppearanceSettingsRepository.setDynamicColors(event.enabled)
          _state.update { it.copy(dynamicColors = event.enabled) }
-@@ -96,6 +101,7 @@ class AppearanceSettingsViewModel(
+@@ -170,6 +175,7 @@ class AppearanceSettingsViewModel(
      return AppearanceSettingsState(
        language = AppearanceSettingsRepository.getLanguage(),
        theme = AppearanceSettingsRepository.getTheme(),
@@ -83,10 +83,10 @@ index ab92df7998..5d3701d0d5 100644
        isDynamicColorsAvailable = AppearanceSettingsRepository.isDynamicColorsAvailable(),
        messageFontSize = AppearanceSettingsRepository.getMessageFontSize(),
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
-index a793ed246d..8f865292e4 100644
+index 634b08be99..5ba0b2f27a 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/components/settings/app/privacy/PrivacySettingsFragment.kt
-@@ -31,7 +31,7 @@ class PrivacySettingsFragment : ComposeFragment() {
+@@ -32,7 +32,7 @@ class PrivacySettingsFragment : ComposeFragment() {
    @Composable
    override fun FragmentContent() {
      PrivacySettingsEntry(
@@ -109,10 +109,10 @@ index a66f18a25a..d3461ad45a 100644
  
      // endregion
 diff --git a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
-index 64260cf36c..574e828f8b 100644
+index 09ee1f1819..3ec17530f9 100644
 --- a/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
 +++ b/app/src/main/java/org/thoughtcrime/securesms/keyvalue/SettingsValues.kt
-@@ -48,6 +48,7 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
+@@ -49,6 +49,7 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
      const val THREAD_TRIM_ENABLED = "pref_trim_threads"
  
      const val DYNAMIC_COLORS_ENABLED = "settings.dynamicColors"
@@ -120,7 +120,7 @@ index 64260cf36c..574e828f8b 100644
      private const val IGNORE_REMOTE_DELETE = "settings.ignore.remote.delete"
      const val THEME = "settings.theme"
      const val MESSAGE_FONT_SIZE = "settings.message.font.size"
-@@ -150,6 +151,7 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
+@@ -151,6 +152,7 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
        THREAD_TRIM_ENABLED,
        THEME,
        DYNAMIC_COLORS_ENABLED,
@@ -128,7 +128,7 @@ index 64260cf36c..574e828f8b 100644
        IGNORE_REMOTE_DELETE,
        MESSAGE_FONT_SIZE,
        PREFER_SYSTEM_EMOJI,
-@@ -250,6 +252,13 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
+@@ -251,6 +253,13 @@ class SettingsValues internal constructor(store: KeyValueStore, private val cont
    val isDynamicColorsEnabled: Boolean
      get() = getBoolean(DYNAMIC_COLORS_ENABLED, true)
  
@@ -425,7 +425,7 @@ index d58facf745..fd13072f77 100644
 \ No newline at end of file
 +</shape>
 diff --git a/app/src/main/res/layout/v2_conversation_fragment.xml b/app/src/main/res/layout/v2_conversation_fragment.xml
-index e8e91eaf9d..272f310af5 100644
+index ac81fde6f4..c9b9aa0098 100644
 --- a/app/src/main/res/layout/v2_conversation_fragment.xml
 +++ b/app/src/main/res/layout/v2_conversation_fragment.xml
 @@ -95,13 +95,13 @@
@@ -1075,10 +1075,10 @@ index 597c67fb86..9ffa58b79c 100644
          <item name="fullScreenDialogStyle">@style/Signal.DayNight.Dialog.FullScreen</item>
          <item name="fixedRoundedCornerBottomSheetStyle">@style/Widget.Signal.FixedRoundedCorners</item>
 diff --git a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-index 09630a1acc..c385821017 100644
+index 3e0e21f092..6218bc5e4f 100644
 --- a/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
 +++ b/core/ui/src/main/java/org/signal/core/ui/compose/theme/SignalTheme.kt
-@@ -243,6 +243,71 @@ private val darkColorScheme = darkColorScheme(
+@@ -245,6 +245,71 @@ private val darkColorScheme = darkColorScheme(
    outline = Color(0xFF5D5D66)
  )
  
@@ -1150,7 +1150,7 @@ index 09630a1acc..c385821017 100644
  @Composable
  fun SignalTheme(
    isDarkMode: Boolean = LocalConfiguration.current.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
-@@ -252,7 +317,8 @@ fun SignalTheme(
+@@ -254,7 +319,8 @@ fun SignalTheme(
  ) {
    val context = LocalContext.current
    val maySupportDynamicColor = Build.VERSION.SDK_INT >= 31
@@ -1160,7 +1160,7 @@ index 09630a1acc..c385821017 100644
  
    // API 31-33's Compose fallback is more saturated than the platform resource
    // palette. Use the same resources for XML and Compose.
-@@ -264,10 +330,12 @@ fun SignalTheme(
+@@ -266,10 +332,12 @@ fun SignalTheme(
          if (isDarkMode) systemAlignedDarkColorScheme() else systemAlignedLightColorScheme()
        }
      }
@@ -1176,7 +1176,7 @@ index 09630a1acc..c385821017 100644
    val snackbarColors = snackbarColors(colorScheme)
  
    ProvideIncognitoKeyboard(enabled = incognitoKeyboardEnabled) {
-@@ -376,7 +444,13 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
+@@ -378,7 +446,13 @@ private fun isThemeUsingDynamicColors(context: Context): Boolean {
      typedValue.data != 0
  }
  
@@ -1190,8 +1190,8 @@ index 09630a1acc..c385821017 100644
 +private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDynamic: Boolean, isVesperTheme: Boolean): ExtendedColors {
    return when {
      isDynamic -> lightExtendedColors.copy(
-       colorSurface1 = colorScheme.surfaceContainerLow,
-@@ -385,8 +459,10 @@ private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDyna
+       colorSecondaryContainer1 = colorScheme.secondaryContainer,
+@@ -388,8 +462,10 @@ private fun extendedColors(colorScheme: ColorScheme, isDarkMode: Boolean, isDyna
        colorSurface4 = colorScheme.surfaceContainerHighest,
        colorSurface5 = if (isDarkMode) colorScheme.surfaceBright else colorScheme.surfaceDim
      )
@@ -1205,10 +1205,10 @@ index 09630a1acc..c385821017 100644
  }
  
 diff --git a/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsEvent.kt b/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsEvent.kt
-index 833ea71ab3..5022b08ea6 100644
+index a0913f3aac..151d159a21 100644
 --- a/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsEvent.kt
 +++ b/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsEvent.kt
-@@ -22,6 +22,8 @@ sealed interface AppearanceSettingsEvent {
+@@ -37,6 +37,8 @@ sealed interface AppearanceSettingsEvent {
    /** The user picked a theme from the theme list. */
    data class ThemeSelected(val theme: AppearanceSettingsState.Theme) : AppearanceSettingsEvent
  
@@ -1218,10 +1218,10 @@ index 833ea71ab3..5022b08ea6 100644
  
    /** The user tapped the chat color and wallpaper row. */
 diff --git a/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsScreen.kt b/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsScreen.kt
-index 59640ba10d..2b3684680c 100644
+index 78c537facf..ca428ca161 100644
 --- a/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsScreen.kt
 +++ b/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsScreen.kt
-@@ -104,7 +104,16 @@ fun AppearanceSettingsScreen(
+@@ -105,7 +105,16 @@ fun AppearanceSettingsScreen(
          )
        }
  
@@ -1240,10 +1240,10 @@ index 59640ba10d..2b3684680c 100644
            Rows.ToggleRow(
              text = stringResource(R.string.preferences_appearance__dynamic_colors),
 diff --git a/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsState.kt b/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsState.kt
-index 8bd4ec0281..74d45b494f 100644
+index d58e63e468..09d05be1c8 100644
 --- a/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsState.kt
 +++ b/feature/app-settings/src/main/java/org/signal/appsettings/appearance/AppearanceSettingsState.kt
-@@ -11,6 +11,7 @@ package org.signal.appsettings.appearance
+@@ -14,6 +14,7 @@ import org.signal.core.util.bytes
  data class AppearanceSettingsState(
    val language: String = "zz",
    val theme: Theme = Theme.SYSTEM,
@@ -1252,10 +1252,10 @@ index 8bd4ec0281..74d45b494f 100644
    val isDynamicColorsAvailable: Boolean = false,
    val messageFontSize: Int = 16,
 diff --git a/feature/app-settings/src/main/java/org/signal/appsettings/privacy/PrivacySettingsScreen.kt b/feature/app-settings/src/main/java/org/signal/appsettings/privacy/PrivacySettingsScreen.kt
-index dc0c983ac3..f5b73c4777 100644
+index d5db2155a0..0064d067e9 100644
 --- a/feature/app-settings/src/main/java/org/signal/appsettings/privacy/PrivacySettingsScreen.kt
 +++ b/feature/app-settings/src/main/java/org/signal/appsettings/privacy/PrivacySettingsScreen.kt
-@@ -249,18 +249,6 @@ fun PrivacySettingsScreen(
+@@ -275,18 +275,6 @@ fun PrivacySettingsScreen(
          Dividers.Default()
        }
  
